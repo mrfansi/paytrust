@@ -303,6 +303,7 @@
 - [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
 - [ ] T128 [P] Generate OpenAPI documentation endpoint in actix-web serving `contracts/openapi.yaml`
+- [ ] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
 - [ ] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
 ### Code Quality

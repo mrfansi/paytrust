@@ -194,7 +194,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-024**: System MUST reject payment attempts in different currency than invoice currency
 - **FR-025**: System MUST calculate and report financial totals separately for each currency
 - **FR-026**: System MUST handle currency-specific formatting (IDR: no decimals, MYR/USD: 2 decimals)
-- **FR-027**: System MUST isolate payment gateway configurations by currency and region
+- **FR-027**: System MUST isolate payment gateway configurations by currency (region-based routing is handled by gateway selection per invoice per FR-007, not by system)
 
 #### Transaction Management
 
@@ -220,8 +220,6 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-037**: System MUST reject requests with missing or invalid API keys with 401 Unauthorized status
 - **FR-040**: System MUST enforce rate limiting of 1000 requests per minute per API key
 - **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
-- **FR-051**: System MUST mark invoice as immutable once payment is initiated
-- **FR-052**: System MUST reject modification requests to invoices with active payments (return 400 error)
 - **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
 - **FR-062**: System MUST use locked tax rates for all payment calculations regardless of external tax rate changes
 - **FR-053**: System MUST implement pessimistic locking for invoice payment processing
@@ -267,12 +265,12 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 ### Measurable Outcomes
 
 - **SC-001**: Developers can create a complete invoice with line items and process payment in under 3 minutes using API documentation
-- **SC-002**: System successfully processes 95% of payment transactions without errors or failures
+- **SC-002**: System successfully processes 95% of payment transactions without errors or failures (includes gateway failures, network timeouts, and validation errors; excludes user input errors)
 - **SC-003**: Financial reports accurately reflect 100% of service fees and taxes within 1 hour of transaction completion
 - **SC-004**: Payment gateway webhook notifications are processed within 5 seconds with 99% success rate
-- **SC-005**: API response times remain under 2 seconds for 95% of requests under normal load (100 concurrent users)
+- **SC-005**: API response times remain under 2 seconds for 95% of requests under sustained load (100 concurrent requests maintained for 5 minutes)
 - **SC-006**: Zero currency mismatch errors occur due to payment isolation architecture
 - **SC-007**: Installment payment calculations maintain accuracy with zero discrepancy between scheduled total and invoice amount
-- **SC-008**: System handles 10,000 invoices per day across all currencies without performance degradation
+- **SC-008**: System handles 10,000 invoices per day across all currencies without performance degradation (distributed throughout business hours with peak of 500 invoices/hour)
 - **SC-009**: Developers successfully integrate payment flows with less than 5 API calls per transaction
 - **SC-010**: 90% of payment status updates are reflected in real-time (within 10 seconds of gateway notification)
