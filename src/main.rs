@@ -72,12 +72,10 @@ async fn main() -> std::io::Result<()> {
             // Routes
             .route("/health", web::get().to(health_check))
             .route("/", web::get().to(index))
-            // API v1 routes (will be added in Phase 3)
+            // API v1 routes
             .service(
                 web::scope("/v1")
-                // .configure(invoices::configure_routes)
-                // .configure(gateways::configure_routes)
-                // etc.
+                    .configure(modules::invoices::controllers::configure)
             )
     })
     .bind(&bind_address)?
