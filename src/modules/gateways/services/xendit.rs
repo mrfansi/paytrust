@@ -67,12 +67,24 @@ impl PaymentGateway for XenditClient {
             _ => request.amount.round_dp(2),
         };
 
+        // Build description with installment info if present (T097)
+        let description = if let Some(ref installment_info) = request.installment_info {
+            format!(
+                "{} - Installment {}/{}",
+                request.description,
+                installment_info.installment_number,
+                installment_info.total_installments
+            )
+        } else {
+            request.description.clone()
+        };
+
         // Build Xendit invoice request
         let xendit_request = json!({
             "external_id": request.external_id,
             "amount": amount,
             "payer_email": request.payer_email,
-            "description": request.description,
+            "description": description,
             "currency": request.currency.to_string().to_uppercase(),
             "invoice_duration": 86400, // 24 hours in seconds (FR-044)
             "success_redirect_url": request.success_redirect_url,

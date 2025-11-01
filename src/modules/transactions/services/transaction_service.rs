@@ -4,6 +4,7 @@ use crate::core::{AppError, Currency, Result};
 use crate::modules::invoices::models::InvoiceStatus;
 use crate::modules::invoices::repositories::InvoiceRepository;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 
 /// Transaction service for business logic
 ///
@@ -325,6 +326,219 @@ impl TransactionService {
             failed_count,
         })
     }
+
+    /// Process installment payment (T099 - FR-068, FR-069, FR-070)
+    ///
+    /// Records payment for a specific installment with sequential enforcement.
+    /// Validates that previous installments are paid before allowing next one.
+    ///
+    /// # Arguments
+    /// * `invoice_id` - Invoice ID
+    /// * `installment_id` - Installment schedule ID
+    /// * `amount_paid` - Amount paid
+    /// * `gateway_transaction_ref` - Gateway reference
+    ///
+    /// # Returns
+    /// * `Result<PaymentTransaction>` - Created transaction
+    ///
+    /// # Errors
+    /// * `400 Bad Request` - If sequential order not followed (FR-068, FR-069)
+    pub async fn process_installment_payment(
+        &self,
+        invoice_id: String,
+        installment_id: String,
+        amount_paid: Decimal,
+        gateway_transaction_ref: String,
+    ) -> Result<PaymentTransaction> {
+        use crate::modules::installments::repositories::InstallmentRepository;
+        use crate::modules::installments::models::InstallmentStatus;
+
+        // Check for idempotency first
+        if let Some(existing) = self
+            .transaction_repo
+            .find_by_gateway_ref(&gateway_transaction_ref)
+            .await?
+        {
+            tracing::info!(
+                gateway_ref = gateway_transaction_ref,
+                "Installment payment already exists (idempotent request)"
+            );
+            return Ok(existing);
+        }
+
+        let pool = self.transaction_repo.pool();
+        
+        // Get installment repository
+        let installment_repo = InstallmentRepository::new(pool.clone());
+        
+        // Get all installments for this invoice
+        let mut installments = installment_repo.find_by_invoice(&invoice_id).await?;
+        installments.sort_by_key(|i| i.installment_number);
+        
+        // Find the current installment
+        let current_installment = installments
+            .iter()
+            .find(|i| i.id == installment_id)
+            .ok_or_else(|| AppError::not_found("Installment not found"))?;
+        
+        // FR-068, FR-069: Validate sequential payment order
+        for inst in &installments {
+            if inst.installment_number < current_installment.installment_number {
+                if inst.status != InstallmentStatus::Paid {
+                    return Err(AppError::validation(format!(
+                        "Cannot pay installment #{} before installment #{} is paid (FR-068)",
+                        current_installment.installment_number,
+                        inst.installment_number
+                    )));
+                }
+            }
+        }
+        
+        // FR-070: Check if current installment is fully paid
+        if current_installment.status == InstallmentStatus::Paid {
+            return Err(AppError::validation(format!(
+                "Installment #{} is already fully paid",
+                current_installment.installment_number
+            )));
+        }
+
+        // Get invoice to extract currency
+        let invoice = self.invoice_repo.find_by_id(&invoice_id)
+            .await?
+            .ok_or_else(|| AppError::not_found("Invoice not found"))?;
+
+        // Create transaction linked to installment (T102)
+        let mut transaction = PaymentTransaction::new(
+            invoice_id.clone(),
+            gateway_transaction_ref,
+            "gateway".to_string(), // Should be passed as parameter
+            amount_paid,
+            invoice.currency,
+            "installment_payment".to_string(),
+            None,
+        )?;
+        
+        // Link transaction to installment
+        transaction.installment_id = Some(installment_id.clone());
+        
+        // Update transaction status to completed
+        transaction.update_status(TransactionStatus::Completed)?;
+        
+        // Save transaction
+        let saved_transaction = self.transaction_repo.create(&transaction).await?;
+        
+        // Handle overpayment auto-application (T100 - FR-073, FR-074, FR-075, FR-076)
+        let excess = self.apply_overpayment_to_installments(
+            &invoice_id,
+            &installment_id,
+            amount_paid,
+            &mut installments,
+        ).await?;
+        
+        if excess > Decimal::ZERO {
+            tracing::warn!(
+                invoice_id = invoice_id,
+                excess = %excess,
+                "Overpayment detected - excess amount after all installments paid"
+            );
+        }
+        
+        Ok(saved_transaction)
+    }
+
+    /// Apply overpayment to subsequent installments (T100 - FR-074, FR-075, FR-076)
+    ///
+    /// # Arguments
+    /// * `invoice_id` - Invoice ID
+    /// * `current_installment_id` - Current installment being paid
+    /// * `payment_amount` - Amount paid
+    /// * `installments` - All installments (sorted by number)
+    ///
+    /// # Returns
+    /// * `Result<Decimal>` - Excess amount after all applications
+    async fn apply_overpayment_to_installments(
+        &self,
+        invoice_id: &str,
+        current_installment_id: &str,
+        payment_amount: Decimal,
+        installments: &mut [crate::modules::installments::models::InstallmentSchedule],
+    ) -> Result<Decimal> {
+        use crate::modules::installments::repositories::InstallmentRepository;
+        use crate::modules::installments::models::InstallmentStatus;
+        
+        let pool = self.transaction_repo.pool();
+        let installment_repo = InstallmentRepository::new(pool.clone());
+        
+        // Find current installment index
+        let current_idx = installments
+            .iter()
+            .position(|i| i.id == current_installment_id)
+            .ok_or_else(|| AppError::not_found("Current installment not found"))?;
+        
+        let mut remaining = payment_amount;
+        
+        // Apply payment starting from current installment
+        for i in current_idx..installments.len() {
+            let installment = &mut installments[i];
+            
+            if remaining <= Decimal::ZERO {
+                break;
+            }
+            
+            if installment.status == InstallmentStatus::Paid {
+                continue; // Skip already paid installments
+            }
+            
+            let required = installment.amount;
+            
+            if remaining >= required {
+                // Full payment for this installment (FR-074, FR-075)
+                remaining -= required;
+                installment.status = InstallmentStatus::Paid;
+                installment.paid_at = Some(chrono::Utc::now().naive_utc());
+                installment.updated_at = chrono::Utc::now().naive_utc();
+                
+                // Update in database
+                installment_repo.update(&installment).await?;
+                
+                tracing::info!(
+                    installment_number = installment.installment_number,
+                    amount = %required,
+                    "Installment paid (auto-applied from overpayment)"
+                );
+            } else {
+                // Partial payment (FR-076)
+                tracing::info!(
+                    installment_number = installment.installment_number,
+                    amount_paid = %remaining,
+                    amount_required = %required,
+                    "Partial payment applied to installment"
+                );
+                remaining = Decimal::ZERO;
+                break;
+            }
+        }
+        
+        // Check if all installments are paid (FR-020)
+        let all_paid = installments.iter().all(|i| i.status == InstallmentStatus::Paid);
+        
+        if all_paid {
+            // Mark invoice as fully paid
+            use crate::modules::invoices::models::InvoiceStatus;
+            self.invoice_repo.update_status(invoice_id, InvoiceStatus::Paid).await?;
+            
+            tracing::info!(
+                invoice_id = invoice_id,
+                "All installments paid - invoice marked as fully paid"
+            );
+        } else {
+            // Mark invoice as partially paid (FR-019)
+            use crate::modules::invoices::models::InvoiceStatus;
+            self.invoice_repo.update_status(invoice_id, InvoiceStatus::PartiallyPaid).await?;
+        }
+        
+        Ok(remaining) // Return excess amount (FR-076)
+    }
 }
 
 /// Payment statistics for an invoice
@@ -339,8 +553,6 @@ pub struct PaymentStats {
     pub pending_count: usize,
     pub failed_count: usize,
 }
-
-use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests {

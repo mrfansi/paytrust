@@ -62,6 +62,18 @@ impl PaymentGateway for MidtransClient {
             _ => request.amount.round_dp(2),
         };
 
+        // Build item name with installment info if present (T098)
+        let item_name = if let Some(ref installment_info) = request.installment_info {
+            format!(
+                "{} - Installment {}/{}",
+                request.description,
+                installment_info.installment_number,
+                installment_info.total_installments
+            )
+        } else {
+            request.description.clone()
+        };
+
         // Build Midtrans transaction request
         let midtrans_request = json!({
             "transaction_details": {
@@ -72,7 +84,7 @@ impl PaymentGateway for MidtransClient {
                 "id": "item-1",
                 "price": amount.to_string(),
                 "quantity": 1,
-                "name": request.description
+                "name": item_name
             }],
             "customer_details": {
                 "email": request.payer_email,

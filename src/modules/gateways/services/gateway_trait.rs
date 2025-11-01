@@ -45,6 +45,25 @@ pub struct PaymentRequest {
     
     /// Failure redirect URL
     pub failure_redirect_url: Option<String>,
+    
+    /// Installment information (optional) - FR-065, FR-066, FR-067
+    pub installment_info: Option<InstallmentInfo>,
+}
+
+/// Installment information for payment requests
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallmentInfo {
+    /// Installment schedule ID
+    pub installment_id: String,
+    
+    /// Installment number (1, 2, 3, etc.)
+    pub installment_number: i32,
+    
+    /// Total number of installments
+    pub total_installments: i32,
+    
+    /// Description for this installment
+    pub description_suffix: String,
 }
 
 /// Payment response from gateway

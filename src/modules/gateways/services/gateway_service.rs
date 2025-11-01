@@ -2,6 +2,7 @@ use super::gateway_trait::{PaymentGateway, PaymentRequest, PaymentResponse, Webh
 use super::{MidtransClient, XenditClient};
 use crate::core::{AppError, Currency, Result};
 use crate::modules::gateways::repositories::GatewayRepository;
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -127,6 +128,75 @@ impl GatewayService {
     ) -> Result<WebhookPayload> {
         let gateway = self.get_gateway(gateway_id)?;
         gateway.process_webhook(payload).await
+    }
+
+    /// Create installment payment (T096 - FR-065, FR-066, FR-067)
+    ///
+    /// Creates a separate payment transaction for a specific installment.
+    /// Each installment gets its own payment URL and gateway reference.
+    ///
+    /// # Arguments
+    /// * `gateway_id` - Gateway identifier
+    /// * `invoice_id` - Invoice ID
+    /// * `installment_id` - Installment schedule ID
+    /// * `installment_number` - Installment number (1, 2, 3, etc.)
+    /// * `total_installments` - Total number of installments
+    /// * `amount` - Installment amount
+    /// * `currency` - Currency
+    /// * `description` - Base description
+    ///
+    /// # Returns
+    /// * `Result<PaymentResponse>` - Payment response with installment-specific URL
+    pub async fn create_installment_payment(
+        &self,
+        gateway_id: &str,
+        invoice_id: String,
+        installment_id: String,
+        installment_number: i32,
+        total_installments: i32,
+        amount: Decimal,
+        currency: Currency,
+        description: String,
+    ) -> Result<PaymentResponse> {
+        let gateway = self.get_gateway(gateway_id)?;
+
+        // Validate currency support (FR-046)
+        if !gateway.supports_currency(currency) {
+            return Err(AppError::validation(format!(
+                "Gateway '{}' does not support currency '{}'",
+                gateway_id,
+                currency.to_string()
+            )));
+        }
+
+        // Create installment-specific external ID (FR-066)
+        let external_id = format!("{}-installment-{}", invoice_id, installment_number);
+        
+        // Create installment description
+        let installment_description = format!(
+            "{} (Installment {}/{})",
+            description, installment_number, total_installments
+        );
+
+        // Build payment request with installment info
+        let request = PaymentRequest {
+            external_id,
+            amount,
+            currency,
+            description: installment_description,
+            payer_email: None,
+            success_redirect_url: None,
+            failure_redirect_url: None,
+            installment_info: Some(super::gateway_trait::InstallmentInfo {
+                installment_id: installment_id.clone(),
+                installment_number,
+                total_installments,
+                description_suffix: format!("Installment {}/{}", installment_number, total_installments),
+            }),
+        };
+
+        // Create payment through gateway (FR-065)
+        gateway.create_payment(request).await
     }
 
     /// List all available gateways

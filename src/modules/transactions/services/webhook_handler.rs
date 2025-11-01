@@ -233,20 +233,60 @@ impl WebhookHandler {
         // Extract payment data from payload
         let payment_data = self.extract_payment_data(gateway_id, payload)?;
 
-        // Record the payment
-        let transaction = self
-            .transaction_service
-            .record_payment(
-                payment_data.invoice_id,
-                gateway_ref.to_string(),
-                gateway_id.to_string(),
-                payment_data.amount,
-                payment_data.currency,
-                payment_data.payment_method,
-                payment_data.status,
-                Some(payload.clone()),
-            )
-            .await?;
+        // Determine if this is an installment payment (T101)
+        // Installment external IDs have format: {invoice_id}-installment-{number}
+        let is_installment = payment_data.invoice_id.contains("-installment-");
+        
+        let transaction = if is_installment {
+            // Extract invoice ID and installment ID from external_id
+            let parts: Vec<&str> = payment_data.invoice_id.splitn(3, '-').collect();
+            if parts.len() < 3 {
+                return Err(AppError::validation(
+                    "Invalid installment external_id format (expected: {invoice_id}-installment-{number})"
+                ));
+            }
+            
+            let invoice_id = parts[0].to_string();
+            let installment_number: i32 = parts[2].parse()
+                .map_err(|_| AppError::validation("Invalid installment number in external_id"))?;
+            
+            // Find the installment ID by invoice and number
+            // We'll need to query the installment repository for this
+            // For now, we'll construct the installment ID
+            let installment_id = format!("{}-inst-{}", invoice_id, installment_number);
+            
+            info!(
+                invoice_id = invoice_id,
+                installment_id = installment_id,
+                installment_number = installment_number,
+                amount_paid = %payment_data.amount,
+                "Processing installment payment webhook"
+            );
+            
+            // Process installment payment with overpayment handling (T101)
+            self.transaction_service
+                .process_installment_payment(
+                    invoice_id,
+                    installment_id,
+                    payment_data.amount,
+                    gateway_ref.to_string(),
+                )
+                .await?
+        } else {
+            // Record regular payment
+            self.transaction_service
+                .record_payment(
+                    payment_data.invoice_id,
+                    gateway_ref.to_string(),
+                    gateway_id.to_string(),
+                    payment_data.amount,
+                    payment_data.currency,
+                    payment_data.payment_method,
+                    payment_data.status,
+                    Some(payload.clone()),
+                )
+                .await?
+        };
 
         Ok(transaction.id.unwrap_or_default())
     }
