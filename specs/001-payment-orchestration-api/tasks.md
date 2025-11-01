@@ -303,7 +303,7 @@
 - [x] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [x] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
 - [x] T128 [P] Generate OpenAPI documentation endpoint in actix-web serving `contracts/openapi.yaml`
-- [ ] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
+- [x] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
 - [x] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
 ### Code Quality
@@ -315,7 +315,7 @@
 
 ### Security & Performance
 
-- [ ] T134 Security audit: validate all input sanitization and SQL injection prevention (sqlx compile-time checks)
+- [x] T134 Security audit: validate all input sanitization and SQL injection prevention (sqlx compile-time checks) - 3 vulnerabilities found and fixed: API key hashing, error disclosure, webhook secret exposure
 - [ ] T135 Performance optimization: add database indexes per data-model.md (already in migration 007)
 - [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001)
 - [ ] T137 Load testing: verify 100 concurrent requests handling (NFR-002)

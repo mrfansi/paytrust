@@ -100,27 +100,47 @@ pub struct ApiKeyRecord {
 }
 
 async fn validate_api_key(pool: &MySqlPool, api_key: &str) -> crate::core::Result<ApiKeyRecord> {
-    // Hash the provided API key for comparison
-    // Note: In production, you'd use a more sophisticated lookup mechanism
-    // For now, we'll look up by key_hash directly
+    // Fetch all active API keys to verify against Argon2 hashes
+    // Note: This is necessary because Argon2 hashes include random salts,
+    // so we can't do a direct database comparison. We must verify each hash.
+    
+    #[derive(sqlx::FromRow)]
+    struct ApiKeyWithHash {
+        id: String,
+        merchant_id: String,
+        key_hash: String,
+        rate_limit: i32,
+        is_active: bool,
+    }
 
-    let record = sqlx::query_as::<_, ApiKeyRecord>(
+    let candidates = sqlx::query_as::<_, ApiKeyWithHash>(
         r#"
-        SELECT id, merchant_id, rate_limit, is_active
+        SELECT id, merchant_id, key_hash, rate_limit, is_active
         FROM api_keys
-        WHERE key_hash = ? AND is_active = TRUE
-        LIMIT 1
+        WHERE is_active = TRUE
         "#,
     )
-    .bind(api_key) // In production, this should be hashed
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await
-    .map_err(AppError::Database)?
-    .ok_or_else(|| AppError::unauthorized("Invalid API key"))?;
+    .map_err(AppError::Database)?;
 
-    if !record.is_active {
-        return Err(AppError::unauthorized("API key is inactive"));
+    // Verify API key against each hash until we find a match
+    let mut matched_record: Option<ApiKeyRecord> = None;
+    
+    for candidate in candidates {
+        if verify_api_key(api_key, &candidate.key_hash)? {
+            matched_record = Some(ApiKeyRecord {
+                id: candidate.id,
+                merchant_id: candidate.merchant_id,
+                rate_limit: candidate.rate_limit,
+                is_active: candidate.is_active,
+            });
+            break;
+        }
     }
+    
+    let record = matched_record
+        .ok_or_else(|| AppError::unauthorized("Invalid API key"))?;
 
     // Update last_used_at timestamp (fire and forget)
     let _ = sqlx::query("UPDATE api_keys SET last_used_at = NOW() WHERE id = ?")

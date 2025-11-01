@@ -104,6 +104,10 @@ path = "tests/contract/invoice_api_test.rs"
 name = "installment_api_test"
 path = "tests/contract/installment_api_test.rs"
 
+[[test]]
+name = "openapi_validation_test"
+path = "tests/contract/openapi_validation_test.rs"
+
 # Integration Tests
 [[test]]
 name = "payment_flow_test"

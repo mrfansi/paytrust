@@ -55,7 +55,42 @@ pub enum AppError {
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         let status_code = self.status_code();
-        let error_message = self.to_string();
+        
+        // Sanitize error messages to prevent information disclosure
+        let error_message = match self {
+            // Return detailed messages for client errors (4xx)
+            AppError::Validation(msg) => msg.clone(),
+            AppError::NotFound(msg) => msg.clone(),
+            AppError::Unauthorized(msg) => msg.clone(),
+            AppError::RateLimitExceeded(msg) => msg.clone(),
+            AppError::Conflict(msg) => msg.clone(),
+            
+            // Sanitize server errors (5xx) - don't expose internal details
+            AppError::Database(_) => "A database error occurred".to_string(),
+            AppError::Configuration(_) => "A configuration error occurred".to_string(),
+            AppError::Internal(_) => "An internal server error occurred".to_string(),
+            
+            // Gateway errors may contain sensitive API details
+            AppError::Gateway(_) => "A payment gateway error occurred".to_string(),
+            AppError::HttpClient(_) => "An external service error occurred".to_string(),
+            
+            // JSON errors usually contain request details (safe to return)
+            AppError::Json(err) => format!("Invalid JSON: {}", err),
+        };
+
+        // Log full error for debugging (with tracing)
+        match self {
+            AppError::Database(e) => {
+                tracing::error!(error = %e, "Database error occurred");
+            }
+            AppError::Gateway(e) => {
+                tracing::error!(error = %e, "Gateway error occurred");
+            }
+            AppError::Internal(e) => {
+                tracing::error!(error = %e, "Internal error occurred");
+            }
+            _ => {}
+        }
 
         HttpResponse::build(status_code).json(serde_json::json!({
             "error": {

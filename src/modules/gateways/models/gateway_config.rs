@@ -19,6 +19,7 @@ pub struct PaymentGatewayConfig {
     #[serde(skip)]
     pub api_key_encrypted: Vec<u8>,
 
+    #[serde(skip)]
     pub webhook_secret: String,
     pub webhook_url: String,
     pub is_active: bool,
