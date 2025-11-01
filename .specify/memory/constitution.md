@@ -1,11 +1,12 @@
 <!--
 Sync Impact Report:
-- Version change: Template → 1.0.0
-- Added principles: Standard Library First, SOLID Architecture, Test-First Development,
-  MySQL Integration, Environment Management
-- Added sections: Technology Stack Constraints, Development Standards
+- Version change: 1.0.0 → 1.1.0
+- Added principles: Context7 MCP Documentation (new VI)
+- Modified principles: None (existing principles unchanged)
+- Added sections: None
+- Removed sections: None
 - Templates updated: ✅ Updated (this constitution aligns with existing templates)
-- Follow-up TODOs: None (ratification date established as today)
+- Follow-up TODOs: None
 -->
 
 # PayTrust Constitution
@@ -62,6 +63,18 @@ and production environments with clear separation of concerns.
 **Rationale**: Enables seamless deployment across environments, prevents configuration drift,
 supports secure credential management, and maintains development productivity.
 
+### VI. Context7 MCP Documentation (NON-NEGOTIABLE)
+
+All documentation lookups, API references, and library integrations MUST use Context7 MCP
+to fetch up-to-date, version-specific documentation directly from source. No reliance on
+potentially outdated cached documentation or hallucinated API information. Context7 MCP
+MUST be configured in development environment and used for all external library research,
+integration guidance, and code examples.
+
+**Rationale**: Eliminates outdated documentation issues, prevents integration errors from
+deprecated APIs, ensures access to latest features and security updates, and maintains
+accuracy of external library usage patterns.
+
 ## Technology Stack Constraints
 
 **Language**: Rust 1.75+ with 2021 edition features
@@ -92,4 +105,4 @@ migration plan to eventual compliance.
 Amendment procedure: Proposed changes require documentation of impact, approval from
 technical leadership, and update of all dependent templates and guidance documents.
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
+**Version**: 1.1.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
