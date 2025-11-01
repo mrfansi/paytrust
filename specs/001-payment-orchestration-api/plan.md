@@ -11,8 +11,8 @@ PayTrust is a payment orchestration platform that unifies multiple payment gatew
 
 ## Technical Context
 
-**Language/Version**: Rust 1.75+ with 2021 edition features  
-**Primary Dependencies**: NEEDS CLARIFICATION (HTTP server framework, MySQL driver, JSON serialization)  
+**Language/Version**: Rust 1.91.0+ (stable as of November 2025) with 2021 edition features  
+**Primary Dependencies**: actix-web 4.9+, tokio 1.40+, sqlx 0.8.x, reqwest 0.12.x, rust_decimal 1.36+ (Verified November 2025)  
 **Storage**: MySQL 8.0+ with InnoDB storage engine  
 **Testing**: cargo test with custom test harnesses for integration tests  
 **Target Platform**: Linux server (RESTful API backend)  

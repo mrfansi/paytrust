@@ -4,17 +4,19 @@ Auto-generated from all feature plans. Last updated: 2025-11-01
 
 ## Active Technologies
 
-- Rust 1.75+ with 2021 edition features (001-payment-orchestration-api)
+- Rust 1.91.0+ (stable Nov 2025) with 2021 edition features (001-payment-orchestration-api)
 - MySQL 8.0+ with InnoDB storage engine (001-payment-orchestration-api)
-- actix-web 4.x - HTTP server with Tokio async runtime (001-payment-orchestration-api)
-- sqlx 0.7.x - Async MySQL driver with compile-time query checking (001-payment-orchestration-api)
-- serde 1.x with serde_json - JSON serialization (001-payment-orchestration-api)
-- dotenvy 0.15.x - Environment configuration (001-payment-orchestration-api)
-- thiserror 1.x - Custom error types (001-payment-orchestration-api)
-- tracing 0.1.x with tracing-subscriber - Structured logging (001-payment-orchestration-api)
-- reqwest 0.11.x - HTTP client for payment gateway integration (001-payment-orchestration-api)
-- rust_decimal 1.x - Financial arithmetic with precision (001-payment-orchestration-api)
-- governor 0.6.x - In-memory rate limiting (001-payment-orchestration-api)
+- actix-web 4.9+ - HTTP server with rustls 0.23 TLS (001-payment-orchestration-api)
+- tokio 1.40+ - Async runtime with improved scheduler (001-payment-orchestration-api)
+- sqlx 0.8.x - Async MySQL driver with enhanced compile-time checking (001-payment-orchestration-api)
+- serde 1.0.210+ with serde_json 1.0.130+ - JSON serialization (001-payment-orchestration-api)
+- dotenvy 0.15.7 - Environment configuration (001-payment-orchestration-api)
+- thiserror 1.0.60+ - Custom error types (001-payment-orchestration-api)
+- tracing 0.1.40+ with tracing-subscriber 0.3.18+ - Structured logging (001-payment-orchestration-api)
+- reqwest 0.12.x - HTTP client with auto-scaling connection pools (001-payment-orchestration-api)
+- rust_decimal 1.36+ - Financial arithmetic with arbitrary precision (001-payment-orchestration-api)
+- governor 0.7.x - Rate limiting with distributed support (001-payment-orchestration-api)
+- argon2 0.5+ - API key hashing (OWASP recommended) (001-payment-orchestration-api)
 
 ## Project Structure
 
@@ -85,4 +87,6 @@ Rust 1.75+ with 2021 edition features: Follow standard conventions
 - 001-payment-orchestration-api: Added Rust 1.75+ with 2021 edition features
 
 <!-- MANUAL ADDITIONS START -->
+
+- Dont write any summary documents in anything format
 <!-- MANUAL ADDITIONS END -->
