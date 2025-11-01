@@ -43,6 +43,14 @@ pub struct CreateLineItemRequest {
     
     /// Price per unit
     pub unit_price: rust_decimal::Decimal,
+    
+    /// Tax rate (e.g., 0.10 for 10%, optional)
+    #[serde(default)]
+    pub tax_rate: Option<rust_decimal::Decimal>,
+    
+    /// Tax category (e.g., "VAT", "GST", optional)
+    #[serde(default)]
+    pub tax_category: Option<String>,
 }
 
 /// Response for invoice operations
@@ -52,6 +60,9 @@ pub struct InvoiceResponse {
     pub external_id: String,
     pub gateway_id: String,
     pub currency: Currency,
+    pub subtotal: rust_decimal::Decimal,
+    pub tax_total: rust_decimal::Decimal,
+    pub service_fee: rust_decimal::Decimal,
     pub total: rust_decimal::Decimal,
     pub status: String,
     pub line_items: Vec<LineItemResponse>,
@@ -68,16 +79,29 @@ pub struct LineItemResponse {
     pub unit_price: rust_decimal::Decimal,
     pub currency: Currency,
     pub subtotal: rust_decimal::Decimal,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_rate: Option<rust_decimal::Decimal>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_amount: Option<rust_decimal::Decimal>,
 }
 
 impl From<Invoice> for InvoiceResponse {
     fn from(mut invoice: Invoice) -> Self {
+        let subtotal = invoice.get_subtotal();
+        let tax_total = invoice.tax_total.unwrap_or_default();
+        let service_fee = invoice.service_fee.unwrap_or_default();
         let total = invoice.get_total();
+        
         Self {
             id: invoice.id.unwrap_or_default(),
             external_id: invoice.external_id.clone(),
             gateway_id: invoice.gateway_id.clone(),
             currency: invoice.currency,
+            subtotal,
+            tax_total,
+            service_fee,
             total,
             status: invoice.status.to_string(),
             line_items: invoice
@@ -102,6 +126,9 @@ impl From<LineItem> for LineItemResponse {
             unit_price: line_item.unit_price,
             currency: line_item.currency,
             subtotal,
+            tax_rate: line_item.tax_rate,
+            tax_category: line_item.tax_category.clone(),
+            tax_amount: line_item.tax_amount,
         }
     }
 }
@@ -134,17 +161,30 @@ pub async fn create_invoice(
 ) -> Result<HttpResponse> {
     let service = InvoiceService::new(pool.get_ref().clone());
 
-    // Convert request line items to domain models
+    // Convert request line items to domain models with tax information (FR-057, FR-058)
     let line_items: Result<Vec<LineItem>> = request
         .line_items
         .iter()
         .map(|req| {
-            LineItem::new(
-                req.description.clone(),
-                req.quantity,
-                req.unit_price,
-                request.currency,
-            )
+            // If tax_rate is provided, create line item with tax
+            if let Some(tax_rate) = req.tax_rate {
+                LineItem::new_with_tax(
+                    req.description.clone(),
+                    req.quantity,
+                    req.unit_price,
+                    request.currency,
+                    tax_rate,
+                    req.tax_category.clone(),
+                )
+            } else {
+                // Otherwise create regular line item (zero tax)
+                LineItem::new(
+                    req.description.clone(),
+                    req.quantity,
+                    req.unit_price,
+                    request.currency,
+                )
+            }
         })
         .collect();
 

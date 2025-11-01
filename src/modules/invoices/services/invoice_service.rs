@@ -18,6 +18,8 @@ use crate::modules::invoices::{
     repositories::InvoiceRepository,
 };
 use crate::modules::gateways::repositories::GatewayRepository;
+use crate::modules::taxes::services::TaxCalculator;
+use rust_decimal::Decimal;
 
 /// Service for invoice business logic
 pub struct InvoiceService {
@@ -81,8 +83,18 @@ impl InvoiceService {
         // FR-046: Validate gateway supports the currency
         self.validate_gateway_currency(&gateway_id, currency).await?;
 
-        // Create invoice model (performs validation)
-        let invoice = Invoice::new(external_id.clone(), gateway_id, currency, line_items)?;
+        // Create invoice model (performs validation and locks tax rates - FR-061)
+        let mut invoice = Invoice::new(external_id.clone(), gateway_id.clone(), currency, line_items)?;
+
+        // FR-057, FR-058: Calculate tax total from locked line item taxes
+        invoice.calculate_tax_total();
+        
+        // FR-009, FR-047: Calculate service fee based on gateway configuration
+        let service_fee = self.calculate_service_fee_for_invoice(&gateway_id, invoice.subtotal.unwrap_or(Decimal::ZERO)).await?;
+        invoice.service_fee = Some(service_fee);
+        
+        // FR-055, FR-056: Calculate final total = subtotal + tax_total + service_fee
+        invoice.calculate_total();
 
         // Persist to database
         let created_invoice = self.invoice_repo.create(&invoice).await?;
@@ -90,6 +102,9 @@ impl InvoiceService {
         info!(
             invoice_id = created_invoice.id.as_ref().map(|s| s.as_str()),
             external_id = external_id.as_str(),
+            subtotal = %created_invoice.subtotal.unwrap_or_default(),
+            tax_total = %created_invoice.tax_total.unwrap_or_default(),
+            service_fee = %created_invoice.service_fee.unwrap_or_default(),
             total = %created_invoice.total.unwrap_or_default(),
             "Invoice created successfully"
         );
@@ -359,6 +374,36 @@ impl InvoiceService {
         }
 
         Ok(())
+    }
+
+    /// Calculate service fee for invoice based on gateway configuration (FR-009, FR-047)
+    /// 
+    /// Service fee is calculated as: (subtotal × gateway.fee_percentage) + gateway.fee_fixed
+    /// Tax is NOT included in the base for service fee calculation (FR-055)
+    /// 
+    /// # Arguments
+    /// * `gateway_id` - Payment gateway ID
+    /// * `subtotal` - Invoice subtotal (before taxes and fees)
+    /// 
+    /// # Returns
+    /// * `Result<Decimal>` - Calculated service fee
+    async fn calculate_service_fee_for_invoice(
+        &self,
+        gateway_id: &str,
+        subtotal: Decimal,
+    ) -> Result<Decimal> {
+        let gateway = self
+            .gateway_repo
+            .find_by_id(gateway_id)
+            .await?
+            .ok_or_else(|| {
+                AppError::validation(format!("Gateway '{}' not found", gateway_id))
+            })?;
+
+        // Use gateway's built-in service fee calculation
+        let service_fee = gateway.calculate_service_fee(subtotal);
+        
+        Ok(service_fee.round_dp(2))
     }
 }
 

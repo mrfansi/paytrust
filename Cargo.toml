@@ -71,6 +71,7 @@ futures-util = "0.3"
 [dev-dependencies]
 proptest = "1.5"
 mockito = "1.5"
+rust_decimal_macros = "1.36"
 
 # Unit Tests (Property-based)
 [[test]]
