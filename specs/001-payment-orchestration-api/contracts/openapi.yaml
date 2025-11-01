@@ -35,7 +35,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateInvoiceRequest'
+              $ref: "#/components/schemas/CreateInvoiceRequest"
             examples:
               singlePayment:
                 summary: Single payment invoice
@@ -65,18 +65,18 @@ paths:
                       - "3000000"
                       - "6100000"
       responses:
-        '201':
+        "201":
           description: Invoice created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InvoiceResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                $ref: "#/components/schemas/InvoiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
     get:
       summary: List invoices
@@ -85,20 +85,20 @@ paths:
       tags:
         - Invoices
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
         - name: status
           in: query
           schema:
-            $ref: '#/components/schemas/InvoiceStatus'
+            $ref: "#/components/schemas/InvoiceStatus"
           description: Filter by invoice status
         - name: currency
           in: query
           schema:
-            $ref: '#/components/schemas/Currency'
+            $ref: "#/components/schemas/Currency"
           description: Filter by currency
       responses:
-        '200':
+        "200":
           description: List of invoices
           content:
             application/json:
@@ -108,13 +108,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/InvoiceResponse'
+                      $ref: "#/components/schemas/InvoiceResponse"
                   pagination:
-                    $ref: '#/components/schemas/Pagination'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                    $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /invoices/{invoice_id}:
     get:
@@ -124,18 +124,18 @@ paths:
       tags:
         - Invoices
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+        - $ref: "#/components/parameters/InvoiceId"
       responses:
-        '200':
+        "200":
           description: Invoice details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InvoiceResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/InvoiceResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /invoices/{invoice_id}/installments:
     get:
@@ -145,9 +145,9 @@ paths:
       tags:
         - Installments
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+        - $ref: "#/components/parameters/InvoiceId"
       responses:
-        '200':
+        "200":
           description: Installment schedule
           content:
             application/json:
@@ -160,9 +160,9 @@ paths:
                   installments:
                     type: array
                     items:
-                      $ref: '#/components/schemas/InstallmentResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                      $ref: "#/components/schemas/InstallmentResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     patch:
       summary: Adjust unpaid installment amounts
@@ -173,7 +173,7 @@ paths:
       tags:
         - Installments
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+        - $ref: "#/components/parameters/InvoiceId"
       requestBody:
         required: true
         content:
@@ -204,7 +204,7 @@ paths:
                 - installment_number: 3
                   new_amount: "5100000"
       responses:
-        '200':
+        "200":
           description: Installments adjusted successfully
           content:
             application/json:
@@ -217,11 +217,11 @@ paths:
                   installments:
                     type: array
                     items:
-                      $ref: '#/components/schemas/InstallmentResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                      $ref: "#/components/schemas/InstallmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /invoices/{invoice_id}/transactions:
     get:
@@ -231,9 +231,9 @@ paths:
       tags:
         - Transactions
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+        - $ref: "#/components/parameters/InvoiceId"
       responses:
-        '200':
+        "200":
           description: Payment transactions
           content:
             application/json:
@@ -246,9 +246,9 @@ paths:
                   transactions:
                     type: array
                     items:
-                      $ref: '#/components/schemas/TransactionResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                      $ref: "#/components/schemas/TransactionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /invoices/{invoice_id}/reconciliation:
     get:
@@ -260,9 +260,9 @@ paths:
       tags:
         - Transactions
       parameters:
-        - $ref: '#/components/parameters/InvoiceId'
+        - $ref: "#/components/parameters/InvoiceId"
       responses:
-        '200':
+        "200":
           description: Reconciliation data
           content:
             application/json:
@@ -285,9 +285,9 @@ paths:
                   transactions:
                     type: array
                     items:
-                      $ref: '#/components/schemas/TransactionResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                      $ref: "#/components/schemas/TransactionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /webhooks/{gateway_name}:
     post:
@@ -298,7 +298,7 @@ paths:
       operationId: handleWebhook
       tags:
         - Webhooks
-      security: []  # No API key, uses webhook signature
+      security: [] # No API key, uses webhook signature
       parameters:
         - name: gateway_name
           in: path
@@ -314,7 +314,7 @@ paths:
               type: object
               description: Gateway-specific payload (varies by gateway)
       responses:
-        '200':
+        "200":
           description: Webhook processed successfully
           content:
             application/json:
@@ -324,9 +324,9 @@ paths:
                   status:
                     type: string
                     example: "received"
-        '401':
+        "401":
           description: Invalid webhook signature
-        '500':
+        "500":
           description: Processing error (gateway will retry)
 
   /reports/financial:
@@ -356,17 +356,17 @@ paths:
         - name: currency
           in: query
           schema:
-            $ref: '#/components/schemas/Currency'
+            $ref: "#/components/schemas/Currency"
           description: Filter by specific currency
       responses:
-        '200':
+        "200":
           description: Financial report
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FinancialReportResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                $ref: "#/components/schemas/FinancialReportResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /gateways:
     get:
@@ -376,7 +376,7 @@ paths:
       tags:
         - Gateways
       responses:
-        '200':
+        "200":
           description: List of payment gateways
           content:
             application/json:
@@ -386,7 +386,7 @@ paths:
                   gateways:
                     type: array
                     items:
-                      $ref: '#/components/schemas/GatewayResponse'
+                      $ref: "#/components/schemas/GatewayResponse"
 
 components:
   securitySchemes:
@@ -444,7 +444,7 @@ components:
         - line_items
       properties:
         currency:
-          $ref: '#/components/schemas/Currency'
+          $ref: "#/components/schemas/Currency"
         gateway_id:
           type: string
           format: uuid
@@ -513,7 +513,7 @@ components:
           type: string
           format: uuid
         currency:
-          $ref: '#/components/schemas/Currency'
+          $ref: "#/components/schemas/Currency"
         subtotal:
           type: string
           description: Sum of line item subtotals
@@ -527,9 +527,9 @@ components:
           type: string
           description: subtotal + tax_total + service_fee (FR-056)
         status:
-          $ref: '#/components/schemas/InvoiceStatus'
+          $ref: "#/components/schemas/InvoiceStatus"
         gateway:
-          $ref: '#/components/schemas/GatewayResponse'
+          $ref: "#/components/schemas/GatewayResponse"
         payment_url:
           type: string
           format: uri
@@ -569,7 +569,7 @@ components:
         installments:
           type: array
           items:
-            $ref: '#/components/schemas/InstallmentResponse'
+            $ref: "#/components/schemas/InstallmentResponse"
 
     InstallmentResponse:
       type: object
@@ -647,7 +647,7 @@ components:
             type: object
             properties:
               currency:
-                $ref: '#/components/schemas/Currency'
+                $ref: "#/components/schemas/Currency"
               gateway:
                 type: string
               total_amount:
@@ -661,7 +661,7 @@ components:
             type: object
             properties:
               currency:
-                $ref: '#/components/schemas/Currency'
+                $ref: "#/components/schemas/Currency"
               tax_rate:
                 type: string
               total_amount:
@@ -681,7 +681,7 @@ components:
         supported_currencies:
           type: array
           items:
-            $ref: '#/components/schemas/Currency'
+            $ref: "#/components/schemas/Currency"
         is_active:
           type: boolean
 
@@ -717,7 +717,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: "VALIDATION_ERROR"
@@ -731,7 +731,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: "UNAUTHORIZED"
@@ -742,7 +742,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: "NOT_FOUND"
@@ -758,7 +758,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: "RATE_LIMIT_EXCEEDED"

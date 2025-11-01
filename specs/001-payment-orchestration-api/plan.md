@@ -23,38 +23,45 @@ PayTrust is a payment orchestration platform that unifies multiple payment gatew
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. Standard Library First ✅
+
 - HTTP server, MySQL driver, JSON serialization require external crates (no std library equivalents)
 - **Action**: Research minimal dependency set with justification in Phase 0
 
 ### II. SOLID Architecture (NON-NEGOTIABLE) ⚠️
+
 - Modular design specified: payment, installment, tax, reporting modules
 - Repository pattern with trait abstractions required
 - **Action**: Phase 1 must define module boundaries and trait contracts
 
 ### III. Test-First Development (NON-NEGOTIABLE) ⚠️
+
 - TDD workflow mandatory: write tests → approve → fail → implement
 - Unit tests for business logic, integration tests for database, contract tests for API
 - **Action**: Phase 2 tasks must include test creation before implementation
 
 ### IV. MySQL Integration Standards ✅
+
 - Connection pooling, prepared statements, transactions required
 - Migrations with rollback capabilities
 - Repository pattern with trait definitions
 - **Action**: Phase 0 research MySQL driver options
 
 ### V. Environment Management (Laravel-Style) ✅
+
 - .env files with .env.example templates
 - Configuration at startup with validation
 - **Action**: Phase 1 quickstart includes .env setup
 
 ### VI. Context7 MCP Documentation (NON-NEGOTIABLE) ✅
+
 - All dependency research uses Context7 MCP for up-to-date documentation
 - **Action**: Use Context7 MCP in Phase 0 research
 
 ### VII. Modular Architecture ⚠️
+
 - Domain modules: invoices, installments, taxes, transactions, reports, gateways
 - Each module with models/, services/, repositories/, controllers/
 - Trait-based communication, no circular dependencies
@@ -232,6 +239,7 @@ Cargo.toml                           # Workspace configuration
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 No constitutional violations. All complexity is justified:
+
 - **Repository Pattern**: Required by Constitution IV (MySQL Integration Standards) for database abstraction and testing
 - **Modular Architecture**: Required by Constitution VII for domain separation and independent deployment
 - **External Dependencies**: Required for HTTP server, MySQL driver, JSON - no std library alternatives

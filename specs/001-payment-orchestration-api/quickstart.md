@@ -93,6 +93,7 @@ cargo build
 ```
 
 This will download and compile all dependencies defined in `Cargo.toml`:
+
 - actix-web (HTTP server)
 - sqlx (MySQL driver with async support)
 - serde/serde_json (JSON serialization)
@@ -221,7 +222,7 @@ Per Constitution Principle III, follow strict TDD:
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_invoice_calculates_totals_correctly() {
         // Arrange
@@ -238,10 +239,10 @@ mod tests {
             ],
             // ... other fields
         };
-        
+
         // Act
         let result = service.create_invoice(invoice).await;
-        
+
         // Assert
         assert!(result.is_ok());
         let invoice = result.unwrap();
@@ -261,19 +262,19 @@ pub async fn create_invoice(&self, request: CreateInvoiceRequest) -> Result<Invo
     let subtotal: Decimal = request.line_items.iter()
         .map(|item| item.quantity * item.unit_price)
         .sum();
-    
+
     // Calculate tax total (per-line-item, FR-058)
     let tax_total: Decimal = request.line_items.iter()
         .map(|item| (item.quantity * item.unit_price) * item.tax_rate)
         .sum();
-    
+
     // Calculate service fee (FR-047)
     let gateway = self.gateway_repo.find_by_id(&request.gateway_id).await?;
     let service_fee = (subtotal * gateway.fee_percentage) + gateway.fee_fixed;
-    
+
     // Total (FR-056)
     let total_amount = subtotal + tax_total + service_fee;
-    
+
     // ... create invoice
 }
 ```
@@ -287,6 +288,7 @@ pub async fn create_invoice(&self, request: CreateInvoiceRequest) -> Result<Invo
 Each module is self-contained. Example: developing installment module.
 
 **File Structure**:
+
 ```
 src/modules/installments/
 ├── mod.rs              # Public interface
@@ -376,7 +378,7 @@ Contract tests ensure API conforms to OpenAPI spec:
 #[actix_web::test]
 async fn test_create_invoice_contract() {
     let app = test::init_service(App::new().configure(configure_routes)).await;
-    
+
     let request_body = json!({
         "currency": "IDR",
         "gateway_id": "gateway-test",
@@ -389,17 +391,17 @@ async fn test_create_invoice_contract() {
             }
         ]
     });
-    
+
     let req = test::TestRequest::post()
         .uri("/v1/invoices")
         .insert_header(("X-API-Key", "test-key"))
         .set_json(&request_body)
         .to_request();
-    
+
     let resp = test::call_service(&app, req).await;
-    
+
     assert_eq!(resp.status(), 201);
-    
+
     let body: Value = test::read_body_json(resp).await;
     assert!(body.get("id").is_some());
     assert_eq!(body["currency"], "IDR");
@@ -437,18 +439,23 @@ pub trait PaymentGateway: Send + Sync {
 ### Debug Common Issues
 
 **Database Connection Error**:
+
 ```
 Error: Connection refused (os error 111)
 ```
+
 Solution: Check MySQL is running and DATABASE_URL is correct
 
 **Migration Error**:
+
 ```
 Error: Migration 001 already applied
 ```
+
 Solution: Check migration status with `sqlx migrate info`, revert if needed
 
 **Rate Limit Testing**:
+
 ```bash
 # Simulate rate limit
 for i in {1..1001}; do
@@ -473,6 +480,7 @@ let invoices_with_items = repo.find_with_line_items(invoice_ids).await?;
 ### Connection Pool Tuning
 
 In `.env`:
+
 ```env
 DATABASE_POOL_SIZE=10        # Minimum connections
 DATABASE_MAX_CONNECTIONS=20  # Maximum connections
@@ -525,6 +533,7 @@ sudo systemctl start paytrust
 ## Support
 
 For questions or issues:
+
 1. Check specification: `specs/001-payment-orchestration-api/spec.md`
 2. Review test cases for examples
 3. Consult OpenAPI contract for API details

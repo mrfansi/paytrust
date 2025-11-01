@@ -107,6 +107,7 @@
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() ON UPDATE | Last modification timestamp |
 
 **Indexes**:
+
 - PRIMARY KEY (id)
 - INDEX (merchant_id, status)
 - INDEX (merchant_id, created_at)
@@ -114,12 +115,14 @@
 - INDEX (original_invoice_id)
 
 **Validation Rules** (from spec):
+
 - FR-051: is_immutable set to true once payment initiated
 - FR-052: Reject modifications when is_immutable = true (except unpaid installments)
 - FR-044: expires_at default = created_at + 24 hours
 - FR-081: Reject line item additions when is_immutable = true
 
 **State Transitions**:
+
 ```
 draft → pending (payment initiated)
 pending → partially_paid (first installment paid or partial payment)
@@ -151,16 +154,19 @@ partially_paid → expired (expires_at reached)
 | created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Creation timestamp |
 
 **Indexes**:
+
 - PRIMARY KEY (id)
 - INDEX (invoice_id)
 
 **Validation Rules** (from spec):
+
 - FR-001: Contains product name, quantity, unit price, subtotal
 - FR-005: subtotal = quantity × unit_price (calculated)
 - FR-057: Each line item has own tax_rate
 - FR-058: tax_amount = subtotal × tax_rate (calculated)
 
 **Calculation Formula**:
+
 ```rust
 subtotal = quantity * unit_price
 tax_amount = subtotal * tax_rate
@@ -190,12 +196,14 @@ tax_amount = subtotal * tax_rate
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() ON UPDATE | Last modification timestamp |
 
 **Indexes**:
+
 - PRIMARY KEY (id)
 - UNIQUE (invoice_id, installment_number)
 - INDEX (invoice_id, status)
 - INDEX (gateway_reference)
 
 **Validation Rules** (from spec):
+
 - FR-014: 2-12 installments allowed
 - FR-017: SUM(amount) = invoice.total_amount
 - FR-059: tax_amount = invoice.tax_total × (amount / invoice.total_amount)
@@ -206,6 +214,7 @@ tax_amount = subtotal * tax_rate
 - FR-077: Unpaid installments can be adjusted (paid cannot)
 
 **Proportional Distribution Formula**:
+
 ```rust
 installment_tax = total_tax * (installment_amount / total_amount)
 installment_service_fee = total_service_fee * (installment_amount / total_amount)
@@ -215,6 +224,7 @@ last_installment_amount = total_amount - sum(previous_installment_amounts)
 ```
 
 **State Transitions**:
+
 ```
 unpaid → paid (payment received via webhook)
 unpaid → overdue (due_date passed without payment)
@@ -241,6 +251,7 @@ unpaid → overdue (due_date passed without payment)
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() ON UPDATE | Last update timestamp |
 
 **Indexes**:
+
 - PRIMARY KEY (id)
 - UNIQUE (gateway_transaction_ref)
 - INDEX (invoice_id)
@@ -248,12 +259,14 @@ unpaid → overdue (due_date passed without payment)
 - INDEX (status, created_at)
 
 **Validation Rules** (from spec):
+
 - FR-030: Store complete transaction history with timestamps, amounts, gateway responses
 - FR-032: Idempotent requests via gateway_transaction_ref uniqueness
 - FR-048: Accept partial payments (amount_paid != invoice.total_amount)
 - FR-073: Accept overpayments on installments
 
 **Overpayment Handling** (FR-074, FR-075, FR-076):
+
 ```
 IF amount_paid > installment.amount:
     excess = amount_paid - installment.amount
@@ -286,16 +299,19 @@ IF amount_paid > installment.amount:
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() ON UPDATE | Last update timestamp |
 
 **Indexes**:
+
 - PRIMARY KEY (id)
 - UNIQUE (name, environment)
 
 **Validation Rules** (from spec):
+
 - FR-007: Developer chooses gateway per invoice
 - FR-046: Validate gateway supports invoice currency
 - FR-009: fee_percentage and fee_fixed for service fee calculation
 - FR-047: Service fee = (subtotal × fee_percentage) + fee_fixed
 
 **Service Fee Calculation**:
+
 ```rust
 service_fee = (invoice.subtotal * gateway.fee_percentage) + gateway.fee_fixed
 ```
@@ -319,17 +335,20 @@ service_fee = (invoice.subtotal * gateway.fee_percentage) + gateway.fee_fixed
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() ON UPDATE | Last update timestamp |
 
 **Indexes**:
+
 - PRIMARY KEY (id)
 - UNIQUE (key_hash)
 - INDEX (merchant_id)
 
 **Validation Rules** (from spec):
+
 - FR-033: Authenticate via X-API-Key header
 - FR-037: Reject invalid/missing keys with 401
 - FR-040: Enforce rate_limit (default 1000 req/min)
 - FR-041: Return 429 when exceeded
 
 **Rate Limiting Algorithm**:
+
 ```
 Sliding window: track request timestamps per key
 IF requests_in_last_minute >= rate_limit:
@@ -345,6 +364,7 @@ IF requests_in_last_minute >= rate_limit:
 **Note**: Tax data primarily stored in LineItem.tax_amount and InstallmentSchedule.tax_amount. This entity/view used for reporting only.
 
 **Report Structure** (from FR-063, FR-064):
+
 ```json
 {
   "tax_breakdown": [
@@ -371,8 +391,9 @@ IF requests_in_last_minute >= rate_limit:
 ```
 
 **Query Pattern**:
+
 ```sql
-SELECT 
+SELECT
     i.currency,
     li.tax_rate,
     SUM(li.tax_amount) as total_amount,
@@ -429,6 +450,7 @@ ORDER BY i.currency, li.tax_rate;
 ## Database Migrations
 
 **Migration Order**:
+
 1. `001_create_payment_gateways_table.sql` - Independent table
 2. `002_create_api_keys_table.sql` - Independent table (merchant FK external)
 3. `003_create_invoices_table.sql` - References payment_gateways
@@ -446,40 +468,40 @@ ORDER BY i.currency, li.tax_rate;
 ### Foreign Key Constraints
 
 ```sql
-ALTER TABLE line_items 
-ADD CONSTRAINT fk_line_items_invoice 
-FOREIGN KEY (invoice_id) REFERENCES invoices(id) 
+ALTER TABLE line_items
+ADD CONSTRAINT fk_line_items_invoice
+FOREIGN KEY (invoice_id) REFERENCES invoices(id)
 ON DELETE CASCADE;
 
-ALTER TABLE installment_schedules 
-ADD CONSTRAINT fk_installments_invoice 
-FOREIGN KEY (invoice_id) REFERENCES invoices(id) 
+ALTER TABLE installment_schedules
+ADD CONSTRAINT fk_installments_invoice
+FOREIGN KEY (invoice_id) REFERENCES invoices(id)
 ON DELETE CASCADE;
 
-ALTER TABLE payment_transactions 
-ADD CONSTRAINT fk_transactions_invoice 
-FOREIGN KEY (invoice_id) REFERENCES invoices(id) 
+ALTER TABLE payment_transactions
+ADD CONSTRAINT fk_transactions_invoice
+FOREIGN KEY (invoice_id) REFERENCES invoices(id)
 ON DELETE RESTRICT;
 
-ALTER TABLE payment_transactions 
-ADD CONSTRAINT fk_transactions_installment 
-FOREIGN KEY (installment_id) REFERENCES installment_schedules(id) 
+ALTER TABLE payment_transactions
+ADD CONSTRAINT fk_transactions_installment
+FOREIGN KEY (installment_id) REFERENCES installment_schedules(id)
 ON DELETE SET NULL;
 ```
 
 ### Check Constraints
 
 ```sql
-ALTER TABLE line_items 
+ALTER TABLE line_items
 ADD CONSTRAINT chk_quantity_positive CHECK (quantity > 0);
 
-ALTER TABLE line_items 
+ALTER TABLE line_items
 ADD CONSTRAINT chk_tax_rate_range CHECK (tax_rate >= 0 AND tax_rate <= 1);
 
-ALTER TABLE installment_schedules 
+ALTER TABLE installment_schedules
 ADD CONSTRAINT chk_installment_number_positive CHECK (installment_number > 0);
 
-ALTER TABLE invoices 
+ALTER TABLE invoices
 ADD CONSTRAINT chk_valid_status CHECK (status IN ('draft', 'pending', 'partially_paid', 'paid', 'failed', 'expired'));
 ```
 
