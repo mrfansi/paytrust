@@ -465,14 +465,14 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 150  
+**Total Tasks**: 151  
 **Setup**: 6 tasks  
 **Foundational**: 24 tasks (BLOCKING)  
 **User Story 1 (P1 - MVP)**: 28 tasks (8 tests + 20 implementation)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 26 tasks (8 tests + 18 implementation)  
 **User Story 4 (P4)**: 20 tasks (5 tests + 15 implementation)  
-**Polish**: 25 tasks
+**Polish**: 26 tasks
 
 **Parallel Opportunities**: ~60 tasks can run in parallel (marked with [P])
 
