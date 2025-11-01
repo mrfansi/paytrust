@@ -15,6 +15,7 @@ use crate::modules::invoices::{
     models::{Invoice, LineItem},
     services::InvoiceService,
 };
+use crate::modules::installments::models::InstallmentConfig;
 
 /// Request to create an invoice
 #[derive(Debug, Deserialize)]
@@ -30,6 +31,10 @@ pub struct CreateInvoiceRequest {
     
     /// Line items (must have at least one)
     pub line_items: Vec<CreateLineItemRequest>,
+    
+    /// Installment configuration (T093: 2-12 installments, optional)
+    #[serde(default)]
+    pub installment_config: Option<InstallmentConfig>,
 }
 
 /// Request to create a line item
@@ -190,13 +195,14 @@ pub async fn create_invoice(
 
     let line_items = line_items?;
 
-    // Create invoice
+    // Create invoice with optional installment configuration (T093)
     let invoice = service
         .create_invoice(
             request.external_id.clone(),
             request.gateway_id.clone(),
             request.currency,
             line_items,
+            request.installment_config.clone(),
         )
         .await?;
 

@@ -18,6 +18,10 @@ use crate::modules::invoices::{
     repositories::InvoiceRepository,
 };
 use crate::modules::gateways::repositories::GatewayRepository;
+use crate::modules::installments::{
+    models::InstallmentConfig,
+    services::InstallmentService,
+};
 use crate::modules::taxes::services::TaxCalculator;
 use rust_decimal::Decimal;
 
@@ -25,6 +29,7 @@ use rust_decimal::Decimal;
 pub struct InvoiceService {
     invoice_repo: InvoiceRepository,
     gateway_repo: GatewayRepository,
+    installment_service: InstallmentService,
 }
 
 impl InvoiceService {
@@ -32,7 +37,8 @@ impl InvoiceService {
     pub fn new(pool: MySqlPool) -> Self {
         Self {
             invoice_repo: InvoiceRepository::new(pool.clone()),
-            gateway_repo: GatewayRepository::new(pool),
+            gateway_repo: GatewayRepository::new(pool.clone()),
+            installment_service: InstallmentService::new(pool),
         }
     }
 
@@ -43,6 +49,7 @@ impl InvoiceService {
     /// * `gateway_id` - Payment gateway to use
     /// * `currency` - Invoice currency
     /// * `line_items` - List of line items
+    /// * `installment_config` - Optional installment configuration (FR-014)
     /// 
     /// # Returns
     /// * `Result<Invoice>` - Created invoice
@@ -50,6 +57,7 @@ impl InvoiceService {
     /// # Business Rules
     /// - FR-001: Validates all invoice and line item data
     /// - FR-007: Ensures all line items match invoice currency
+    /// - FR-014: Supports 2-12 installments if config provided
     /// - FR-044: Sets expiration to 24 hours from creation
     /// - FR-046: Validates gateway supports the currency
     /// - External ID must be unique per merchant
@@ -59,6 +67,7 @@ impl InvoiceService {
         gateway_id: String,
         currency: Currency,
         line_items: Vec<LineItem>,
+        installment_config: Option<InstallmentConfig>,
     ) -> Result<Invoice> {
         info!(
             external_id = external_id.as_str(),
@@ -98,6 +107,36 @@ impl InvoiceService {
 
         // Persist to database
         let created_invoice = self.invoice_repo.create(&invoice).await?;
+        
+        // T093: Create installment schedules if configuration provided
+        if let Some(config) = installment_config {
+            let invoice_id = created_invoice.id.clone().unwrap_or_default();
+            let subtotal = created_invoice.subtotal.unwrap_or_default();
+            let tax_total = created_invoice.tax_total.unwrap_or_default();
+            let service_fee = created_invoice.service_fee.unwrap_or_default();
+            
+            // Calculate first installment due date (24 hours from now, matching invoice expiration)
+            let start_date = chrono::Utc::now()
+                .checked_add_signed(chrono::Duration::hours(24))
+                .ok_or_else(|| AppError::Internal("Failed to calculate start date".to_string()))?
+                .date_naive();
+            
+            // Create installment schedules
+            let _schedules = self.installment_service.create_schedule(
+                invoice_id.clone(),
+                subtotal,
+                tax_total,
+                service_fee,
+                config,
+                currency,
+                start_date,
+            ).await?;
+            
+            info!(
+                invoice_id = invoice_id.as_str(),
+                "Installment schedules created successfully"
+            );
+        }
         
         info!(
             invoice_id = created_invoice.id.as_ref().map(|s| s.as_str()),

@@ -214,7 +214,7 @@
 
 **Invoice Module Updates**
 
-- [ ] T093 [US3] Update InvoiceService to support installment configuration at creation (count, custom_amounts)
+- [x] T093 [US3] Update InvoiceService to support installment configuration at creation (count, custom_amounts)
 - [ ] T094 [US3] Update InvoiceService to handle partially_paid status when first installment paid (FR-019)
 - [ ] T095 [US3] Update InvoiceService to mark fully_paid when all installments complete (FR-020)
 
