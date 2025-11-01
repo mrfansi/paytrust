@@ -131,10 +131,10 @@
 
 **Integration & Error Handling**
 
-- [ ] T055 [US1] Implement pessimistic locking for concurrent payment requests (FR-053, FR-054)
-- [ ] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
-- [ ] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
-- [ ] T058 [US1] Add logging for all invoice and payment operations using tracing
+- [x] T055 [US1] Implement pessimistic locking for concurrent payment requests (FR-053, FR-054)
+- [x] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
+- [x] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
+- [x] T058 [US1] Add logging for all invoice and payment operations using tracing
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - developers can create invoices, process payments, receive webhooks, and query status. This is MVP ready.
 

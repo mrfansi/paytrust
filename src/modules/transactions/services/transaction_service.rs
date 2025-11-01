@@ -26,9 +26,10 @@ impl TransactionService {
         }
     }
 
-    /// Record a payment transaction (FR-030)
+    /// Record a payment transaction (FR-030) with pessimistic locking (FR-053, FR-054)
     ///
-    /// Creates a transaction record and updates invoice status if payment is complete
+    /// Creates a transaction record and updates invoice status if payment is complete.
+    /// Uses pessimistic locking to prevent concurrent payment processing.
     ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID
@@ -42,6 +43,9 @@ impl TransactionService {
     ///
     /// # Returns
     /// * `Result<PaymentTransaction>` - Created or existing transaction
+    ///
+    /// # Errors
+    /// * `409 Conflict` - If payment is already in progress for this invoice (FR-054)
     pub async fn record_payment(
         &self,
         invoice_id: String,
@@ -53,12 +57,43 @@ impl TransactionService {
         status: TransactionStatus,
         gateway_response: Option<serde_json::Value>,
     ) -> Result<PaymentTransaction> {
-        // Verify invoice exists
-        let invoice = self
-            .invoice_repo
-            .find_by_id(&invoice_id)
+        // Check for idempotency first (before acquiring lock)
+        if let Some(existing) = self
+            .transaction_repo
+            .find_by_gateway_ref(&gateway_transaction_ref)
             .await?
-            .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
+        {
+            tracing::info!(
+                gateway_ref = gateway_transaction_ref,
+                transaction_id = existing.id,
+                "Transaction already exists (idempotent request)"
+            );
+            return Ok(existing);
+        }
+
+        // Start transaction with pessimistic locking (FR-053)
+        let pool = self.transaction_repo.pool();
+        let mut tx = pool.begin().await
+            .map_err(|e| AppError::Internal(format!("Failed to start transaction: {}", e)))?;
+
+        // Acquire lock on invoice (FOR UPDATE)
+        let invoice = crate::modules::invoices::repositories::InvoiceRepository::find_by_id_for_update(
+            &mut tx,
+            &invoice_id,
+        )
+        .await?
+        .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
+
+        // Check if payment is already in progress (FR-054)
+        if invoice.status == crate::modules::invoices::models::InvoiceStatus::Processing {
+            tracing::warn!(
+                invoice_id = invoice_id,
+                "Payment already in progress for invoice"
+            );
+            return Err(AppError::Conflict(
+                "Payment already in progress for this invoice".to_string(),
+            ));
+        }
 
         // Verify currency matches
         if invoice.currency.to_string() != currency.to_string() {
@@ -84,10 +119,29 @@ impl TransactionService {
             transaction.update_status(status)?;
         }
 
-        // Save transaction (idempotent via gateway_transaction_ref)
-        let saved_transaction = self.transaction_repo.create(&transaction).await?;
+        // Save transaction within transaction
+        let saved_transaction = self.transaction_repo.create_with_tx(&transaction, &mut *tx).await?;
 
-        // Update invoice status if payment is completed
+        // Update invoice status to Processing (marks payment in progress)
+        if saved_transaction.status != TransactionStatus::Failed.to_string() {
+            sqlx::query(
+                r#"
+                UPDATE invoices
+                SET status = 'processing', updated_at = NOW()
+                WHERE id = ?
+                "#
+            )
+            .bind(&invoice_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to update invoice status: {}", e)))?;
+        }
+
+        // Commit transaction
+        tx.commit().await
+            .map_err(|e| AppError::Internal(format!("Failed to commit transaction: {}", e)))?;
+
+        // Update invoice status if payment is completed (outside the lock)
         if saved_transaction.is_completed() {
             self.update_invoice_status_after_payment(&invoice_id).await?;
         }

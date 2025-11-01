@@ -83,7 +83,7 @@ impl PaymentGateway for MidtransClient {
             }
         });
 
-        // Send request to Midtrans with Basic Auth (server_key as username, no password)
+        // Send request to Midtrans with Basic Auth (FR-038: Descriptive errors with gateway name)
         let response = self
             .client
             .post(&url)
@@ -93,24 +93,37 @@ impl PaymentGateway for MidtransClient {
             .json(&midtrans_request)
             .send()
             .await
-            .map_err(|e| AppError::Internal(format!("Midtrans API request failed: {}", e)))?;
+            .map_err(|e| {
+                // FR-038: Descriptive error with gateway name
+                if e.is_connect() || e.is_timeout() {
+                    AppError::gateway(format!(
+                        "Midtrans gateway unavailable: {} ({})",
+                        if e.is_timeout() { "timeout" } else { "connection failed" },
+                        e
+                    ))
+                } else {
+                    AppError::gateway(format!("Midtrans API request failed: {}", e))
+                }
+            })?;
 
         let status_code = response.status();
         let response_body = response
             .text()
             .await
-            .map_err(|e| AppError::Internal(format!("Failed to read Midtrans response: {}", e)))?;
+            .map_err(|e| AppError::gateway(format!("Failed to read Midtrans response: {}", e)))?;
 
         if !status_code.is_success() {
-            return Err(AppError::Internal(format!(
-                "Midtrans API error ({}): {}",
-                status_code, response_body
+            // FR-038: Return descriptive error with gateway name and error type
+            return Err(AppError::gateway(format!(
+                "Midtrans API error - HTTP {} ({})",
+                status_code.as_u16(),
+                response_body
             )));
         }
 
         // Parse Midtrans response
         let midtrans_response: MidtransSnapResponse = serde_json::from_str(&response_body)
-            .map_err(|e| AppError::Internal(format!("Failed to parse Midtrans response: {}", e)))?;
+            .map_err(|e| AppError::gateway(format!("Failed to parse Midtrans response: {}", e)))?;
 
         // Calculate expiration time (24 hours from now)
         let expires_at = chrono::Utc::now() + chrono::Duration::hours(24);

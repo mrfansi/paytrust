@@ -207,6 +207,59 @@ impl InvoiceRepository {
         Ok(Some(invoice_row.into_invoice(line_items)?))
     }
 
+    /// Find invoice by ID with pessimistic lock (FOR UPDATE) for payment processing (FR-053)
+    ///
+    /// This method locks the invoice row to prevent concurrent payment processing.
+    /// Must be called within a transaction.
+    ///
+    /// # Arguments
+    /// * `tx` - Database transaction
+    /// * `id` - Invoice ID
+    ///
+    /// # Returns
+    /// * `Result<Option<Invoice>>` - Locked invoice if found
+    pub async fn find_by_id_for_update(
+        tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
+        id: &str,
+    ) -> Result<Option<Invoice>> {
+        // Fetch invoice with pessimistic lock
+        let invoice_row = sqlx::query_as::<_, InvoiceRow>(
+            r#"
+            SELECT 
+                id, external_id, gateway_id, currency, total, status,
+                expires_at, created_at, updated_at
+            FROM invoices
+            WHERE id = ?
+            FOR UPDATE
+            "#
+        )
+        .bind(id)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to fetch invoice with lock: {}", e)))?;
+
+        let Some(invoice_row) = invoice_row else {
+            return Ok(None);
+        };
+
+        // Fetch line items
+        let line_items = sqlx::query_as::<_, LineItemRow>(
+            r#"
+            SELECT 
+                id, invoice_id, description, quantity, unit_price, currency, subtotal
+            FROM line_items
+            WHERE invoice_id = ?
+            ORDER BY id
+            "#
+        )
+        .bind(&invoice_row.id)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to fetch line items: {}", e)))?;
+
+        Ok(Some(invoice_row.into_invoice(line_items)?))
+    }
+
     /// List invoices with pagination
     /// 
     /// # Arguments

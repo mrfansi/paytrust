@@ -10,6 +10,7 @@
 
 use chrono::Utc;
 use sqlx::MySqlPool;
+use tracing::{info, warn, error};
 
 use crate::core::{AppError, Currency, Result};
 use crate::modules::invoices::{
@@ -57,8 +58,20 @@ impl InvoiceService {
         currency: Currency,
         line_items: Vec<LineItem>,
     ) -> Result<Invoice> {
+        info!(
+            external_id = external_id.as_str(),
+            gateway_id = gateway_id.as_str(),
+            currency = %currency,
+            line_items_count = line_items.len(),
+            "Creating new invoice"
+        );
+
         // Check external_id uniqueness
         if self.invoice_repo.exists_by_external_id(&external_id).await? {
+            warn!(
+                external_id = external_id.as_str(),
+                "Invoice creation failed - external_id already exists"
+            );
             return Err(AppError::validation(format!(
                 "Invoice with external_id '{}' already exists",
                 external_id
@@ -69,10 +82,19 @@ impl InvoiceService {
         self.validate_gateway_currency(&gateway_id, currency).await?;
 
         // Create invoice model (performs validation)
-        let invoice = Invoice::new(external_id, gateway_id, currency, line_items)?;
+        let invoice = Invoice::new(external_id.clone(), gateway_id, currency, line_items)?;
 
         // Persist to database
-        self.invoice_repo.create(&invoice).await
+        let created_invoice = self.invoice_repo.create(&invoice).await?;
+        
+        info!(
+            invoice_id = created_invoice.id.as_ref().map(|s| s.as_str()),
+            external_id = external_id.as_str(),
+            total = %created_invoice.total.unwrap_or_default(),
+            "Invoice created successfully"
+        );
+
+        Ok(created_invoice)
     }
 
     /// Get invoice by ID
@@ -145,11 +167,25 @@ impl InvoiceService {
     ) -> Result<Invoice> {
         let mut invoice = self.get_invoice(id).await?;
 
+        let old_status = invoice.status.clone();
+        info!(
+            invoice_id = id,
+            old_status = %old_status,
+            new_status = %new_status,
+            "Updating invoice status"
+        );
+
         // Validate status transition
         invoice.update_status(new_status)?;
 
         // Persist status change
         self.invoice_repo.update_status(id, new_status).await?;
+
+        info!(
+            invoice_id = id,
+            status = %new_status,
+            "Invoice status updated successfully"
+        );
 
         // Return updated invoice
         self.get_invoice(id).await
@@ -191,10 +227,13 @@ impl InvoiceService {
     /// - FR-051: Invoice becomes immutable after payment initiation
     /// - FR-045: Cannot initiate payment on expired invoice
     pub async fn initiate_payment(&self, id: &str) -> Result<Invoice> {
+        info!(invoice_id = id, "Initiating payment for invoice");
+        
         let invoice = self.get_invoice(id).await?;
 
         // Check expiration first (FR-045)
         if invoice.is_expired() {
+            warn!(invoice_id = id, "Payment initiation failed - invoice expired");
             // Mark as expired and return error
             self.update_invoice_status(id, InvoiceStatus::Expired).await?;
             return Err(AppError::validation(format!(
@@ -205,12 +244,19 @@ impl InvoiceService {
 
         // Check status
         if invoice.status != InvoiceStatus::Pending {
+            warn!(
+                invoice_id = id,
+                current_status = %invoice.status,
+                "Payment initiation failed - invalid status"
+            );
             return Err(AppError::validation(format!(
                 "Invoice '{}' is not in pending status (current: {:?})",
                 id, invoice.status
             )));
         }
 
+        info!(invoice_id = id, "Payment initiated - invoice now immutable");
+        
         // Change status to Processing (makes invoice immutable)
         self.update_invoice_status(id, InvoiceStatus::Processing).await
     }
@@ -253,6 +299,44 @@ impl InvoiceService {
         }
 
         self.update_invoice_status(id, InvoiceStatus::Failed).await
+    }
+
+    /// Check if invoice is mutable (FR-051, FR-052)
+    ///
+    /// Invoices can only be modified when in Draft status.
+    /// Once payment is initiated (Processing status), they become immutable.
+    ///
+    /// # Arguments
+    /// * `invoice` - Invoice to check
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if mutable, error if immutable
+    ///
+    /// # Business Rules
+    /// - FR-051: Invoices immutable once payment initiated
+    /// - FR-052: Reject modifications with 400 Bad Request for non-draft status
+    pub fn check_invoice_mutable(&self, invoice: &Invoice) -> Result<()> {
+        if invoice.status != InvoiceStatus::Pending {
+            return Err(AppError::validation(format!(
+                "Invoice '{}' cannot be modified - status is '{}' (modifications only allowed for 'pending' invoices)",
+                invoice.id.as_ref().unwrap_or(&"unknown".to_string()),
+                invoice.status
+            )));
+        }
+        Ok(())
+    }
+
+    /// Verify invoice can be modified (by ID)
+    ///
+    /// # Arguments
+    /// * `id` - Invoice ID
+    ///
+    /// # Returns
+    /// * `Result<Invoice>` - Invoice if mutable, error if immutable
+    pub async fn verify_invoice_mutable(&self, id: &str) -> Result<Invoice> {
+        let invoice = self.get_invoice(id).await?;
+        self.check_invoice_mutable(&invoice)?;
+        Ok(invoice)
     }
 
     // Private helper methods

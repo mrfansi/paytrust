@@ -79,7 +79,7 @@ impl PaymentGateway for XenditClient {
             "failure_redirect_url": request.failure_redirect_url,
         });
 
-        // Send request to Xendit
+        // Send request to Xendit (FR-038: Descriptive errors with gateway name)
         let response = self
             .client
             .post(&url)
@@ -87,24 +87,37 @@ impl PaymentGateway for XenditClient {
             .json(&xendit_request)
             .send()
             .await
-            .map_err(|e| AppError::Internal(format!("Xendit API request failed: {}", e)))?;
+            .map_err(|e| {
+                // FR-038: Descriptive error with gateway name
+                if e.is_connect() || e.is_timeout() {
+                    AppError::gateway(format!(
+                        "Xendit gateway unavailable: {} ({})",
+                        if e.is_timeout() { "timeout" } else { "connection failed" },
+                        e
+                    ))
+                } else {
+                    AppError::gateway(format!("Xendit API request failed: {}", e))
+                }
+            })?;
 
         let status_code = response.status();
         let response_body = response
             .text()
             .await
-            .map_err(|e| AppError::Internal(format!("Failed to read Xendit response: {}", e)))?;
+            .map_err(|e| AppError::gateway(format!("Failed to read Xendit response: {}", e)))?;
 
         if !status_code.is_success() {
-            return Err(AppError::Internal(format!(
-                "Xendit API error ({}): {}",
-                status_code, response_body
+            // FR-038: Return descriptive error with gateway name and error type
+            return Err(AppError::gateway(format!(
+                "Xendit API error - HTTP {} ({})",
+                status_code.as_u16(),
+                response_body
             )));
         }
 
         // Parse Xendit response
         let xendit_response: XenditInvoiceResponse = serde_json::from_str(&response_body)
-            .map_err(|e| AppError::Internal(format!("Failed to parse Xendit response: {}", e)))?;
+            .map_err(|e| AppError::gateway(format!("Failed to parse Xendit response: {}", e)))?;
 
         Ok(PaymentResponse {
             gateway_reference: xendit_response.id,

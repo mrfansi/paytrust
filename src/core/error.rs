@@ -31,6 +31,10 @@ pub enum AppError {
     #[error("Rate limit exceeded: {0}")]
     RateLimitExceeded(String),
 
+    /// Conflict - resource state conflict (e.g., concurrent modifications)
+    #[error("Conflict: {0}")]
+    Conflict(String),
+
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Configuration(String),
@@ -69,6 +73,7 @@ impl ResponseError for AppError {
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
             AppError::RateLimitExceeded(_) => StatusCode::TOO_MANY_REQUESTS,
+            AppError::Conflict(_) => StatusCode::CONFLICT,
             AppError::Configuration(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::HttpClient(_) => StatusCode::BAD_GATEWAY,
             AppError::Json(_) => StatusCode::BAD_REQUEST,
@@ -93,6 +98,10 @@ impl AppError {
 
     pub fn gateway(msg: impl Into<String>) -> Self {
         AppError::Gateway(msg.into())
+    }
+
+    pub fn conflict(msg: impl Into<String>) -> Self {
+        AppError::Conflict(msg.into())
     }
 
     pub fn internal(msg: impl Into<String>) -> Self {

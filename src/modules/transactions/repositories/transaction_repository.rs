@@ -18,6 +18,14 @@ impl TransactionRepository {
         Self { pool }
     }
 
+    /// Get the database connection pool
+    ///
+    /// # Returns
+    /// * `&MySqlPool` - Database connection pool
+    pub fn pool(&self) -> &MySqlPool {
+        &self.pool
+    }
+
     /// Create a new transaction with idempotency check (FR-032)
     ///
     /// # Arguments
