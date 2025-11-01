@@ -40,17 +40,17 @@
 ### Database & Configuration
 
 - [ ] T007 Create database migration framework setup in `migrations/` directory
-- [ ] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
-- [ ] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
-- [ ] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
+- [x] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
+- [x] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
+- [x] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
 
 ### Core Utilities
 
-- [X] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
-- [X] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
-- [X] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
-- [X] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
-- [X] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
+- [x] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
+- [x] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
+- [x] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
+- [x] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
+- [x] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
 
 ### Middleware & Security
 
