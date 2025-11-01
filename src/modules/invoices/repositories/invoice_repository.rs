@@ -63,8 +63,8 @@ impl InvoiceRepository {
             r#"
             INSERT INTO invoices (
                 id, external_id, gateway_id, currency, total, status,
-                expires_at, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                expires_at, original_invoice_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#
         )
         .bind(&id)
@@ -74,6 +74,7 @@ impl InvoiceRepository {
         .bind(invoice.total)
         .bind(invoice.status.to_string())
         .bind(invoice.expires_at)
+        .bind(&invoice.original_invoice_id)
         .bind(invoice.created_at)
         .bind(invoice.updated_at)
         .execute(&mut **tx)
@@ -133,7 +134,7 @@ impl InvoiceRepository {
             r#"
             SELECT 
                 id, external_id, gateway_id, currency, total, status,
-                expires_at, created_at, updated_at
+                expires_at, original_invoice_id, created_at, updated_at
             FROM invoices
             WHERE id = ?
             "#
@@ -177,7 +178,7 @@ impl InvoiceRepository {
             r#"
             SELECT 
                 id, external_id, gateway_id, currency, total, status,
-                expires_at, created_at, updated_at
+                expires_at, original_invoice_id, created_at, updated_at
             FROM invoices
             WHERE external_id = ?
             "#
@@ -228,7 +229,7 @@ impl InvoiceRepository {
             r#"
             SELECT 
                 id, external_id, gateway_id, currency, total, status,
-                expires_at, created_at, updated_at
+                expires_at, original_invoice_id, created_at, updated_at
             FROM invoices
             WHERE id = ?
             FOR UPDATE
@@ -274,7 +275,7 @@ impl InvoiceRepository {
             r#"
             SELECT 
                 id, external_id, gateway_id, currency, total, status,
-                expires_at, created_at, updated_at
+                expires_at, original_invoice_id, created_at, updated_at
             FROM invoices
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
@@ -371,6 +372,7 @@ struct InvoiceRow {
     total: rust_decimal::Decimal,
     status: String,
     expires_at: chrono::DateTime<chrono::Utc>,
+    original_invoice_id: Option<String>, // T103
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
 }
@@ -401,6 +403,7 @@ impl InvoiceRow {
             total: Some(self.total),
             status,
             expires_at: Some(self.expires_at),
+            original_invoice_id: self.original_invoice_id, // T103
             created_at: Some(self.created_at),
             updated_at: Some(self.updated_at),
             line_items: line_items?,

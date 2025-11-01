@@ -220,24 +220,24 @@
 
 **Gateway Integration**
 
-- [ ] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067) [IMPLEMENTATION NEEDED]
-- [ ] T097 [US3] Update Xendit client to generate installment-specific payment URLs [IMPLEMENTATION NEEDED]
-- [ ] T098 [US3] Update Midtrans client to generate installment-specific payment URLs [IMPLEMENTATION NEEDED]
+- [x] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067)
+- [x] T097 [US3] Update Xendit client to generate installment-specific payment URLs
+- [x] T098 [US3] Update Midtrans client to generate installment-specific payment URLs
 
 **Transaction Module Updates**
 
-- [ ] T099 [US3] Update TransactionService to handle installment payments with sequential enforcement (FR-068, FR-069, FR-070) [IMPLEMENTATION NEEDED]
-- [ ] T100 [US3] Update TransactionService to handle overpayment auto-application (FR-073, FR-074, FR-075, FR-076) [IMPLEMENTATION NEEDED]
-- [ ] T101 [US3] Update WebhookController to update installment status and apply excess payment [IMPLEMENTATION NEEDED]
-- [ ] T102 [US3] Update TransactionRepository to link transactions to specific installments [IMPLEMENTATION NEEDED]
+- [x] T099 [US3] Update TransactionService to handle installment payments with sequential enforcement (FR-068, FR-069, FR-070)
+- [x] T100 [US3] Update TransactionService to handle overpayment auto-application (FR-073, FR-074, FR-075, FR-076)
+- [x] T101 [US3] Update WebhookController to update installment status and apply excess payment
+- [x] T102 [US3] Update TransactionRepository to link transactions to specific installments
 
 **Supplementary Invoice Support**
 
-- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082) [IMPLEMENTATION NEEDED]
-- [ ] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082) [IMPLEMENTATION NEEDED]
-- [ ] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint [IMPLEMENTATION NEEDED]
+- [x] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082)
+- [x] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082)
+- [x] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint
 
-**Checkpoint**: All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, and sequential enforcement.
+**Checkpoint**: ✅ All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, sequential enforcement, and supplementary invoice support.
 
 ---
 

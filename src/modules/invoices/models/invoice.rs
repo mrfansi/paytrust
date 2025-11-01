@@ -129,6 +129,10 @@ pub struct Invoice {
     #[serde(skip_deserializing)]
     pub expires_at: Option<DateTime<Utc>>,
     
+    /// Reference to original invoice for supplementary invoices (FR-082, T103)
+    /// When overpayment exceeds all installments, a supplementary invoice can be created
+    pub original_invoice_id: Option<String>,
+    
     /// When invoice was created
     #[serde(skip_deserializing)]
     pub created_at: Option<DateTime<Utc>>,
@@ -183,6 +187,7 @@ impl Invoice {
             total: None,
             status: InvoiceStatus::Pending,
             expires_at: Some(expires_at),
+            original_invoice_id: None, // T103: null for regular invoices
             created_at: Some(now),
             updated_at: Some(now),
             line_items,

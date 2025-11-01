@@ -507,6 +507,99 @@ impl InvoiceService {
         self.get_invoice(invoice_id).await
     }
 
+    /// Create a supplementary invoice for excess overpayment (FR-081, FR-082, T104)
+    /// 
+    /// When overpayment exceeds all installments and leaves excess, a supplementary
+    /// invoice can be created to track the additional payment. This allows merchants
+    /// to properly account for all received funds.
+    /// 
+    /// # Arguments
+    /// * `original_invoice_id` - ID of the original invoice that received overpayment
+    /// * `excess_amount` - Excess payment amount to include in supplementary invoice
+    /// * `description` - Description for the supplementary invoice line item
+    /// 
+    /// # Returns
+    /// * `Result<Invoice>` - Created supplementary invoice
+    /// 
+    /// # Business Rules
+    /// - FR-081: Supplementary invoices record excess payments beyond all installments
+    /// - FR-082: Links to original invoice via original_invoice_id
+    /// - Uses same gateway and currency as original invoice
+    /// - No installments on supplementary invoices (single payment already received)
+    /// - Automatically marked as "paid" since payment already received
+    pub async fn create_supplementary_invoice(
+        &self,
+        original_invoice_id: &str,
+        excess_amount: Decimal,
+        description: String,
+    ) -> Result<Invoice> {
+        info!(
+            original_invoice_id = original_invoice_id,
+            excess_amount = %excess_amount,
+            "Creating supplementary invoice for excess overpayment"
+        );
+
+        // Validate excess amount is positive
+        if excess_amount <= Decimal::ZERO {
+            return Err(AppError::validation(
+                "Excess amount must be positive for supplementary invoice"
+            ));
+        }
+
+        // Get original invoice to copy gateway and currency
+        let original_invoice = self.get_invoice(original_invoice_id).await?;
+
+        // Create line item for the excess amount
+        let line_item = LineItem::new(
+            description,
+            1, // quantity = 1
+            excess_amount, // unit_price = excess_amount
+            original_invoice.currency,
+        )?;
+
+        // Create supplementary invoice
+        let external_id = format!("{}-supplementary-{}", 
+            original_invoice.external_id,
+            chrono::Utc::now().timestamp()
+        );
+
+        let mut supplementary = Invoice::new(
+            external_id,
+            original_invoice.gateway_id.clone(),
+            original_invoice.currency,
+            vec![line_item],
+        )?;
+
+        // Link to original invoice (FR-082)
+        supplementary.original_invoice_id = Some(original_invoice_id.to_string());
+
+        // Calculate total (no service fee or tax on supplementary invoices)
+        supplementary.calculate_subtotal();
+        supplementary.tax_total = Some(Decimal::ZERO);
+        supplementary.service_fee = Some(Decimal::ZERO);
+        supplementary.calculate_total();
+
+        // Create in database
+        let created = self.invoice_repo.create(&supplementary).await?;
+
+        // Mark as paid immediately (payment already received)
+        self.invoice_repo
+            .update_status(
+                created.id.as_ref().unwrap(),
+                InvoiceStatus::Paid,
+            )
+            .await?;
+
+        info!(
+            supplementary_invoice_id = created.id.as_ref().unwrap(),
+            original_invoice_id = original_invoice_id,
+            amount = %excess_amount,
+            "Supplementary invoice created and marked as paid"
+        );
+
+        self.get_invoice(created.id.as_ref().unwrap()).await
+    }
+
     /// Calculate service fee for invoice based on gateway configuration (FR-009, FR-047)
     /// 
     /// Service fee is calculated as: (subtotal × gateway.fee_percentage) + gateway.fee_fixed

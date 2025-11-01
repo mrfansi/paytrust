@@ -267,13 +267,63 @@ pub async fn list_invoices(
     Ok(HttpResponse::Ok().json(response))
 }
 
+/// Request to create a supplementary invoice (T105, FR-081, FR-082)
+#[derive(Debug, Deserialize)]
+pub struct CreateSupplementaryInvoiceRequest {
+    /// Excess payment amount to record
+    pub excess_amount: rust_decimal::Decimal,
+    
+    /// Description for the supplementary invoice
+    pub description: String,
+}
+
+/// Create a supplementary invoice for excess overpayment (T105)
+/// 
+/// POST /invoices/{id}/supplementary
+/// 
+/// Creates a new invoice to record excess payment that exceeds all installments.
+/// The supplementary invoice is automatically marked as paid since the payment
+/// was already received.
+/// 
+/// # Path Parameters
+/// * `id` - Original invoice ID that received the overpayment
+/// 
+/// # Request Body
+/// * `excess_amount` - Amount of excess payment
+/// * `description` - Description for the supplementary invoice line item
+/// 
+/// # Returns
+/// * `200 OK` - Created supplementary invoice
+/// * `400 Bad Request` - Invalid excess amount or original invoice not found
+/// * `500 Internal Server Error` - Database or processing error
+async fn create_supplementary_invoice(
+    pool: web::Data<MySqlPool>,
+    path: web::Path<String>,
+    body: web::Json<CreateSupplementaryInvoiceRequest>,
+) -> Result<HttpResponse> {
+    let original_invoice_id = path.into_inner();
+    let service = InvoiceService::new(pool.get_ref().clone());
+    
+    let supplementary = service
+        .create_supplementary_invoice(
+            &original_invoice_id,
+            body.excess_amount,
+            body.description.clone(),
+        )
+        .await?;
+    
+    let response = InvoiceResponse::from(supplementary);
+    Ok(HttpResponse::Ok().json(response))
+}
+
 /// Configure invoice routes
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/invoices")
             .route("", web::post().to(create_invoice))
             .route("", web::get().to(list_invoices))
-            .route("/{id}", web::get().to(get_invoice)),
+            .route("/{id}", web::get().to(get_invoice))
+            .route("/{id}/supplementary", web::post().to(create_supplementary_invoice)),
     );
 }
 
