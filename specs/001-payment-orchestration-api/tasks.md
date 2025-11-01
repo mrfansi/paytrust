@@ -20,14 +20,14 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
-- [ ] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
-- [ ] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
-- [ ] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
-- [ ] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
-- [ ] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
+- [x] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
+- [x] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
+- [x] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
+- [x] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
+- [x] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
+- [x] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
 
-**Checkpoint**: Project structure ready for foundational development
+**Checkpoint**: ✅ Project structure ready for foundational development
 
 ---
 
@@ -46,11 +46,11 @@
 
 ### Core Utilities
 
-- [ ] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
-- [ ] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
-- [ ] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
-- [ ] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
-- [ ] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
+- [X] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
+- [X] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
+- [X] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
+- [X] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
+- [X] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
 
 ### Middleware & Security
 

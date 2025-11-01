@@ -1,0 +1,23 @@
+# Clippy configuration for PayTrust
+# Run with: cargo clippy --all-targets --all-features
+
+# Deny these lints to enforce code quality
+deny = [
+    "clippy::all",
+    "clippy::pedantic",
+]
+
+# Allow these lints for practical reasons
+allow = [
+    "clippy::module_name_repetitions",
+    "clippy::missing_errors_doc",
+    "clippy::missing_panics_doc",
+]
+
+# Warn on these lints
+warn = [
+    "clippy::dbg_macro",
+    "clippy::todo",
+    "clippy::unwrap_used",
+    "clippy::expect_used",
+]
