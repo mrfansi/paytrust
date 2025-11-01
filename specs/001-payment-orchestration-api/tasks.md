@@ -39,7 +39,7 @@
 
 ### Database & Configuration
 
-- [ ] T007 Create database migration framework setup in `migrations/` directory
+- [x] T007 Create database migration framework setup in `migrations/` directory
 - [x] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
 - [x] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
 - [x] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
@@ -54,32 +54,32 @@
 
 ### Middleware & Security
 
-- [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
-- [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
-- [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
+- [x] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
+- [x] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
+- [x] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
+- [x] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
 ### Database Migrations
 
-- [ ] T020 Create migration 001: payment_gateways table in `migrations/001_create_payment_gateways_table.sql`
-- [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql`
-- [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
-- [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
-- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
-- [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
+- [x] T020 Create migration 001: payment_gateways table in `migrations/001_create_payment_gateways_table.sql`
+- [x] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
+- [x] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql`
+- [x] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
+- [x] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
+- [x] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
+- [x] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
 
 ### Gateway Module Foundation
 
-- [ ] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
-- [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
-- [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
+- [x] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
+- [x] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
+- [x] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
 ### Application Entry Point
 
-- [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting, server startup using actix-web and tokio
+- [x] T030 Implement main.rs application setup: database pool, middleware registration, route mounting, server startup using actix-web and tokio
 
-**Checkpoint**: Foundation ready - all core utilities, database schema, and middleware are functional. User story implementation can now begin in parallel.
+**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, and middleware are functional. User story implementation can now begin in parallel.
 
 ---
 

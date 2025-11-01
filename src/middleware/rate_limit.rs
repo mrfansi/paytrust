@@ -1,6 +1,6 @@
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpResponse,
+    Error, HttpResponse, ResponseError,
 };
 use futures_util::future::LocalBoxFuture;
 use governor::{
@@ -12,6 +12,8 @@ use std::num::NonZeroU32;
 use std::future::{ready, Ready};
 use std::rc::Rc;
 use std::sync::Arc;
+
+use crate::core::AppError;
 
 /// Rate limiting middleware using governor
 pub struct RateLimiter {
@@ -34,11 +36,11 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<actix_web::body::EitherBody<actix_web::body::BoxBody, B>>;
     type Error = Error;
     type InitError = ();
     type Transform = RateLimiterMiddleware<S>;
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+    type Future = Ready<std::result::Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(RateLimiterMiddleware {
@@ -59,9 +61,9 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<actix_web::body::EitherBody<actix_web::body::BoxBody, B>>;
     type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, std::result::Result<Self::Response, Self::Error>>;
 
     forward_ready!(service);
 
@@ -72,27 +74,22 @@ where
         Box::pin(async move {
             // Skip rate limiting for health check
             if req.path() == "/health" || req.path() == "/" {
-                return svc.call(req).await;
+                return svc.call(req).await.map(|res| res.map_into_right_body());
             }
 
             // Check rate limit
             match limiter.check() {
                 Ok(_) => {
-                    // Rate limit not exceeded, continue
-                    svc.call(req).await
+                    // Allowed - forward to next service
+                    svc.call(req).await.map(|res| res.map_into_right_body())
                 }
                 Err(_) => {
-                    // Rate limit exceeded
-                    let response = HttpResponse::TooManyRequests()
-                        .insert_header(("Retry-After", "60"))
-                        .json(serde_json::json!({
-                            "error": {
-                                "message": "Rate limit exceeded. Maximum 1000 requests per minute.",
-                                "code": 429
-                            }
-                        }));
-
-                    Ok(req.into_response(response))
+                    // Rate limit exceeded - return error response
+                    let error_response = AppError::RateLimitExceeded(
+                        "Rate limit exceeded. Maximum 1000 requests per minute.".to_string()
+                    );
+                    let http_response = error_response.error_response();
+                    Ok(req.into_response(http_response).map_into_left_body())
                 }
             }
         })

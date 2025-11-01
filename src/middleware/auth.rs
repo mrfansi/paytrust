@@ -1,4 +1,4 @@
-use crate::core::{AppError, Result};
+use crate::core::AppError;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error, HttpMessage,
@@ -30,7 +30,7 @@ where
     type Error = Error;
     type InitError = ();
     type Transform = ApiKeyAuthMiddleware<S>;
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+    type Future = Ready<std::result::Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(ApiKeyAuthMiddleware {
@@ -53,7 +53,7 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, std::result::Result<Self::Response, Self::Error>>;
 
     forward_ready!(service);
 
@@ -74,11 +74,12 @@ where
                 .get("X-API-Key")
                 .and_then(|h| h.to_str().ok())
                 .ok_or_else(|| {
-                    AppError::unauthorized("Missing X-API-Key header")
+                    Error::from(AppError::unauthorized("Missing X-API-Key header"))
                 })?;
 
             // Validate API key against database
-            let api_key_record = validate_api_key(&pool, api_key).await?;
+            let api_key_record = validate_api_key(&pool, api_key).await
+                .map_err(Error::from)?;
 
             // Store merchant_id in request extensions for use in handlers
             req.extensions_mut().insert(api_key_record.merchant_id.clone());
@@ -98,7 +99,7 @@ pub struct ApiKeyRecord {
     pub is_active: bool,
 }
 
-async fn validate_api_key(pool: &MySqlPool, api_key: &str) -> Result<ApiKeyRecord> {
+async fn validate_api_key(pool: &MySqlPool, api_key: &str) -> crate::core::Result<ApiKeyRecord> {
     // Hash the provided API key for comparison
     // Note: In production, you'd use a more sophisticated lookup mechanism
     // For now, we'll look up by key_hash directly
@@ -131,7 +132,7 @@ async fn validate_api_key(pool: &MySqlPool, api_key: &str) -> Result<ApiKeyRecor
 }
 
 /// Helper function to hash API keys using Argon2
-pub fn hash_api_key(api_key: &str) -> Result<String> {
+pub fn hash_api_key(api_key: &str) -> crate::core::Result<String> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
@@ -147,7 +148,7 @@ pub fn hash_api_key(api_key: &str) -> Result<String> {
 }
 
 /// Helper function to verify API keys using Argon2
-pub fn verify_api_key(api_key: &str, hash: &str) -> Result<bool> {
+pub fn verify_api_key(api_key: &str, hash: &str) -> crate::core::Result<bool> {
     let parsed_hash = PasswordHash::new(hash)
         .map_err(|e| AppError::internal(format!("Invalid hash format: {}", e)))?;
 
