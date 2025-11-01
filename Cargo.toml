@@ -147,6 +147,11 @@ path = "tests/integration/service_fee_test.rs"
 name = "report_generation_test"
 path = "tests/integration/report_generation_test.rs"
 
+# Performance tests
+[[test]]
+name = "invoice_creation_performance_test"
+path = "tests/performance/invoice_creation_performance_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
