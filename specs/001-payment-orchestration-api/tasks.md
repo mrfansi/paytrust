@@ -324,7 +324,13 @@
 ### Monitoring & Observability
 
 - [x] T139 Add structured logging for all API endpoints with request IDs
-- [ ] T140 Add metrics collection for response times, error rates, gateway success rates
+- [x] T140 Add metrics collection for response times, error rates, gateway success rates
+  - Implemented MetricsCollector with thread-safe in-memory storage
+  - Implemented MetricsMiddleware for automatic collection
+  - Added GET /metrics endpoint (docs/METRICS-COLLECTION-2025-11.md)
+  - Tracks: total_requests, success/error rates, response times (avg/min/max)
+  - Endpoint-level metrics with per-path counters
+  - 6 unit tests + 3 integration tests passing
 - [x] T141 Add health check endpoint GET /health with database connectivity check
 - [x] T142 Add readiness probe endpoint GET /ready
 

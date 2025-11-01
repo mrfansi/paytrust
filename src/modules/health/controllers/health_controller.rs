@@ -160,6 +160,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::scope("")
             .route("/health", web::get().to(health_check))
             .route("/ready", web::get().to(readiness_check))
+            .route("/metrics", web::get().to(super::metrics::get_metrics))
             .route("/api/docs", web::get().to(api_docs_ui))
             .route("/api/docs/openapi.yaml", web::get().to(openapi_spec_yaml))
             .route("/api/docs/openapi.json", web::get().to(openapi_spec_json)),

@@ -152,6 +152,11 @@ path = "tests/integration/report_generation_test.rs"
 name = "invoice_creation_performance_test"
 path = "tests/performance/invoice_creation_performance_test.rs"
 
+# Metrics tests
+[[test]]
+name = "metrics_collection_test"
+path = "tests/integration/metrics_collection_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

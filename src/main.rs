@@ -6,7 +6,7 @@ mod modules;
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer};
 use config::Config;
-use middleware::{ApiKeyAuth, RateLimiter, RequestId};
+use middleware::{ApiKeyAuth, MetricsCollector, MetricsMiddleware, RateLimiter, RequestId};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[actix_web::main]
@@ -52,6 +52,10 @@ async fn main() -> std::io::Result<()> {
     let rate_limit_per_minute = config.security.rate_limit_per_minute;
     let bind_address = config.server.bind_address();
 
+    // Initialize metrics collector
+    let metrics_collector = MetricsCollector::new();
+    tracing::info!("Metrics collection enabled at /metrics endpoint");
+
     // Start HTTP server
     let server = HttpServer::new(move || {
         // CORS configuration
@@ -64,10 +68,12 @@ async fn main() -> std::io::Result<()> {
         App::new()
             // Data
             .app_data(web::Data::new(db_pool.clone()))
+            .app_data(web::Data::new(metrics_collector.clone()))
             // Middleware
             .wrap(cors)
             .wrap(Logger::new("%a \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\" %T"))
             .wrap(RequestId) // Add request ID to all requests
+            .wrap(MetricsMiddleware::new(metrics_collector.clone())) // Collect metrics
             .wrap(RateLimiter::new(rate_limit_per_minute))
             .wrap(ApiKeyAuth::new(db_pool.clone()))
             // Health check routes (no auth required)
