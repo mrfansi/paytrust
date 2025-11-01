@@ -5,6 +5,31 @@
 **Status**: Draft  
 **Input**: User description: "Paytrust is payment orchestration to unify multiple payment gateway. The goals is to help developer to integrates their platform into their payment gateway using this platform effortless by consume the API. All transaction architectures handled by this codebase. This platform can create invoice with the items, can add additional charge like service fee (its charges from payment gateway) and tax, can handling installment payment by dynamic setup their installment, can adjust their payment like example if their payment is Rp1000.000 and has 2 installments so they can adjust for the first one is Rp200.000 and the last one is Rp800.000. For now the third party payment gateway support only Xendit and Midtrans (Indonesia Only). The currency support is IDR (Indonesia), MYR (Malaysia) and USD (Global). This platform must support for get total additional charge like service fee (its charges from payment gateway) and tax to help their finance. This platform only backend API. Consider to make the payment isolation between different currency or region to avoid mismatch calculation"
 
+## Clarifications
+
+### Session 2025-11-01
+
+- Q: Which authentication mechanism should the API use for developer authentication? → A: API Key in Header - Static key passed in request header (e.g., X-API-Key), simple and standard
+- Q: How should the system handle payment gateway failures when processing invoices? → A: Immediate Fail with Error Response - Return error immediately, let developer retry manually with idempotency
+- Q: What rate limiting should be applied to prevent API abuse? → A: 1000 requests per minute per API key - Balanced limit for production use
+- Q: How should the system handle failed webhook deliveries from payment gateways? → A: Exponential Backoff - 3 retries with increasing delays (1min, 5min, 30min)
+- Q: What should be the default invoice expiration timeframe before payment must be completed? → A: 24 hours - Standard expiration, balances customer convenience and system efficiency
+- Q: Which payment gateway should handle MYR and USD currency transactions? → A: Developer chooses gateway per invoice - Maximum flexibility, more complex routing
+- Q: In what order should service fees be calculated when both percentage and fixed amount are present? → A: (Subtotal × %) + Fixed - Standard industry practice, apply percentage first then add fixed
+- Q: How should the system handle partial payments that don't match the invoice total? → A: Accept and track - Mark invoice as "partially paid", store difference, merchant handles reconciliation
+- Q: Which invoice modifications should be allowed after a payment has been initiated? → A: No modifications allowed - Invoice becomes read-only once payment initiated, must cancel and recreate
+- Q: How should the system handle multiple simultaneous payment requests for the same invoice? → A: Lock invoice, first wins - First request locks invoice, others get 409 Conflict "payment in progress"
+- Q: In what order should tax and service fees be calculated when both are present on an invoice? → A: Tax on subtotal only - Tax applies to subtotal only, service fees added after: Total = Subtotal + (Subtotal × Tax%) + Service Fee
+- Q: Should taxes be applied per line item or at invoice level? → A: Per-line-item tax rates - Each line item can have its own tax rate/category, system calculates tax per item and sums for invoice total
+- Q: How should tax be distributed across installment payments when custom amounts are configured? → A: Proportional distribution - Tax distributed proportionally: installment_tax = total_tax × (installment_amount / total_amount)
+- Q: What happens if external tax rates change between invoice creation and payment completion? → A: Lock tax rate at creation - Tax rate frozen when invoice created, immutable throughout invoice lifecycle regardless of external rate changes
+- Q: What level of detail should tax reports provide for compliance and merchant analysis? → A: Breakdown by tax rate and currency - Group taxes by rate percentage and currency for compliance: {"IDR_10%": amount, "MYR_6%": amount}
+- Q: How should installment payments integrate with payment gateways (Xendit/Midtrans) - gateway native or PayTrust-managed? → A: PayTrust-managed separate payments - Each installment treated as independent single payment to gateway, PayTrust tracks schedule and relationship
+- Q: Must installments be paid in sequential order (1, 2, 3) or can customers pay any unpaid installment at any time? → A: Sequential order enforced - Installments must be paid in order, payment link for next installment only available after previous paid
+- Q: How should rounding discrepancies be handled when dividing amounts across installments (especially for IDR with no decimals)? → A: Last installment absorbs difference - Round down earlier installments, last installment = total minus sum of previous
+- Q: What happens when a customer overpays a single installment (e.g., pays Rp 300,000 for Rp 200,000 installment)? → A: Accept excess, auto-apply to remaining installments - Apply excess sequentially to next installments, mark them paid, if total reached mark invoice "fully paid"
+- Q: Can developers adjust remaining installment amounts after first payment is made? → A: Can adjust unpaid installments only - Paid installments locked, unpaid amounts can be adjusted while maintaining total remaining balance
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Basic Invoice Creation and Payment (Priority: P1)
@@ -17,9 +42,9 @@ A developer integrates PayTrust API into their e-commerce platform to create inv
 
 **Acceptance Scenarios**:
 
-1. **Given** a developer has API credentials, **When** they submit an invoice with line items (product name, quantity, price) and currency (IDR/MYR/USD), **Then** the system creates an invoice and returns a unique invoice ID and payment URL
-2. **Given** an invoice is created, **When** payment is made through Xendit or Midtrans, **Then** the system receives webhook notification and updates invoice status to "paid"
-3. **Given** an invoice with IDR currency, **When** developer requests payment, **Then** system routes to appropriate gateway (Xendit or Midtrans) for Indonesian payments
+1. **Given** a developer has API credentials, **When** they submit an invoice with line items (product name, quantity, price), currency (IDR/MYR/USD), and preferred gateway (Xendit or Midtrans), **Then** the system creates an invoice and returns a unique invoice ID and payment URL
+2. **Given** an invoice is created, **When** payment is made through the selected gateway, **Then** the system receives webhook notification and updates invoice status to "paid"
+3. **Given** an invoice with MYR currency and Midtrans gateway selection, **When** developer submits the invoice, **Then** system validates gateway currency support and returns error if unsupported
 4. **Given** multiple line items with quantities, **When** invoice is created, **Then** system calculates correct total amount based on (quantity × price) for each item
 
 ---
@@ -78,16 +103,21 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Edge Cases
 
-- What happens when a payment gateway (Xendit or Midtrans) is temporarily unavailable or returns an error?
-- How does the system handle webhook failures or delayed webhook notifications from payment gateways?
-- What happens when a customer partially pays an invoice amount (underpayment or overpayment)?
-- How does the system handle installment payment when a customer skips an installment?
-- What happens when a developer tries to modify an invoice after payment has started?
+- What happens when a payment gateway (Xendit or Midtrans) is temporarily unavailable or returns an error? System returns immediate error response to developer, who can retry using idempotency key (FR-032)
+- How does the system handle webhook failures or delayed webhook notifications from payment gateways? System retries webhook processing 3 times with exponential backoff (1min, 5min, 30min)
+- What happens when a customer partially pays an invoice amount (underpayment or overpayment)? System accepts payment, marks invoice as "partially paid", stores difference, and provides reconciliation API for merchant
+- How does the system handle installment payment when a customer skips an installment? System marks installment as overdue, merchant handles collection/enforcement, invoice remains "partially paid" until all installments complete
+- Can customers pay installments out of order (e.g., pay installment #3 before #1)? No, sequential order enforced - must pay installment 1 before 2, payment URLs only active for next unpaid installment in sequence
+- What happens if customer overpays an installment (pays more than installment amount)? System accepts overpayment, automatically applies excess to next installments sequentially, marks invoice "fully paid" if total reached
+- Can installment schedule be modified after first payment? Yes, unpaid installments can be adjusted (paid installments locked), system validates sum equals remaining balance and recalculates proportional taxes/fees
+- How are tax and service fees distributed when installment amounts are customized? Tax and service fees distributed proportionally based on each installment's share of total amount
+- What happens when a developer tries to modify an invoice after payment has started? System rejects modification with 400 error, invoice is immutable once payment initiated, must cancel and create new invoice
 - How does the system handle refunds or payment reversals from the gateway?
 - What happens when timezone differences cause payment timestamp discrepancies?
-- How does the system handle concurrent payment attempts for the same invoice?
-- What happens when tax or service fee rules change mid-transaction?
-- How does the system handle currency-specific formatting and decimal places (IDR has no decimals, USD/MYR have 2)?
+- How does the system handle concurrent payment attempts for the same invoice? System uses pessimistic locking - first payment request locks invoice, subsequent requests receive 409 Conflict with "payment already in progress" message until lock is released
+- What happens when tax or service fee rules change mid-transaction? Tax rates and service fee structures are locked at invoice creation (immutable), external changes don't affect existing invoices
+- How does the system handle currency-specific formatting and decimal places (IDR has no decimals, USD/MYR have 2)? System respects currency decimal rules (IDR whole numbers, MYR/USD 2 decimals), uses rounding for installment calculations with last installment absorbing difference
+- What happens when a developer exceeds the rate limit (1000 requests/minute)? System returns 429 Too Many Requests with Retry-After header
 
 ## Requirements _(mandatory)_
 
@@ -101,16 +131,28 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-004**: System MUST generate unique invoice IDs for tracking and reference
 - **FR-005**: System MUST calculate invoice subtotal by summing all line item totals (quantity × unit price)
 - **FR-006**: System MUST provide RESTful API endpoints for all payment operations
-- **FR-007**: System MUST route IDR currency payments to Indonesian-supported gateways (Xendit or Midtrans)
+- **FR-007**: System MUST allow developers to specify preferred payment gateway (Xendit or Midtrans) per invoice at creation time
+- **FR-046**: System MUST validate that the selected gateway supports the invoice currency before processing
+- **FR-051**: System MUST make invoices immutable (read-only) once payment is initiated - no modifications to line items, amounts, or financial data allowed (exception: unpaid installment amounts can be adjusted per FR-077)
+- **FR-052**: System MUST reject modification requests for invoices with status other than "draft" with 400 Bad Request and appropriate error message (exception: unpaid installment schedule adjustments allowed)
+- **FR-044**: System MUST set default invoice expiration to 24 hours from creation unless explicitly configured otherwise
+- **FR-045**: System MUST automatically mark invoices as "expired" when expiration time is reached and payment is not completed
 
 #### Additional Charges
 
 - **FR-008**: System MUST allow configuring tax rates as percentages applied to invoice subtotal
-- **FR-009**: System MUST calculate service fees based on payment gateway fee structures (percentage + fixed amount)
+- **FR-009**: System MUST calculate service fees using the formula: (subtotal × percentage) + fixed_amount, where both percentage and fixed amount are gateway-specific
+- **FR-047**: System MUST calculate service fee percentage component before adding fixed amount (industry standard order of operations)
+- **FR-055**: System MUST calculate tax on subtotal only, excluding service fees from tax base
+- **FR-056**: System MUST calculate total amount using formula: Total = Subtotal + (Subtotal × Tax%) + Service Fee
+- **FR-057**: System MUST support per-line-item tax rates, allowing each line item to have its own tax rate or category
+- **FR-058**: System MUST calculate tax per line item as (line_item_subtotal × line_item_tax_rate), then sum all line item taxes for invoice total tax
 - **FR-010**: System MUST add tax and service fees to subtotal to calculate final payable amount
 - **FR-011**: System MUST track and store tax amounts separately from service fees for reporting
 - **FR-012**: System MUST generate financial reports showing total service fees collected by gateway and currency
 - **FR-013**: System MUST generate financial reports showing total taxes collected by currency
+- **FR-063**: System MUST provide tax breakdown in reports grouped by tax rate percentage and currency (e.g., IDR_10%, MYR_6%, USD_0%)
+- **FR-064**: System MUST include transaction count for each tax rate category in financial reports
 
 #### Installment Payments
 
@@ -118,6 +160,24 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-015**: System MUST create default installment schedules with equal payment amounts
 - **FR-016**: System MUST allow adjusting individual installment amounts while maintaining total invoice amount
 - **FR-017**: System MUST validate that sum of all installment amounts equals total invoice amount
+- **FR-077**: System MUST allow modification of unpaid installment amounts after first payment is made
+- **FR-078**: System MUST prevent modification of already-paid installments
+- **FR-079**: System MUST validate that sum of unpaid installment adjustments equals remaining balance (total - paid amount)
+- **FR-080**: System MUST recalculate proportional tax and service fee distribution for adjusted unpaid installments
+- **FR-065**: System MUST treat each installment as an independent single payment transaction to the payment gateway
+- **FR-066**: System MUST generate separate payment URLs/references for each installment from the payment gateway
+- **FR-067**: System MUST maintain internal tracking of installment relationships and schedule independently from gateway
+- **FR-068**: System MUST enforce sequential installment payment order (installment N can only be paid after installment N-1 is completed)
+- **FR-069**: System MUST only generate/activate payment URL for the next unpaid installment in sequence
+- **FR-070**: System MUST reject payment attempts for out-of-sequence installments with appropriate error message
+- **FR-059**: System MUST distribute tax proportionally across installments using formula: installment_tax = total_tax × (installment_amount / total_amount)
+- **FR-060**: System MUST distribute service fees proportionally across installments using the same proportional formula
+- **FR-071**: System MUST handle rounding discrepancies by rounding down all installments except the last
+- **FR-072**: System MUST calculate last installment amount as: total_amount - sum_of_all_previous_installments to ensure exact total match
+- **FR-073**: System MUST accept overpayment on individual installments (payment amount exceeds installment amount)
+- **FR-074**: System MUST automatically apply excess payment amount sequentially to remaining unpaid installments in order
+- **FR-075**: System MUST mark installments as "paid" when covered by excess payment application
+- **FR-076**: System MUST mark entire invoice as "fully paid" if total payment received equals or exceeds invoice total, regardless of installment distribution
 - **FR-018**: System MUST track payment status for each installment separately
 - **FR-019**: System MUST update invoice status to "partially paid" after first installment payment
 - **FR-020**: System MUST mark invoice as "fully paid" only after all installments are completed
@@ -139,13 +199,29 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-030**: System MUST store complete transaction history including timestamps, amounts, and gateway responses
 - **FR-031**: System MUST provide API endpoints to query invoice status and payment history
 - **FR-032**: System MUST handle idempotent payment requests to prevent duplicate charges
+- **FR-038**: System MUST return descriptive error responses when payment gateway is unavailable, including gateway name and error type
+- **FR-039**: System MUST NOT automatically retry failed payment gateway requests - developers must explicitly retry with idempotency
+- **FR-042**: System MUST retry failed webhook processing 3 times using exponential backoff (1 minute, 5 minutes, 30 minutes)
+- **FR-043**: System MUST log all webhook retry attempts with timestamps and final status (success/failed after retries)
+- **FR-048**: System MUST accept partial payments (underpayment or overpayment) and mark invoice as "partially paid"
+- **FR-049**: System MUST store payment amount received, invoice total, and difference (positive for overpayment, negative for underpayment)
+- **FR-050**: System MUST provide API endpoint for developers to query payment discrepancies and handle reconciliation
 
 #### API Authentication & Security
 
-- **FR-033**: System MUST authenticate API requests using API keys or tokens
+- **FR-033**: System MUST authenticate API requests using API keys passed in request header (X-API-Key header)
 - **FR-034**: System MUST validate webhook authenticity using gateway-provided signatures
 - **FR-035**: System MUST log all API requests and responses for audit trail
 - **FR-036**: System MUST return appropriate HTTP status codes and error messages for all API operations
+- **FR-037**: System MUST reject requests with missing or invalid API keys with 401 Unauthorized status
+- **FR-040**: System MUST enforce rate limiting of 1000 requests per minute per API key
+- **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
+- **FR-051**: System MUST mark invoice as immutable once payment is initiated
+- **FR-052**: System MUST reject modification requests to invoices with active payments (return 400 error)
+- **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
+- **FR-062**: System MUST use locked tax rates for all payment calculations regardless of external tax rate changes
+- **FR-053**: System MUST implement pessimistic locking for invoice payment processing
+- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests
 
 ### Non-Functional Requirements
 
@@ -159,10 +235,10 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Key Entities
 
-- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, and creation/update timestamps
-- **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, and optional tax category
+- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, immutability flag (becomes read-only after payment initiation), and creation/update timestamps
+- **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, tax rate (percentage), tax category (optional identifier), and calculated tax amount
 - **Payment Transaction**: Represents actual payment attempt/completion with transaction ID, gateway transaction reference, amount paid, payment method, timestamp, status, and gateway response data
-- **Installment Schedule**: Represents payment plan with installment number, due date, amount, payment status, and associated transaction reference when paid
+- **Installment Schedule**: Represents payment plan with installment number, due date, amount, proportionally-calculated tax amount, proportionally-calculated service fee amount, payment status, and associated transaction reference when paid
 - **Payment Gateway Configuration**: Represents gateway credentials and settings with gateway name (Xendit/Midtrans), supported currencies, fee structure (percentage + fixed), region, and webhook endpoint
 - **Financial Report**: Aggregated data showing total transactions, service fees, taxes, and revenue by currency, gateway, and time period
 - **Service Fee**: Calculated charges from payment gateway with amount, calculation method, gateway reference, and currency
@@ -175,11 +251,12 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - Exchange rates between currencies are NOT handled by this system - each currency operates independently
 - Payment gateway credentials are configured per environment (development, staging, production)
 - Installment payment scheduling and reminder notifications are handled outside this system
+- Each installment is processed as an independent payment transaction to the gateway (not using gateway-native installment features)
 - Gateway-specific payment methods (credit card, bank transfer, e-wallet) are abstracted by gateway APIs
 - IDR amounts are whole numbers (no decimal places), MYR and USD use 2 decimal places
 - Tax rates are configured per invoice/merchant and not automatically determined by location
 - Refund processing is handled directly with payment gateways, not through PayTrust API
-- Invoice expiration rules are configurable and enforced by payment gateways
+- Default invoice expiration is 24 hours but can be configured per invoice at creation time
 
 ## Success Criteria _(mandatory)_
 
