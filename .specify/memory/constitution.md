@@ -1,12 +1,13 @@
 <!--
 Sync Impact Report:
-- Version change: 1.0.0 → 1.1.0
-- Added principles: Context7 MCP Documentation (new VI)
-- Modified principles: None (existing principles unchanged)
+- Version change: 1.1.0 → 1.2.0
+- Added principles: Modular Architecture (new VII)
+- Modified principles: Development Standards (removed markdown summary documentation requirement)
 - Added sections: None
 - Removed sections: None
-- Templates updated: ✅ Updated (this constitution aligns with existing templates)
+- Templates updated: ✅ Updated (constitution aligns with modular design requirements)
 - Follow-up TODOs: None
+- Rationale: MINOR bump - new principle added for modular architecture, documentation standards refined
 -->
 
 # PayTrust Constitution
@@ -75,6 +76,18 @@ integration guidance, and code examples.
 deprecated APIs, ensures access to latest features and security updates, and maintains
 accuracy of external library usage patterns.
 
+### VII. Modular Architecture
+
+System MUST be organized into loosely-coupled, independently-deployable modules with clear
+boundaries and interfaces. Each module MUST have a single well-defined responsibility and
+communicate through explicit contracts (traits/interfaces). Modules MUST NOT have circular
+dependencies. Cross-module communication MUST occur via dependency injection, not direct
+imports of implementation details. Module boundaries MUST align with business domains.
+
+**Rationale**: Enables parallel development by multiple teams, facilitates independent testing
+and deployment, reduces blast radius of changes, improves code navigation and understanding,
+and allows selective scaling of system components based on load characteristics.
+
 ## Technology Stack Constraints
 
 **Language**: Rust 1.75+ with 2021 edition features
@@ -87,13 +100,23 @@ accuracy of external library usage patterns.
 
 ## Development Standards
 
-**Code Organization**: src/ for application code, tests/ for integration tests, migrations/
-for database schema changes, config/ for environment templates
+**Code Organization**: Modular structure with src/modules/ containing domain-bounded modules,
+each with its own models/, services/, repositories/, and controllers/. Shared code in src/core/.
+Integration tests in tests/, migrations in migrations/, config in config/. No markdown summary
+files or changelog generation required - code and tests are the documentation.
+
 **Naming Conventions**: snake_case for variables/functions, PascalCase for types/traits,
 SCREAMING_SNAKE_CASE for constants
-**Documentation**: All public APIs MUST have rustdoc comments with examples
+
+**Documentation**: Public APIs MUST have rustdoc comments with examples. Module boundaries and
+contracts documented via trait definitions. No separate summary documentation files required.
+
 **Performance**: Database queries MUST be indexed appropriately, N+1 query patterns prohibited
+
 **Security**: Input validation at service boundaries, output sanitization, secure connection handling
+
+**Module Structure**: Each module exports clear public interface via mod.rs, internal implementation
+details remain private. Dependencies injected via trait objects, never concrete types.
 
 ## Governance
 
@@ -105,4 +128,4 @@ migration plan to eventual compliance.
 Amendment procedure: Proposed changes require documentation of impact, approval from
 technical leadership, and update of all dependent templates and guidance documents.
 
-**Version**: 1.1.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
+**Version**: 1.2.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
