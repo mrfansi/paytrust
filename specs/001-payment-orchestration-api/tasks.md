@@ -207,8 +207,8 @@
 **Installment Module**
 
 - [ ] T088 [P] [US3] Create InstallmentSchedule model in `src/modules/installments/models/installment_schedule.rs` with validation (FR-014, FR-017)
-- [ ] T089 [US3] Implement InstallmentCalculator in `src/modules/installments/services/installment_calculator.rs` for proportional distribution (FR-059, FR-060, FR-071, FR-072)
-- [ ] T090 [US3] Implement InstallmentRepository in `src/modules/installments/repositories/installment_repository.rs` with CRUD and status queries
+- [x] T089 [US3] Implement InstallmentCalculator in `src/modules/installments/services/installment_calculator.rs` for proportional distribution (FR-059, FR-060, FR-071, FR-072)
+- [x] T090 [US3] Implement InstallmentRepository in `src/modules/installments/repositories/installment_repository.rs` with CRUD and status queries
 - [ ] T091 [US3] Implement InstallmentService in `src/modules/installments/services/installment_service.rs` for schedule management (create, adjust, validate sequence)
 - [ ] T092 [US3] Implement InstallmentController in `src/modules/installments/controllers/installment_controller.rs` for GET and PATCH /invoices/{id}/installments
 
