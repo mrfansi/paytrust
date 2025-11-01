@@ -193,14 +193,14 @@
 
 ### Tests for User Story 3 (TDD Required)
 
-- [ ] T080 [P] [US3] Property-based test for proportional tax distribution in `tests/unit/installment_calculator_test.rs` (FR-059)
-- [ ] T081 [P] [US3] Property-based test for proportional service fee distribution in `tests/unit/installment_calculator_test.rs` (FR-060)
-- [ ] T082 [P] [US3] Property-based test for rounding and last installment absorption in `tests/unit/installment_calculator_test.rs` (FR-071, FR-072)
-- [ ] T083 [P] [US3] Property-based test for overpayment auto-application in `tests/unit/installment_overpayment_test.rs` (FR-073, FR-074, FR-075, FR-076)
-- [ ] T084 [P] [US3] Contract test for GET /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
-- [ ] T085 [P] [US3] Contract test for PATCH /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
-- [ ] T086 [P] [US3] Integration test for sequential installment payment enforcement in `tests/integration/installment_flow_test.rs` (FR-068, FR-069, FR-070)
-- [ ] T087 [P] [US3] Integration test for installment adjustment after first payment in `tests/integration/installment_adjustment_test.rs` (FR-077, FR-078, FR-079, FR-080)
+- [x] T080 [P] [US3] Property-based test for proportional tax distribution in `tests/unit/installment_calculator_test.rs` (FR-059)
+- [x] T081 [P] [US3] Property-based test for proportional service fee distribution in `tests/unit/installment_calculator_test.rs` (FR-060)
+- [x] T082 [P] [US3] Property-based test for rounding and last installment absorption in `tests/unit/installment_calculator_test.rs` (FR-071, FR-072)
+- [x] T083 [P] [US3] Property-based test for overpayment auto-application in `tests/unit/installment_overpayment_test.rs` (FR-073, FR-074, FR-075, FR-076)
+- [x] T084 [P] [US3] Contract test for GET /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
+- [x] T085 [P] [US3] Contract test for PATCH /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
+- [x] T086 [P] [US3] Integration test for sequential installment payment enforcement in `tests/integration/installment_flow_test.rs` (FR-068, FR-069, FR-070)
+- [x] T087 [P] [US3] Integration test for installment adjustment after first payment in `tests/integration/installment_adjustment_test.rs` (FR-077, FR-078, FR-079, FR-080)
 
 ### Implementation for User Story 3
 
@@ -220,22 +220,22 @@
 
 **Gateway Integration**
 
-- [ ] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067)
-- [ ] T097 [US3] Update Xendit client to generate installment-specific payment URLs
-- [ ] T098 [US3] Update Midtrans client to generate installment-specific payment URLs
+- [ ] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067) [IMPLEMENTATION NEEDED]
+- [ ] T097 [US3] Update Xendit client to generate installment-specific payment URLs [IMPLEMENTATION NEEDED]
+- [ ] T098 [US3] Update Midtrans client to generate installment-specific payment URLs [IMPLEMENTATION NEEDED]
 
 **Transaction Module Updates**
 
-- [ ] T099 [US3] Update TransactionService to handle installment payments with sequential enforcement (FR-068, FR-069, FR-070)
-- [ ] T100 [US3] Update TransactionService to handle overpayment auto-application (FR-073, FR-074, FR-075, FR-076)
-- [ ] T101 [US3] Update WebhookController to update installment status and apply excess payment
-- [ ] T102 [US3] Update TransactionRepository to link transactions to specific installments
+- [ ] T099 [US3] Update TransactionService to handle installment payments with sequential enforcement (FR-068, FR-069, FR-070) [IMPLEMENTATION NEEDED]
+- [ ] T100 [US3] Update TransactionService to handle overpayment auto-application (FR-073, FR-074, FR-075, FR-076) [IMPLEMENTATION NEEDED]
+- [ ] T101 [US3] Update WebhookController to update installment status and apply excess payment [IMPLEMENTATION NEEDED]
+- [ ] T102 [US3] Update TransactionRepository to link transactions to specific installments [IMPLEMENTATION NEEDED]
 
 **Supplementary Invoice Support**
 
-- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082)
-- [ ] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082)
-- [ ] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint
+- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082) [IMPLEMENTATION NEEDED]
+- [ ] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082) [IMPLEMENTATION NEEDED]
+- [ ] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint [IMPLEMENTATION NEEDED]
 
 **Checkpoint**: All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, and sequential enforcement.
 

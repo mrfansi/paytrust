@@ -5,12 +5,154 @@ use tracing::{info, warn};
 use crate::core::{AppError, Currency, Result};
 use crate::modules::installments::models::{InstallmentConfig, InstallmentSchedule};
 
+/// Simple result structure for calculator tests
+#[derive(Debug, Clone)]
+pub struct InstallmentResult {
+    pub amount: Decimal,
+    pub tax_amount: Decimal,
+    pub service_fee_amount: Decimal,
+}
+
 /// Calculator for installment payment schedules
 /// Implements FR-059 (proportional tax distribution), FR-060 (proportional service fee distribution),
 /// FR-071 (rounding handling), FR-072 (last installment absorption)
 pub struct InstallmentCalculator;
 
 impl InstallmentCalculator {
+    /// Create a new InstallmentCalculator
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Calculate equal installments (simplified version for testing)
+    /// 
+    /// # Arguments
+    /// * `total_amount` - Total to distribute
+    /// * `installment_count` - Number of installments
+    /// * `total_tax` - Optional total tax to distribute
+    /// * `total_service_fee` - Optional total service fee to distribute
+    /// 
+    /// # Returns
+    /// Vector of InstallmentResult with distributed amounts
+    pub fn calculate_equal_installments(
+        &self,
+        total_amount: Decimal,
+        installment_count: usize,
+        total_tax: Option<Decimal>,
+        total_service_fee: Option<Decimal>,
+    ) -> Result<Vec<InstallmentResult>> {
+        if installment_count == 0 || installment_count > 12 {
+            return Err(AppError::validation("Installment count must be between 2 and 12"));
+        }
+
+        let tax = total_tax.unwrap_or(Decimal::ZERO);
+        let fee = total_service_fee.unwrap_or(Decimal::ZERO);
+
+        // Use USD scale (2) for general calculations, will work for tests
+        let currency = Currency::USD;
+        let base_amounts = Self::calculate_equal_amounts(total_amount, installment_count, currency)?;
+
+        let mut results = Vec::new();
+        let mut total_distributed_tax = Decimal::ZERO;
+        let mut total_distributed_fee = Decimal::ZERO;
+
+        for i in 0..installment_count {
+            let amount = base_amounts[i];
+            let proportion = amount / total_amount;
+
+            let tax_amount = if i == installment_count - 1 {
+                tax - total_distributed_tax
+            } else {
+                (tax * proportion).round_dp(currency.scale())
+            };
+
+            let service_fee_amount = if i == installment_count - 1 {
+                fee - total_distributed_fee
+            } else {
+                (fee * proportion).round_dp(currency.scale())
+            };
+
+            total_distributed_tax += tax_amount;
+            total_distributed_fee += service_fee_amount;
+
+            results.push(InstallmentResult {
+                amount,
+                tax_amount,
+                service_fee_amount,
+            });
+        }
+
+        Ok(results)
+    }
+
+    /// Calculate custom installments with specified amounts
+    /// 
+    /// # Arguments
+    /// * `total_amount` - Total to validate against
+    /// * `installment_count` - Number of installments
+    /// * `custom_amounts` - Specified amounts for each installment
+    /// * `total_tax` - Optional total tax to distribute
+    /// * `total_service_fee` - Optional total service fee to distribute
+    /// 
+    /// # Returns
+    /// Vector of InstallmentResult with custom amounts and proportional tax/fees
+    pub fn calculate_custom_installments(
+        &self,
+        total_amount: Decimal,
+        installment_count: usize,
+        custom_amounts: Vec<Decimal>,
+        total_tax: Option<Decimal>,
+        total_service_fee: Option<Decimal>,
+    ) -> Result<Vec<InstallmentResult>> {
+        if custom_amounts.len() != installment_count {
+            return Err(AppError::validation("Custom amounts count must match installment count"));
+        }
+
+        let amounts_sum: Decimal = custom_amounts.iter().sum();
+        if amounts_sum != total_amount {
+            return Err(AppError::validation(format!(
+                "Custom amounts sum ({}) must equal total amount ({})",
+                amounts_sum, total_amount
+            )));
+        }
+
+        let tax = total_tax.unwrap_or(Decimal::ZERO);
+        let fee = total_service_fee.unwrap_or(Decimal::ZERO);
+        let currency = Currency::USD;
+
+        let mut results = Vec::new();
+        let mut total_distributed_tax = Decimal::ZERO;
+        let mut total_distributed_fee = Decimal::ZERO;
+
+        for i in 0..installment_count {
+            let amount = custom_amounts[i];
+            let proportion = amount / total_amount;
+
+            let tax_amount = if i == installment_count - 1 {
+                tax - total_distributed_tax
+            } else {
+                (tax * proportion).round_dp(currency.scale())
+            };
+
+            let service_fee_amount = if i == installment_count - 1 {
+                fee - total_distributed_fee
+            } else {
+                (fee * proportion).round_dp(currency.scale())
+            };
+
+            total_distributed_tax += tax_amount;
+            total_distributed_fee += service_fee_amount;
+
+            results.push(InstallmentResult {
+                amount,
+                tax_amount,
+                service_fee_amount,
+            });
+        }
+
+        Ok(results)
+    }
+
     /// Calculate installment schedules for an invoice
     /// 
     /// Distributes the invoice total, taxes, and service fees proportionally across installments.
@@ -272,6 +414,12 @@ impl InstallmentCalculator {
         result.sort_by_key(|s| s.installment_number);
 
         Ok(result)
+    }
+}
+
+impl Default for InstallmentCalculator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

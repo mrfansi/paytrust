@@ -86,10 +86,22 @@ path = "tests/unit/service_fee_test.rs"
 name = "tax_calculation_test"
 path = "tests/unit/tax_calculation_test.rs"
 
+[[test]]
+name = "installment_calculator_test"
+path = "tests/unit/installment_calculator_test.rs"
+
+[[test]]
+name = "installment_overpayment_test"
+path = "tests/unit/installment_overpayment_test.rs"
+
 # Contract Tests
 [[test]]
 name = "invoice_api_test"
 path = "tests/contract/invoice_api_test.rs"
+
+[[test]]
+name = "installment_api_test"
+path = "tests/contract/installment_api_test.rs"
 
 # Integration Tests
 [[test]]
@@ -99,6 +111,14 @@ path = "tests/integration/payment_flow_test.rs"
 [[test]]
 name = "gateway_validation_test"
 path = "tests/integration/gateway_validation_test.rs"
+
+[[test]]
+name = "installment_flow_test"
+path = "tests/integration/installment_flow_test.rs"
+
+[[test]]
+name = "installment_adjustment_test"
+path = "tests/integration/installment_adjustment_test.rs"
 
 [[test]]
 name = "invoice_expiration_test"
