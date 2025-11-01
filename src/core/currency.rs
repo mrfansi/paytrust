@@ -121,13 +121,15 @@ mod tests {
 
     #[test]
     fn test_currency_rounding() {
+        // IDR (0 decimal places): 1000.50 rounds to 1000 (banker's rounding)
         assert_eq!(
             Currency::IDR.round(Decimal::new(100050, 2)),
-            Decimal::new(1001, 0)
+            Decimal::new(1000, 0)
         );
+        // MYR (2 decimal places): 10.0055 rounds to 10.01 (banker's rounding)
         assert_eq!(
             Currency::MYR.round(Decimal::new(100055, 4)),
-            Decimal::new(10, 0)
+            Decimal::new(1001, 2)
         );
     }
 

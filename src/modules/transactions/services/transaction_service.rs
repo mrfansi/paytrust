@@ -346,14 +346,5 @@ use serde::{Deserialize, Serialize};
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_service_creation() {
-        let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
-        let transaction_repo = TransactionRepository::new(pool.clone());
-        let invoice_repo = InvoiceRepository::new(pool);
-        
-        let _service = TransactionService::new(transaction_repo, invoice_repo);
-        // Just verify it can be created
-        assert!(true);
-    }
+    // Service creation is tested in integration tests
 }

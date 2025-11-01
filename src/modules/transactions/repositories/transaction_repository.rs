@@ -290,11 +290,5 @@ mod tests {
     // Note: These are unit tests for the repository interface.
     // Integration tests with actual database will be in tests/integration/
 
-    #[test]
-    fn test_repository_creation() {
-        let pool = MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
-        let repo = TransactionRepository::new(pool);
-        // Just verify it can be created
-        assert!(true);
-    }
+    // Repository creation is tested in integration tests
 }

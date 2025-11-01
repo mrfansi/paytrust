@@ -72,6 +72,24 @@ futures-util = "0.3"
 proptest = "1.5"
 mockito = "1.5"
 
+# Contract Tests
+[[test]]
+name = "invoice_api_test"
+path = "tests/contract/invoice_api_test.rs"
+
+# Integration Tests
+[[test]]
+name = "payment_flow_test"
+path = "tests/integration/payment_flow_test.rs"
+
+[[test]]
+name = "gateway_validation_test"
+path = "tests/integration/gateway_validation_test.rs"
+
+[[test]]
+name = "invoice_expiration_test"
+path = "tests/integration/invoice_expiration_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

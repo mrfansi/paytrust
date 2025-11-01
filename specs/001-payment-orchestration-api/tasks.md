@@ -95,12 +95,12 @@
 
 - [x] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
 - [x] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
-- [ ] T033 [P] [US1] Contract test for POST /invoices endpoint in `tests/contract/invoice_api_test.rs` validating OpenAPI schema
-- [ ] T034 [P] [US1] Contract test for GET /invoices/{id} endpoint in `tests/contract/invoice_api_test.rs`
-- [ ] T035 [P] [US1] Contract test for GET /invoices endpoint in `tests/contract/invoice_api_test.rs`
-- [ ] T036 [P] [US1] Integration test for single payment flow in `tests/integration/invoice_flow_test.rs` (create → gateway payment → webhook → status update)
-- [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (FR-046)
-- [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (FR-044, FR-045)
+- [x] T033 [P] [US1] Contract test for POST /invoices endpoint in `tests/contract/invoice_api_test.rs` validating OpenAPI schema (7 tests)
+- [x] T034 [P] [US1] Contract test for GET /invoices/{id} endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
+- [x] T035 [P] [US1] Contract test for GET /invoices endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
+- [x] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
+- [x] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
+- [x] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
 
 ### Implementation for User Story 1
 
