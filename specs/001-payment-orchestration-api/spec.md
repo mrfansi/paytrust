@@ -29,6 +29,7 @@
 - Q: How should rounding discrepancies be handled when dividing amounts across installments (especially for IDR with no decimals)? → A: Last installment absorbs difference - Round down earlier installments, last installment = total minus sum of previous
 - Q: What happens when a customer overpays a single installment (e.g., pays Rp 300,000 for Rp 200,000 installment)? → A: Accept excess, auto-apply to remaining installments - Apply excess sequentially to next installments, mark them paid, if total reached mark invoice "fully paid"
 - Q: Can developers adjust remaining installment amounts after first payment is made? → A: Can adjust unpaid installments only - Paid installments locked, unpaid amounts can be adjusted while maintaining total remaining balance
+- Q: How should the system handle adding line items to an invoice after payment has started? → A: Create supplementary invoice - Original invoice continues unchanged, new invoice created for additional items with separate payment/installment schedule
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -110,6 +111,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - Can customers pay installments out of order (e.g., pay installment #3 before #1)? No, sequential order enforced - must pay installment 1 before 2, payment URLs only active for next unpaid installment in sequence
 - What happens if customer overpays an installment (pays more than installment amount)? System accepts overpayment, automatically applies excess to next installments sequentially, marks invoice "fully paid" if total reached
 - Can installment schedule be modified after first payment? Yes, unpaid installments can be adjusted (paid installments locked), system validates sum equals remaining balance and recalculates proportional taxes/fees
+- What happens if customer wants to add items to invoice after payment started? System rejects line item additions, developer must create new supplementary invoice for additional items with separate payment schedule
 - How are tax and service fees distributed when installment amounts are customized? Tax and service fees distributed proportionally based on each installment's share of total amount
 - What happens when a developer tries to modify an invoice after payment has started? System rejects modification with 400 error, invoice is immutable once payment initiated, must cancel and create new invoice
 - How does the system handle refunds or payment reversals from the gateway?
@@ -135,6 +137,8 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-046**: System MUST validate that the selected gateway supports the invoice currency before processing
 - **FR-051**: System MUST make invoices immutable (read-only) once payment is initiated - no modifications to line items, amounts, or financial data allowed (exception: unpaid installment amounts can be adjusted per FR-077)
 - **FR-052**: System MUST reject modification requests for invoices with status other than "draft" with 400 Bad Request and appropriate error message (exception: unpaid installment schedule adjustments allowed)
+- **FR-081**: System MUST reject attempts to add or remove line items from invoices after payment is initiated
+- **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle
 - **FR-044**: System MUST set default invoice expiration to 24 hours from creation unless explicitly configured otherwise
 - **FR-045**: System MUST automatically mark invoices as "expired" when expiration time is reached and payment is not completed
 
@@ -235,7 +239,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Key Entities
 
-- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, immutability flag (becomes read-only after payment initiation), and creation/update timestamps
+- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, immutability flag (becomes read-only after payment initiation), optional reference to original invoice (for supplementary invoices), and creation/update timestamps
 - **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, tax rate (percentage), tax category (optional identifier), and calculated tax amount
 - **Payment Transaction**: Represents actual payment attempt/completion with transaction ID, gateway transaction reference, amount paid, payment method, timestamp, status, and gateway response data
 - **Installment Schedule**: Represents payment plan with installment number, due date, amount, proportionally-calculated tax amount, proportionally-calculated service fee amount, payment status, and associated transaction reference when paid
