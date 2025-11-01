@@ -169,17 +169,17 @@
 
 - [x] T070 [US2] Update Invoice model to include tax_total and service_fee fields
 - [x] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
-- [ ] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
-- [ ] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
-- [ ] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
-- [ ] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
+- [x] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
+- [x] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
+- [x] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
+- [x] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
 
 **Reports Module**
 
-- [ ] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
-- [ ] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
-- [ ] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
-- [ ] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
+- [x] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
+- [x] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
+- [x] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
+- [x] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
 
 **Checkpoint**: At this point, User Stories 1 AND 2 work independently - invoices include accurate taxes and fees, financial reports show breakdowns by currency and rate.
 
