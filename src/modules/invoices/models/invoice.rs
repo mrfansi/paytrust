@@ -26,9 +26,17 @@ pub enum InvoiceStatus {
     #[serde(rename = "processing")]
     Processing,
     
-    /// Payment successfully completed
+    /// Payment successfully completed (full or single payment)
     #[serde(rename = "paid")]
     Paid,
+    
+    /// First installment paid, remaining installments pending (FR-019, T094)
+    #[serde(rename = "partially_paid")]
+    PartiallyPaid,
+    
+    /// All installments completed (FR-020, T095)
+    #[serde(rename = "fully_paid")]
+    FullyPaid,
     
     /// Invoice expired without payment (FR-044)
     #[serde(rename = "expired")]
@@ -51,6 +59,8 @@ impl std::fmt::Display for InvoiceStatus {
             InvoiceStatus::Pending => write!(f, "pending"),
             InvoiceStatus::Processing => write!(f, "processing"),
             InvoiceStatus::Paid => write!(f, "paid"),
+            InvoiceStatus::PartiallyPaid => write!(f, "partially_paid"),
+            InvoiceStatus::FullyPaid => write!(f, "fully_paid"),
             InvoiceStatus::Expired => write!(f, "expired"),
             InvoiceStatus::Failed => write!(f, "failed"),
         }
@@ -65,6 +75,8 @@ impl std::str::FromStr for InvoiceStatus {
             "pending" => Ok(InvoiceStatus::Pending),
             "processing" => Ok(InvoiceStatus::Processing),
             "paid" => Ok(InvoiceStatus::Paid),
+            "partially_paid" => Ok(InvoiceStatus::PartiallyPaid),
+            "fully_paid" => Ok(InvoiceStatus::FullyPaid),
             "expired" => Ok(InvoiceStatus::Expired),
             "failed" => Ok(InvoiceStatus::Failed),
             _ => Err(format!("Invalid invoice status: {}", s)),

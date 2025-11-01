@@ -415,6 +415,98 @@ impl InvoiceService {
         Ok(())
     }
 
+    /// Update invoice status to partially_paid when first installment is paid (T094, FR-019)
+    /// 
+    /// # Arguments
+    /// * `invoice_id` - Invoice ID
+    /// 
+    /// # Returns
+    /// * `Result<Invoice>` - Updated invoice
+    /// 
+    /// # Business Rules
+    /// - FR-019: Status becomes "partially_paid" when first installment paid
+    /// - Can only transition from Pending or Processing status
+    pub async fn mark_invoice_partially_paid(&self, invoice_id: &str) -> Result<Invoice> {
+        info!(
+            invoice_id = invoice_id,
+            "Marking invoice as partially paid (first installment received)"
+        );
+
+        let invoice = self.get_invoice(invoice_id).await?;
+
+        // Validate current status allows this transition
+        if invoice.status != InvoiceStatus::Pending 
+            && invoice.status != InvoiceStatus::Processing {
+            return Err(AppError::validation(format!(
+                "Cannot mark invoice as partially_paid from status '{}'",
+                invoice.status
+            )));
+        }
+
+        // Update status to partially_paid
+        self.invoice_repo
+            .update_status(invoice_id, InvoiceStatus::PartiallyPaid)
+            .await?;
+
+        info!(
+            invoice_id = invoice_id,
+            "Invoice marked as partially paid successfully"
+        );
+
+        self.get_invoice(invoice_id).await
+    }
+
+    /// Update invoice status to fully_paid when all installments are paid (T095, FR-020)
+    /// 
+    /// # Arguments
+    /// * `invoice_id` - Invoice ID
+    /// 
+    /// # Returns
+    /// * `Result<Invoice>` - Updated invoice
+    /// 
+    /// # Business Rules
+    /// - FR-020: Status becomes "fully_paid" when all installments complete
+    /// - Can only transition from PartiallyPaid status (or Pending/Processing for edge cases)
+    pub async fn mark_invoice_fully_paid(&self, invoice_id: &str) -> Result<Invoice> {
+        info!(
+            invoice_id = invoice_id,
+            "Marking invoice as fully paid (all installments received)"
+        );
+
+        let invoice = self.get_invoice(invoice_id).await?;
+
+        // Validate current status allows this transition
+        match invoice.status {
+            InvoiceStatus::PartiallyPaid 
+            | InvoiceStatus::Pending 
+            | InvoiceStatus::Processing => {
+                // Valid transitions
+            }
+            InvoiceStatus::FullyPaid => {
+                // Already fully paid, no-op
+                return Ok(invoice);
+            }
+            _ => {
+                return Err(AppError::validation(format!(
+                    "Cannot mark invoice as fully_paid from status '{}'",
+                    invoice.status
+                )));
+            }
+        }
+
+        // Update status to fully_paid
+        self.invoice_repo
+            .update_status(invoice_id, InvoiceStatus::FullyPaid)
+            .await?;
+
+        info!(
+            invoice_id = invoice_id,
+            "Invoice marked as fully paid successfully"
+        );
+
+        self.get_invoice(invoice_id).await
+    }
+
     /// Calculate service fee for invoice based on gateway configuration (FR-009, FR-047)
     /// 
     /// Service fee is calculated as: (subtotal × gateway.fee_percentage) + gateway.fee_fixed
@@ -458,5 +550,31 @@ mod tests {
     fn test_service_creation() {
         // This test just ensures the module compiles
         // Real tests require database setup
+    }
+
+    #[test]
+    fn test_invoice_status_partially_paid_display() {
+        let status = InvoiceStatus::PartiallyPaid;
+        assert_eq!(status.to_string(), "partially_paid");
+    }
+
+    #[test]
+    fn test_invoice_status_fully_paid_display() {
+        let status = InvoiceStatus::FullyPaid;
+        assert_eq!(status.to_string(), "fully_paid");
+    }
+
+    #[test]
+    fn test_invoice_status_partially_paid_from_str() {
+        use std::str::FromStr;
+        let status = InvoiceStatus::from_str("partially_paid").unwrap();
+        assert_eq!(status, InvoiceStatus::PartiallyPaid);
+    }
+
+    #[test]
+    fn test_invoice_status_fully_paid_from_str() {
+        use std::str::FromStr;
+        let status = InvoiceStatus::from_str("fully_paid").unwrap();
+        assert_eq!(status, InvoiceStatus::FullyPaid);
     }
 }
