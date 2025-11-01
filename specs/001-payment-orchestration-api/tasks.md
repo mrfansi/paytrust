@@ -108,7 +108,7 @@
 
 - [x] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
 - [x] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
-- [x] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations
+- [x] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
 - [x] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway, set expiration)
 - [x] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [x] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs

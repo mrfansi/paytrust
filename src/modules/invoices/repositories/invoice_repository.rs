@@ -58,23 +58,23 @@ impl InvoiceRepository {
         let id = invoice.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         
         // Insert invoice
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO invoices (
                 id, external_id, gateway_id, currency, total, status,
                 expires_at, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
-            id,
-            invoice.external_id,
-            invoice.gateway_id,
-            invoice.currency.to_string(),
-            invoice.total,
-            invoice.status.to_string(),
-            invoice.expires_at,
-            invoice.created_at,
-            invoice.updated_at,
+            "#
         )
+        .bind(&id)
+        .bind(&invoice.external_id)
+        .bind(&invoice.gateway_id)
+        .bind(invoice.currency.to_string())
+        .bind(invoice.total)
+        .bind(invoice.status.to_string())
+        .bind(invoice.expires_at)
+        .bind(invoice.created_at)
+        .bind(invoice.updated_at)
         .execute(&mut **tx)
         .await
         .map_err(|e| {
@@ -93,20 +93,20 @@ impl InvoiceRepository {
         for line_item in &invoice.line_items {
             let line_id = Uuid::new_v4().to_string();
             
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 INSERT INTO line_items (
                     id, invoice_id, description, quantity, unit_price, currency, subtotal
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                "#,
-                line_id,
-                id,
-                line_item.description,
-                line_item.quantity,
-                line_item.unit_price,
-                line_item.currency.to_string(),
-                line_item.subtotal,
+                "#
             )
+            .bind(&line_id)
+            .bind(&id)
+            .bind(&line_item.description)
+            .bind(line_item.quantity)
+            .bind(line_item.unit_price)
+            .bind(line_item.currency.to_string())
+            .bind(line_item.subtotal)
             .execute(&mut **tx)
             .await
             .map_err(|e| AppError::Internal(format!("Failed to create line item: {}", e)))?;
@@ -128,18 +128,16 @@ impl InvoiceRepository {
     /// * `Result<Option<Invoice>>` - Invoice if found, None if not found
     pub async fn find_by_id(&self, id: &str) -> Result<Option<Invoice>> {
         // Fetch invoice
-        let invoice_row = sqlx::query_as!(
-            InvoiceRow,
+        let invoice_row = sqlx::query_as::<_, InvoiceRow>(
             r#"
             SELECT 
-                id, external_id, gateway_id, currency, total, 
-                status as "status: InvoiceStatus",
+                id, external_id, gateway_id, currency, total, status,
                 expires_at, created_at, updated_at
             FROM invoices
             WHERE id = ?
-            "#,
-            id
+            "#
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to fetch invoice: {}", e)))?;
@@ -149,17 +147,16 @@ impl InvoiceRepository {
         };
 
         // Fetch line items
-        let line_items = sqlx::query_as!(
-            LineItemRow,
+        let line_items = sqlx::query_as::<_, LineItemRow>(
             r#"
             SELECT 
                 id, invoice_id, description, quantity, unit_price, currency, subtotal
             FROM line_items
             WHERE invoice_id = ?
             ORDER BY id
-            "#,
-            id
+            "#
         )
+        .bind(id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to fetch line items: {}", e)))?;
@@ -175,18 +172,16 @@ impl InvoiceRepository {
     /// # Returns
     /// * `Result<Option<Invoice>>` - Invoice if found
     pub async fn find_by_external_id(&self, external_id: &str) -> Result<Option<Invoice>> {
-        let invoice_row = sqlx::query_as!(
-            InvoiceRow,
+        let invoice_row = sqlx::query_as::<_, InvoiceRow>(
             r#"
             SELECT 
-                id, external_id, gateway_id, currency, total,
-                status as "status: InvoiceStatus",
+                id, external_id, gateway_id, currency, total, status,
                 expires_at, created_at, updated_at
             FROM invoices
             WHERE external_id = ?
-            "#,
-            external_id
+            "#
         )
+        .bind(external_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to fetch invoice: {}", e)))?;
@@ -195,17 +190,16 @@ impl InvoiceRepository {
             return Ok(None);
         };
 
-        let line_items = sqlx::query_as!(
-            LineItemRow,
+        let line_items = sqlx::query_as::<_, LineItemRow>(
             r#"
             SELECT 
                 id, invoice_id, description, quantity, unit_price, currency, subtotal
             FROM line_items
             WHERE invoice_id = ?
             ORDER BY id
-            "#,
-            invoice_row.id
+            "#
         )
+        .bind(&invoice_row.id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to fetch line items: {}", e)))?;
@@ -221,33 +215,43 @@ impl InvoiceRepository {
     /// 
     /// # Returns
     /// * `Result<Vec<Invoice>>` - List of invoices (without line items for performance)
-    pub async fn list(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<Invoice>> {
-        let limit = limit.unwrap_or(20).min(100);
-        let offset = offset.unwrap_or(0);
-
-        let invoice_rows = sqlx::query_as!(
-            InvoiceRow,
+    pub async fn list(&self, limit: i32, offset: i32) -> Result<Vec<Invoice>> {
+        let invoice_rows = sqlx::query_as::<_, InvoiceRow>(
             r#"
             SELECT 
-                id, external_id, gateway_id, currency, total,
-                status as "status: InvoiceStatus",
+                id, external_id, gateway_id, currency, total, status,
                 expires_at, created_at, updated_at
             FROM invoices
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
-            "#,
-            limit,
-            offset
+            "#
         )
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to list invoices: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("Failed to fetch invoices: {}", e)))?;
 
-        // Convert to invoices (without line items for list view)
-        invoice_rows
-            .into_iter()
-            .map(|row| row.into_invoice(vec![]))
-            .collect()
+        let mut invoices = Vec::new();
+        for invoice_row in invoice_rows {
+            let line_items = sqlx::query_as::<_, LineItemRow>(
+                r#"
+                SELECT 
+                    id, invoice_id, description, quantity, unit_price, currency, subtotal
+                FROM line_items
+                WHERE invoice_id = ?
+                ORDER BY id
+                "#
+            )
+            .bind(&invoice_row.id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to fetch line items: {}", e)))?;
+
+            invoices.push(invoice_row.into_invoice(line_items)?);
+        }
+
+        Ok(invoices)
     }
 
     /// Update invoice status
@@ -262,15 +266,15 @@ impl InvoiceRepository {
     /// # Notes
     /// Caller must enforce immutability rules (FR-051, FR-052)
     pub async fn update_status(&self, id: &str, new_status: InvoiceStatus) -> Result<()> {
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"
             UPDATE invoices
             SET status = ?, updated_at = NOW()
             WHERE id = ?
-            "#,
-            new_status.to_string(),
-            id
+            "#
         )
+        .bind(new_status.to_string())
+        .bind(id)
         .execute(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to update invoice status: {}", e)))?;
@@ -286,32 +290,32 @@ impl InvoiceRepository {
     /// 
     /// Used for uniqueness validation before creation
     pub async fn exists_by_external_id(&self, external_id: &str) -> Result<bool> {
-        let result = sqlx::query!(
+        let row: (i64,) = sqlx::query_as(
             r#"
             SELECT COUNT(*) as count
             FROM invoices
             WHERE external_id = ?
-            "#,
-            external_id
+            "#
         )
+        .bind(external_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to check external_id: {}", e)))?;
 
-        Ok(result.count > 0)
+        Ok(row.0 > 0)
     }
 }
 
 // Helper structs for database mapping
 
-#[derive(Debug)]
+#[derive(Debug, sqlx::FromRow)]
 struct InvoiceRow {
     id: String,
     external_id: String,
     gateway_id: String,
     currency: String,
     total: rust_decimal::Decimal,
-    status: InvoiceStatus,
+    status: String,
     expires_at: chrono::DateTime<chrono::Utc>,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
@@ -323,6 +327,9 @@ impl InvoiceRow {
         
         let currency = crate::core::Currency::from_str(&self.currency)
             .map_err(|e| AppError::Internal(format!("Invalid currency in database: {}", e)))?;
+        
+        let status = InvoiceStatus::from_str(&self.status)
+            .map_err(|e| AppError::Internal(format!("Invalid status in database: {}", e)))?;
 
         let line_items: Result<Vec<LineItem>> = line_item_rows
             .into_iter()
@@ -335,7 +342,7 @@ impl InvoiceRow {
             gateway_id: self.gateway_id,
             currency,
             total: Some(self.total),
-            status: self.status,
+            status,
             expires_at: Some(self.expires_at),
             created_at: Some(self.created_at),
             updated_at: Some(self.updated_at),
@@ -344,7 +351,7 @@ impl InvoiceRow {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, sqlx::FromRow)]
 struct LineItemRow {
     id: String,
     invoice_id: String,
@@ -371,18 +378,6 @@ impl LineItemRow {
             currency,
             subtotal: Some(self.subtotal),
         })
-    }
-}
-
-impl ToString for InvoiceStatus {
-    fn to_string(&self) -> String {
-        match self {
-            InvoiceStatus::Pending => "pending".to_string(),
-            InvoiceStatus::Processing => "processing".to_string(),
-            InvoiceStatus::Paid => "paid".to_string(),
-            InvoiceStatus::Expired => "expired".to_string(),
-            InvoiceStatus::Failed => "failed".to_string(),
-        }
     }
 }
 

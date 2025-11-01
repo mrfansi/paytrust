@@ -45,6 +45,33 @@ impl Default for InvoiceStatus {
     }
 }
 
+impl std::fmt::Display for InvoiceStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InvoiceStatus::Pending => write!(f, "pending"),
+            InvoiceStatus::Processing => write!(f, "processing"),
+            InvoiceStatus::Paid => write!(f, "paid"),
+            InvoiceStatus::Expired => write!(f, "expired"),
+            InvoiceStatus::Failed => write!(f, "failed"),
+        }
+    }
+}
+
+impl std::str::FromStr for InvoiceStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "pending" => Ok(InvoiceStatus::Pending),
+            "processing" => Ok(InvoiceStatus::Processing),
+            "paid" => Ok(InvoiceStatus::Paid),
+            "expired" => Ok(InvoiceStatus::Expired),
+            "failed" => Ok(InvoiceStatus::Failed),
+            _ => Err(format!("Invalid invoice status: {}", s)),
+        }
+    }
+}
+
 /// Represents a payment invoice
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Invoice {

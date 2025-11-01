@@ -121,6 +121,8 @@ impl InvoiceService {
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> Result<Vec<Invoice>> {
+        let limit = limit.unwrap_or(20).min(100) as i32;
+        let offset = offset.unwrap_or(0) as i32;
         self.invoice_repo.list(limit, offset).await
     }
 
