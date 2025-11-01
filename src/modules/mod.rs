@@ -1,4 +1,5 @@
 pub mod gateways;
+pub mod health;
 pub mod installments;
 pub mod invoices;
 pub mod reports;

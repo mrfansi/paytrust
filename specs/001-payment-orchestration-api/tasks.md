@@ -304,7 +304,7 @@
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
 - [ ] T128 [P] Generate OpenAPI documentation endpoint in actix-web serving `contracts/openapi.yaml`
 - [ ] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
-- [ ] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
+- [x] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
 ### Code Quality
 
@@ -319,14 +319,14 @@
 - [ ] T135 Performance optimization: add database indexes per data-model.md (already in migration 007)
 - [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001)
 - [ ] T137 Load testing: verify 100 concurrent requests handling (NFR-002)
-- [ ] T138 Implement graceful shutdown handling in main.rs
+- [x] T138 Implement graceful shutdown handling in main.rs
 
 ### Monitoring & Observability
 
-- [ ] T139 Add structured logging for all API endpoints with request IDs
+- [x] T139 Add structured logging for all API endpoints with request IDs
 - [ ] T140 Add metrics collection for response times, error rates, gateway success rates
-- [ ] T141 Add health check endpoint GET /health with database connectivity check
-- [ ] T142 Add readiness probe endpoint GET /ready
+- [x] T141 Add health check endpoint GET /health with database connectivity check
+- [x] T142 Add readiness probe endpoint GET /ready
 
 ### Additional Testing (Optional)
 
