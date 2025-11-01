@@ -316,7 +316,7 @@
 ### Security & Performance
 
 - [x] T134 Security audit: validate all input sanitization and SQL injection prevention (sqlx compile-time checks) - 3 vulnerabilities found and fixed: API key hashing, error disclosure, webhook secret exposure
-- [ ] T135 Performance optimization: add database indexes per data-model.md (already in migration 007)
+- [x] T135 Performance optimization: add database indexes per data-model.md (already in migration 007) - 27 indexes verified across 4 tables, all data-model.md requirements satisfied
 - [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001)
 - [ ] T137 Load testing: verify 100 concurrent requests handling (NFR-002)
 - [x] T138 Implement graceful shutdown handling in main.rs
