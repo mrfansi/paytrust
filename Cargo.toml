@@ -72,6 +72,19 @@ futures-util = "0.3"
 proptest = "1.5"
 mockito = "1.5"
 
+# Unit Tests (Property-based)
+[[test]]
+name = "tax_calculator_test"
+path = "tests/unit/tax_calculator_test.rs"
+
+[[test]]
+name = "service_fee_test"
+path = "tests/unit/service_fee_test.rs"
+
+[[test]]
+name = "tax_calculation_test"
+path = "tests/unit/tax_calculation_test.rs"
+
 # Contract Tests
 [[test]]
 name = "invoice_api_test"
