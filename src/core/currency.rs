@@ -92,6 +92,22 @@ impl std::str::FromStr for Currency {
     }
 }
 
+impl TryFrom<String> for Currency {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl TryFrom<&str> for Currency {
+    type Error = String;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
