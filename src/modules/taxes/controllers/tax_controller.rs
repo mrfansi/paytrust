@@ -33,10 +33,7 @@ pub async fn list_active_taxes(pool: web::Data<MySqlPool>) -> HttpResponse {
 /// Get tax by ID
 ///
 /// GET /taxes/{id}
-pub async fn get_tax_by_id(
-    pool: web::Data<MySqlPool>,
-    tax_id: web::Path<String>,
-) -> HttpResponse {
+pub async fn get_tax_by_id(pool: web::Data<MySqlPool>, tax_id: web::Path<String>) -> HttpResponse {
     let repository = TaxRepository::new(pool.get_ref().clone());
 
     match repository.find_by_id(&tax_id).await {

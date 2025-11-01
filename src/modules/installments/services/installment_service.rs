@@ -34,7 +34,7 @@ impl InstallmentService {
     }
 
     /// Create installment schedules for an invoice
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to create schedules for
     /// * `invoice_total` - Total invoice amount
@@ -43,10 +43,10 @@ impl InstallmentService {
     /// * `config` - Installment configuration (count and optional custom amounts)
     /// * `currency` - Currency for rounding
     /// * `start_date` - First installment due date
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Created installment schedules
-    /// 
+    ///
     /// # Business Rules
     /// - FR-014: 2-12 installments allowed (validated by InstallmentConfig)
     /// - FR-017: SUM(amounts) = invoice_total (validated by calculator)
@@ -94,10 +94,10 @@ impl InstallmentService {
     }
 
     /// Get all installments for an invoice
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to query
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Ordered list of installments
     pub async fn get_installments(&self, invoice_id: &str) -> Result<Vec<InstallmentSchedule>> {
@@ -105,10 +105,10 @@ impl InstallmentService {
     }
 
     /// Get a single installment by ID
-    /// 
+    ///
     /// # Arguments
     /// * `id` - Installment ID
-    /// 
+    ///
     /// # Returns
     /// * `Result<InstallmentSchedule>` - Installment if found
     pub async fn get_installment(&self, id: &str) -> Result<InstallmentSchedule> {
@@ -119,13 +119,13 @@ impl InstallmentService {
     }
 
     /// Validate that an installment can be paid according to sequential rules
-    /// 
+    ///
     /// # Arguments
     /// * `installment_id` - Installment ID to validate
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success if installment can be paid
-    /// 
+    ///
     /// # Business Rules
     /// - FR-068: Sequential payment order enforced
     /// - All previous installments must be paid before this one
@@ -138,7 +138,10 @@ impl InstallmentService {
         }
 
         // Get all installments for the invoice
-        let all_installments = self.repository.find_by_invoice(&installment.invoice_id).await?;
+        let all_installments = self
+            .repository
+            .find_by_invoice(&installment.invoice_id)
+            .await?;
 
         // Check if can be paid (sequential enforcement)
         if !installment.can_be_paid(&all_installments) {
@@ -157,14 +160,14 @@ impl InstallmentService {
     }
 
     /// Mark an installment as paid
-    /// 
+    ///
     /// # Arguments
     /// * `id` - Installment ID
     /// * `gateway_reference` - Gateway transaction reference
-    /// 
+    ///
     /// # Returns
     /// * `Result<InstallmentSchedule>` - Updated installment
-    /// 
+    ///
     /// # Business Rules
     /// - FR-068: Validates sequential payment order before marking as paid
     pub async fn mark_installment_paid(
@@ -193,17 +196,17 @@ impl InstallmentService {
     }
 
     /// Adjust unpaid installments after first payment
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID
     /// * `remaining_total` - Remaining unpaid total (invoice total - paid installments)
     /// * `remaining_tax` - Remaining tax to distribute
     /// * `remaining_fee` - Remaining service fee to distribute
     /// * `currency` - Currency for rounding
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Updated installment schedules
-    /// 
+    ///
     /// # Business Rules
     /// - FR-077: Only unpaid installments can be adjusted
     /// - FR-078: Paid installments remain unchanged
@@ -259,16 +262,19 @@ impl InstallmentService {
     }
 
     /// Mark overdue installments
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to check
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Updated overdue installments
-    /// 
+    ///
     /// # Business Rules
     /// - Unpaid installments past their due date are marked as overdue
-    pub async fn mark_overdue_installments(&self, invoice_id: &str) -> Result<Vec<InstallmentSchedule>> {
+    pub async fn mark_overdue_installments(
+        &self,
+        invoice_id: &str,
+    ) -> Result<Vec<InstallmentSchedule>> {
         let installments = self.repository.find_by_invoice(invoice_id).await?;
 
         let mut updated = Vec::new();
@@ -292,24 +298,27 @@ impl InstallmentService {
     }
 
     /// Get unpaid installments in sequence
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to query
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Unpaid installments ordered by number
-    pub async fn get_unpaid_installments(&self, invoice_id: &str) -> Result<Vec<InstallmentSchedule>> {
+    pub async fn get_unpaid_installments(
+        &self,
+        invoice_id: &str,
+    ) -> Result<Vec<InstallmentSchedule>> {
         self.repository.find_unpaid_in_sequence(invoice_id).await
     }
 
     /// Get the next unpaid installment that can be paid
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to query
-    /// 
+    ///
     /// # Returns
     /// * `Result<Option<InstallmentSchedule>>` - Next payable installment if exists
-    /// 
+    ///
     /// # Business Rules
     /// - FR-068: Returns the first unpaid installment in sequence
     pub async fn get_next_payable_installment(
@@ -331,11 +340,11 @@ impl InstallmentService {
     }
 
     /// Set payment URL for an installment
-    /// 
+    ///
     /// # Arguments
     /// * `id` - Installment ID
     /// * `payment_url` - Gateway-generated payment URL
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success
     pub async fn set_payment_url(&self, id: &str, payment_url: String) -> Result<()> {
@@ -388,7 +397,7 @@ mod tests {
             Decimal::new(500000, 0),
         ];
         let total = Decimal::new(1500000, 0);
-        
+
         let valid_config = InstallmentConfig {
             installment_count: 3,
             custom_amounts: Some(amounts.clone()),

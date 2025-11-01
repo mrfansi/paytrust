@@ -91,9 +91,9 @@ impl TransactionRepository {
         .map_err(|e| AppError::Internal(format!("Failed to create transaction: {}", e)))?;
 
         // Fetch and return created transaction
-        self.find_by_id(id).await?.ok_or_else(|| {
-            AppError::Internal("Transaction was created but not found".to_string())
-        })
+        self.find_by_id(id)
+            .await?
+            .ok_or_else(|| AppError::Internal("Transaction was created but not found".to_string()))
     }
 
     /// Find transaction by ID
@@ -129,7 +129,10 @@ impl TransactionRepository {
     ///
     /// # Returns
     /// * `Result<Option<PaymentTransaction>>` - Transaction if found
-    pub async fn find_by_gateway_ref(&self, gateway_ref: &str) -> Result<Option<PaymentTransaction>> {
+    pub async fn find_by_gateway_ref(
+        &self,
+        gateway_ref: &str,
+    ) -> Result<Option<PaymentTransaction>> {
         let transaction = sqlx::query_as::<_, PaymentTransaction>(
             r#"
             SELECT 
@@ -143,7 +146,9 @@ impl TransactionRepository {
         .bind(gateway_ref)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to fetch transaction by gateway ref: {}", e)))?;
+        .map_err(|e| {
+            AppError::Internal(format!("Failed to fetch transaction by gateway ref: {}", e))
+        })?;
 
         Ok(transaction)
     }
@@ -170,7 +175,9 @@ impl TransactionRepository {
         .bind(invoice_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to fetch transactions for invoice: {}", e)))?;
+        .map_err(|e| {
+            AppError::Internal(format!("Failed to fetch transactions for invoice: {}", e))
+        })?;
 
         Ok(transactions)
     }
@@ -182,7 +189,10 @@ impl TransactionRepository {
     ///
     /// # Returns
     /// * `Result<Vec<PaymentTransaction>>` - List of transactions
-    pub async fn find_by_installment_id(&self, installment_id: &str) -> Result<Vec<PaymentTransaction>> {
+    pub async fn find_by_installment_id(
+        &self,
+        installment_id: &str,
+    ) -> Result<Vec<PaymentTransaction>> {
         let transactions = sqlx::query_as::<_, PaymentTransaction>(
             r#"
             SELECT 
@@ -197,7 +207,12 @@ impl TransactionRepository {
         .bind(installment_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to fetch transactions for installment: {}", e)))?;
+        .map_err(|e| {
+            AppError::Internal(format!(
+                "Failed to fetch transactions for installment: {}",
+                e
+            ))
+        })?;
 
         Ok(transactions)
     }

@@ -18,15 +18,15 @@ impl ReportRepository {
     }
 
     /// Get service fee breakdown aggregated by gateway and currency
-    /// 
+    ///
     /// Queries invoices table to sum service_fee grouped by gateway_id and currency.
     /// Only includes invoices with status 'paid' or 'partially_paid' within the date range.
-    /// 
+    ///
     /// # Arguments
     /// * `start_date` - Start of reporting period (inclusive)
     /// * `end_date` - End of reporting period (inclusive)
     /// * `currency_filter` - Optional currency filter (e.g., Some("IDR"))
-    /// 
+    ///
     /// # Returns
     /// Vector of ServiceFeeBreakdown ordered by gateway and currency
     pub async fn get_service_fee_breakdown(
@@ -84,26 +84,28 @@ impl ReportRepository {
 
         Ok(rows
             .into_iter()
-            .map(|row| ServiceFeeBreakdown::new(
-                row.gateway,
-                row.currency,
-                row.total_amount,
-                row.transaction_count,
-            ))
+            .map(|row| {
+                ServiceFeeBreakdown::new(
+                    row.gateway,
+                    row.currency,
+                    row.total_amount,
+                    row.transaction_count,
+                )
+            })
             .collect())
     }
 
     /// Get tax breakdown aggregated by rate and currency
-    /// 
+    ///
     /// Queries line_items joined with invoices to sum tax_amount grouped by tax_rate and currency.
     /// Only includes line items from invoices with status 'paid' or 'partially_paid' within the date range.
     /// Excludes line items with zero tax rate.
-    /// 
+    ///
     /// # Arguments
     /// * `start_date` - Start of reporting period (inclusive)
     /// * `end_date` - End of reporting period (inclusive)
     /// * `currency_filter` - Optional currency filter (e.g., Some("IDR"))
-    /// 
+    ///
     /// # Returns
     /// Vector of TaxBreakdown ordered by tax_rate and currency
     pub async fn get_tax_breakdown(
@@ -163,12 +165,14 @@ impl ReportRepository {
 
         Ok(rows
             .into_iter()
-            .map(|row| TaxBreakdown::new(
-                row.tax_rate,
-                row.currency,
-                row.total_amount,
-                row.transaction_count,
-            ))
+            .map(|row| {
+                TaxBreakdown::new(
+                    row.tax_rate,
+                    row.currency,
+                    row.total_amount,
+                    row.transaction_count,
+                )
+            })
             .collect())
     }
 }

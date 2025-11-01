@@ -28,13 +28,13 @@ impl InstallmentRepository {
     }
 
     /// Create a batch of installment schedules in a transaction
-    /// 
+    ///
     /// # Arguments
     /// * `installments` - Vector of installment schedules to create
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or database error
-    /// 
+    ///
     /// # Database Operations
     /// Inserts all installment records in a single transaction
     pub async fn create_batch(&self, installments: &[InstallmentSchedule]) -> Result<()> {
@@ -42,14 +42,18 @@ impl InstallmentRepository {
             return Ok(());
         }
 
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to start transaction: {}", e)))?;
 
         for installment in installments {
             self.insert_with_tx(&mut tx, installment).await?;
         }
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to commit transaction: {}", e)))?;
 
         Ok(())
@@ -70,7 +74,7 @@ impl InstallmentRepository {
                 service_fee_amount, due_date, status, payment_url, 
                 gateway_reference, paid_at, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(id)
         .bind(&installment.invoice_id)
@@ -93,10 +97,10 @@ impl InstallmentRepository {
     }
 
     /// Find all installments for an invoice
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to query
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Ordered list of installments (by installment_number)
     pub async fn find_by_invoice(&self, invoice_id: &str) -> Result<Vec<InstallmentSchedule>> {
@@ -109,23 +113,21 @@ impl InstallmentRepository {
             FROM installment_schedules
             WHERE invoice_id = ?
             ORDER BY installment_number ASC
-            "#
+            "#,
         )
         .bind(invoice_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to fetch installments: {}", e)))?;
 
-        rows.into_iter()
-            .map(|row| row.try_into())
-            .collect()
+        rows.into_iter().map(|row| row.try_into()).collect()
     }
 
     /// Find a single installment by ID
-    /// 
+    ///
     /// # Arguments
     /// * `id` - Installment ID
-    /// 
+    ///
     /// # Returns
     /// * `Result<Option<InstallmentSchedule>>` - Installment if found, None otherwise
     pub async fn find_by_id(&self, id: &str) -> Result<Option<InstallmentSchedule>> {
@@ -137,7 +139,7 @@ impl InstallmentRepository {
                 gateway_reference, paid_at, created_at, updated_at
             FROM installment_schedules
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -151,10 +153,10 @@ impl InstallmentRepository {
     }
 
     /// Update installment status and payment details
-    /// 
+    ///
     /// # Arguments
     /// * `installment` - Installment with updated fields
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or database error
     pub async fn update(&self, installment: &InstallmentSchedule) -> Result<()> {
@@ -173,7 +175,7 @@ impl InstallmentRepository {
                 paid_at = ?,
                 updated_at = ?
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(installment.amount)
         .bind(installment.tax_amount)
@@ -198,13 +200,16 @@ impl InstallmentRepository {
 
     /// Find unpaid installments in sequence for an invoice
     /// Used for sequential payment enforcement (FR-068)
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Invoice ID to query
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<InstallmentSchedule>>` - Unpaid installments ordered by number
-    pub async fn find_unpaid_in_sequence(&self, invoice_id: &str) -> Result<Vec<InstallmentSchedule>> {
+    pub async fn find_unpaid_in_sequence(
+        &self,
+        invoice_id: &str,
+    ) -> Result<Vec<InstallmentSchedule>> {
         let rows = sqlx::query_as::<_, InstallmentScheduleRow>(
             r#"
             SELECT 
@@ -214,23 +219,21 @@ impl InstallmentRepository {
             FROM installment_schedules
             WHERE invoice_id = ? AND status = 'unpaid'
             ORDER BY installment_number ASC
-            "#
+            "#,
         )
         .bind(invoice_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| AppError::Internal(format!("Failed to fetch unpaid installments: {}", e)))?;
 
-        rows.into_iter()
-            .map(|row| row.try_into())
-            .collect()
+        rows.into_iter().map(|row| row.try_into()).collect()
     }
 
     /// Batch update multiple installments (for adjustment - FR-077)
-    /// 
+    ///
     /// # Arguments
     /// * `installments` - Vector of installments with updated amounts
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or database error
     pub async fn update_batch(&self, installments: &[InstallmentSchedule]) -> Result<()> {
@@ -238,7 +241,10 @@ impl InstallmentRepository {
             return Ok(());
         }
 
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to start transaction: {}", e)))?;
 
         for installment in installments {
@@ -253,7 +259,7 @@ impl InstallmentRepository {
                     service_fee_amount = ?,
                     updated_at = ?
                 WHERE id = ?
-                "#
+                "#,
             )
             .bind(installment.amount)
             .bind(installment.tax_amount)
@@ -265,7 +271,8 @@ impl InstallmentRepository {
             .map_err(|e| AppError::Internal(format!("Failed to update installment: {}", e)))?;
         }
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to commit transaction: {}", e)))?;
 
         Ok(())
@@ -298,7 +305,12 @@ impl TryFrom<InstallmentScheduleRow> for InstallmentSchedule {
             "unpaid" => InstallmentStatus::Unpaid,
             "paid" => InstallmentStatus::Paid,
             "overdue" => InstallmentStatus::Overdue,
-            _ => return Err(AppError::Internal(format!("Invalid installment status: {}", row.status))),
+            _ => {
+                return Err(AppError::Internal(format!(
+                    "Invalid installment status: {}",
+                    row.status
+                )))
+            }
         };
 
         Ok(InstallmentSchedule {
@@ -322,8 +334,8 @@ impl TryFrom<InstallmentScheduleRow> for InstallmentSchedule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal::Decimal;
     use chrono::NaiveDate;
+    use rust_decimal::Decimal;
 
     #[test]
     fn test_installment_row_conversion() {

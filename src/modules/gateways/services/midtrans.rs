@@ -1,4 +1,6 @@
-use super::gateway_trait::{PaymentGateway, PaymentRequest, PaymentResponse, PaymentStatus, WebhookPayload};
+use super::gateway_trait::{
+    PaymentGateway, PaymentRequest, PaymentResponse, PaymentStatus, WebhookPayload,
+};
 use crate::core::{AppError, Currency, Result};
 use async_trait::async_trait;
 use reqwest::{Client, StatusCode};
@@ -35,16 +37,25 @@ impl MidtransClient {
     }
 
     /// Verify SHA512 signature for webhook
-    fn verify_signature(&self, signature: &str, order_id: &str, status_code: &str, gross_amount: &str) -> bool {
+    fn verify_signature(
+        &self,
+        signature: &str,
+        order_id: &str,
+        status_code: &str,
+        gross_amount: &str,
+    ) -> bool {
         use sha2::{Digest, Sha512};
 
         // Midtrans signature format: SHA512(order_id+status_code+gross_amount+server_key)
-        let signature_string = format!("{}{}{}{}", order_id, status_code, gross_amount, self.server_key);
-        
+        let signature_string = format!(
+            "{}{}{}{}",
+            order_id, status_code, gross_amount, self.server_key
+        );
+
         let mut hasher = Sha512::new();
         hasher.update(signature_string.as_bytes());
         let expected_signature = format!("{:x}", hasher.finalize());
-        
+
         // Constant-time comparison
         signature == expected_signature
     }
@@ -110,7 +121,11 @@ impl PaymentGateway for MidtransClient {
                 if e.is_connect() || e.is_timeout() {
                     AppError::gateway(format!(
                         "Midtrans gateway unavailable: {} ({})",
-                        if e.is_timeout() { "timeout" } else { "connection failed" },
+                        if e.is_timeout() {
+                            "timeout"
+                        } else {
+                            "connection failed"
+                        },
                         e
                     ))
                 } else {
@@ -271,7 +286,10 @@ mod tests {
 
         // Generate expected signature
         use sha2::{Digest, Sha512};
-        let signature_string = format!("{}{}{}{}", order_id, status_code, gross_amount, "test_server_key");
+        let signature_string = format!(
+            "{}{}{}{}",
+            order_id, status_code, gross_amount, "test_server_key"
+        );
         let mut hasher = Sha512::new();
         hasher.update(signature_string.as_bytes());
         let expected_sig = format!("{:x}", hasher.finalize());

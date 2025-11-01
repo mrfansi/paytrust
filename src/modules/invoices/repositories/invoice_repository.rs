@@ -27,24 +27,28 @@ impl InvoiceRepository {
     }
 
     /// Create an invoice with its line items in a transaction
-    /// 
+    ///
     /// # Arguments
     /// * `invoice` - Invoice to create (must have line_items populated)
-    /// 
+    ///
     /// # Returns
     /// * `Result<Invoice>` - Created invoice with generated ID
-    /// 
+    ///
     /// # Database Operations
     /// 1. Insert invoice record
     /// 2. Insert all line item records
     /// 3. Commit transaction
     pub async fn create(&self, invoice: &Invoice) -> Result<Invoice> {
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to start transaction: {}", e)))?;
 
         let created_invoice = self.create_with_tx(&mut tx, invoice).await?;
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to commit transaction: {}", e)))?;
 
         Ok(created_invoice)
@@ -56,8 +60,11 @@ impl InvoiceRepository {
         tx: &mut Transaction<'_, MySql>,
         invoice: &Invoice,
     ) -> Result<Invoice> {
-        let id = invoice.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
-        
+        let id = invoice
+            .id
+            .clone()
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+
         // Insert invoice
         sqlx::query(
             r#"
@@ -65,7 +72,7 @@ impl InvoiceRepository {
                 id, external_id, gateway_id, currency, total, status,
                 expires_at, original_invoice_id, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&id)
         .bind(&invoice.external_id)
@@ -94,13 +101,13 @@ impl InvoiceRepository {
         // Insert line items
         for line_item in &invoice.line_items {
             let line_id = Uuid::new_v4().to_string();
-            
+
             sqlx::query(
                 r#"
                 INSERT INTO line_items (
                     id, invoice_id, description, quantity, unit_price, currency, subtotal
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                "#
+                "#,
             )
             .bind(&line_id)
             .bind(&id)
@@ -117,15 +124,15 @@ impl InvoiceRepository {
         // Return invoice with generated ID
         let mut created_invoice = invoice.clone();
         created_invoice.id = Some(id);
-        
+
         Ok(created_invoice)
     }
 
     /// Find invoice by ID, including line items
-    /// 
+    ///
     /// # Arguments
     /// * `id` - Invoice ID (UUID)
-    /// 
+    ///
     /// # Returns
     /// * `Result<Option<Invoice>>` - Invoice if found, None if not found
     pub async fn find_by_id(&self, id: &str) -> Result<Option<Invoice>> {
@@ -137,7 +144,7 @@ impl InvoiceRepository {
                 expires_at, original_invoice_id, created_at, updated_at
             FROM invoices
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -156,7 +163,7 @@ impl InvoiceRepository {
             FROM line_items
             WHERE invoice_id = ?
             ORDER BY id
-            "#
+            "#,
         )
         .bind(id)
         .fetch_all(&self.pool)
@@ -167,10 +174,10 @@ impl InvoiceRepository {
     }
 
     /// Find invoice by external_id
-    /// 
+    ///
     /// # Arguments
     /// * `external_id` - Merchant's reference ID
-    /// 
+    ///
     /// # Returns
     /// * `Result<Option<Invoice>>` - Invoice if found
     pub async fn find_by_external_id(&self, external_id: &str) -> Result<Option<Invoice>> {
@@ -181,7 +188,7 @@ impl InvoiceRepository {
                 expires_at, original_invoice_id, created_at, updated_at
             FROM invoices
             WHERE external_id = ?
-            "#
+            "#,
         )
         .bind(external_id)
         .fetch_optional(&self.pool)
@@ -199,7 +206,7 @@ impl InvoiceRepository {
             FROM line_items
             WHERE invoice_id = ?
             ORDER BY id
-            "#
+            "#,
         )
         .bind(&invoice_row.id)
         .fetch_all(&self.pool)
@@ -233,7 +240,7 @@ impl InvoiceRepository {
             FROM invoices
             WHERE id = ?
             FOR UPDATE
-            "#
+            "#,
         )
         .bind(id)
         .fetch_optional(&mut **tx)
@@ -252,7 +259,7 @@ impl InvoiceRepository {
             FROM line_items
             WHERE invoice_id = ?
             ORDER BY id
-            "#
+            "#,
         )
         .bind(&invoice_row.id)
         .fetch_all(&mut **tx)
@@ -263,11 +270,11 @@ impl InvoiceRepository {
     }
 
     /// List invoices with pagination
-    /// 
+    ///
     /// # Arguments
     /// * `limit` - Maximum number of results (default: 20, max: 100)
     /// * `offset` - Number of results to skip
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<Invoice>>` - List of invoices (without line items for performance)
     pub async fn list(&self, limit: i32, offset: i32) -> Result<Vec<Invoice>> {
@@ -279,7 +286,7 @@ impl InvoiceRepository {
             FROM invoices
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
-            "#
+            "#,
         )
         .bind(limit)
         .bind(offset)
@@ -296,7 +303,7 @@ impl InvoiceRepository {
                 FROM line_items
                 WHERE invoice_id = ?
                 ORDER BY id
-                "#
+                "#,
             )
             .bind(&invoice_row.id)
             .fetch_all(&self.pool)
@@ -310,14 +317,14 @@ impl InvoiceRepository {
     }
 
     /// Update invoice status
-    /// 
+    ///
     /// # Arguments
     /// * `id` - Invoice ID
     /// * `new_status` - New status to set
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or error
-    /// 
+    ///
     /// # Notes
     /// Caller must enforce immutability rules (FR-051, FR-052)
     pub async fn update_status(&self, id: &str, new_status: InvoiceStatus) -> Result<()> {
@@ -326,7 +333,7 @@ impl InvoiceRepository {
             UPDATE invoices
             SET status = ?, updated_at = NOW()
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(new_status.to_string())
         .bind(id)
@@ -335,14 +342,17 @@ impl InvoiceRepository {
         .map_err(|e| AppError::Internal(format!("Failed to update invoice status: {}", e)))?;
 
         if result.rows_affected() == 0 {
-            return Err(AppError::not_found(format!("Invoice with id '{}' not found", id)));
+            return Err(AppError::not_found(format!(
+                "Invoice with id '{}' not found",
+                id
+            )));
         }
 
         Ok(())
     }
 
     /// Check if external_id exists
-    /// 
+    ///
     /// Used for uniqueness validation before creation
     pub async fn exists_by_external_id(&self, external_id: &str) -> Result<bool> {
         let row: (i64,) = sqlx::query_as(
@@ -350,7 +360,7 @@ impl InvoiceRepository {
             SELECT COUNT(*) as count
             FROM invoices
             WHERE external_id = ?
-            "#
+            "#,
         )
         .bind(external_id)
         .fetch_one(&self.pool)
@@ -380,10 +390,10 @@ struct InvoiceRow {
 impl InvoiceRow {
     fn into_invoice(self, line_item_rows: Vec<LineItemRow>) -> Result<Invoice> {
         use std::str::FromStr;
-        
+
         let currency = crate::core::Currency::from_str(&self.currency)
             .map_err(|e| AppError::Internal(format!("Invalid currency in database: {}", e)))?;
-        
+
         let status = InvoiceStatus::from_str(&self.status)
             .map_err(|e| AppError::Internal(format!("Invalid status in database: {}", e)))?;
 
@@ -425,7 +435,7 @@ struct LineItemRow {
 impl LineItemRow {
     fn into_line_item(self) -> Result<LineItem> {
         use std::str::FromStr;
-        
+
         let currency = crate::core::Currency::from_str(&self.currency)
             .map_err(|e| AppError::Internal(format!("Invalid currency in database: {}", e)))?;
 
@@ -438,7 +448,7 @@ impl LineItemRow {
             currency,
             subtotal: Some(self.subtotal),
             tax_rate: Some(Decimal::ZERO), // TODO: Add tax_rate column to DB
-            tax_category: None, // TODO: Add tax_category column to DB
+            tax_category: None,            // TODO: Add tax_category column to DB
             tax_amount: Some(Decimal::ZERO), // TODO: Add tax_amount column to DB
         })
     }
@@ -448,10 +458,10 @@ impl LineItemRow {
 mod tests {
     use super::*;
     use rust_decimal::Decimal;
-    
+
     // Note: Integration tests with actual database will be in tests/integration/
     // These are unit tests for the conversion logic
-    
+
     #[test]
     fn test_invoice_status_to_string() {
         assert_eq!(InvoiceStatus::Pending.to_string(), "pending");

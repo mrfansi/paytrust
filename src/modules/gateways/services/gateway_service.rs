@@ -28,7 +28,7 @@ impl GatewayService {
         midtrans_client: MidtransClient,
     ) -> Self {
         let mut gateways: HashMap<String, Arc<dyn PaymentGateway>> = HashMap::new();
-        
+
         gateways.insert("xendit".to_string(), Arc::new(xendit_client));
         gateways.insert("midtrans".to_string(), Arc::new(midtrans_client));
 
@@ -121,11 +121,7 @@ impl GatewayService {
     ///
     /// # Returns
     /// * `Result<WebhookPayload>` - Parsed webhook data
-    pub async fn process_webhook(
-        &self,
-        gateway_id: &str,
-        payload: &str,
-    ) -> Result<WebhookPayload> {
+    pub async fn process_webhook(&self, gateway_id: &str, payload: &str) -> Result<WebhookPayload> {
         let gateway = self.get_gateway(gateway_id)?;
         gateway.process_webhook(payload).await
     }
@@ -171,7 +167,7 @@ impl GatewayService {
 
         // Create installment-specific external ID (FR-066)
         let external_id = format!("{}-installment-{}", invoice_id, installment_number);
-        
+
         // Create installment description
         let installment_description = format!(
             "{} (Installment {}/{})",
@@ -191,7 +187,10 @@ impl GatewayService {
                 installment_id: installment_id.clone(),
                 installment_number,
                 total_installments,
-                description_suffix: format!("Installment {}/{}", installment_number, total_installments),
+                description_suffix: format!(
+                    "Installment {}/{}",
+                    installment_number, total_installments
+                ),
             }),
         };
 
@@ -216,7 +215,7 @@ impl GatewayService {
     /// * `Result<GatewayInfo>` - Gateway information
     pub fn get_gateway_info(&self, gateway_id: &str) -> Result<GatewayInfo> {
         let gateway = self.get_gateway(gateway_id)?;
-        
+
         let supported_currencies = vec![Currency::IDR, Currency::MYR, Currency::USD]
             .into_iter()
             .filter(|c| gateway.supports_currency(*c))
@@ -246,22 +245,14 @@ mod tests {
     async fn test_service_initialization() {
         let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
         let repository = GatewayRepository::new(pool);
-        
-        let xendit = XenditClient::new(
-            "test_key".to_string(),
-            "test_secret".to_string(),
-            None,
-        );
-        
-        let midtrans = MidtransClient::new(
-            "test_key".to_string(),
-            "test_secret".to_string(),
-            None,
-        );
+
+        let xendit = XenditClient::new("test_key".to_string(), "test_secret".to_string(), None);
+
+        let midtrans = MidtransClient::new("test_key".to_string(), "test_secret".to_string(), None);
 
         let service = GatewayService::new(repository, xendit, midtrans);
         let gateways = service.list_gateways();
-        
+
         assert_eq!(gateways.len(), 2);
         assert!(gateways.contains(&"xendit".to_string()));
         assert!(gateways.contains(&"midtrans".to_string()));
@@ -271,11 +262,11 @@ mod tests {
     async fn test_get_gateway() {
         let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
         let repository = GatewayRepository::new(pool);
-        
+
         let xendit = XenditClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let midtrans = MidtransClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let service = GatewayService::new(repository, xendit, midtrans);
-        
+
         assert!(service.get_gateway("xendit").is_ok());
         assert!(service.get_gateway("midtrans").is_ok());
         assert!(service.get_gateway("invalid").is_err());
@@ -285,36 +276,46 @@ mod tests {
     async fn test_validate_currency() {
         let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
         let repository = GatewayRepository::new(pool);
-        
+
         let xendit = XenditClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let midtrans = MidtransClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let service = GatewayService::new(repository, xendit, midtrans);
-        
+
         // Xendit supports IDR and MYR
-        assert!(service.validate_gateway_currency("xendit", Currency::IDR).unwrap());
-        assert!(service.validate_gateway_currency("xendit", Currency::MYR).unwrap());
-        assert!(!service.validate_gateway_currency("xendit", Currency::USD).unwrap());
-        
+        assert!(service
+            .validate_gateway_currency("xendit", Currency::IDR)
+            .unwrap());
+        assert!(service
+            .validate_gateway_currency("xendit", Currency::MYR)
+            .unwrap());
+        assert!(!service
+            .validate_gateway_currency("xendit", Currency::USD)
+            .unwrap());
+
         // Midtrans supports only IDR
-        assert!(service.validate_gateway_currency("midtrans", Currency::IDR).unwrap());
-        assert!(!service.validate_gateway_currency("midtrans", Currency::MYR).unwrap());
+        assert!(service
+            .validate_gateway_currency("midtrans", Currency::IDR)
+            .unwrap());
+        assert!(!service
+            .validate_gateway_currency("midtrans", Currency::MYR)
+            .unwrap());
     }
 
     #[tokio::test]
     async fn test_get_gateway_info() {
         let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
         let repository = GatewayRepository::new(pool);
-        
+
         let xendit = XenditClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let midtrans = MidtransClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let service = GatewayService::new(repository, xendit, midtrans);
-        
+
         let xendit_info = service.get_gateway_info("xendit").unwrap();
         assert_eq!(xendit_info.id, "xendit");
         assert_eq!(xendit_info.name, "xendit");
         assert!(xendit_info.supported_currencies.contains(&Currency::IDR));
         assert!(xendit_info.supported_currencies.contains(&Currency::MYR));
-        
+
         let midtrans_info = service.get_gateway_info("midtrans").unwrap();
         assert_eq!(midtrans_info.id, "midtrans");
         assert!(midtrans_info.supported_currencies.contains(&Currency::IDR));

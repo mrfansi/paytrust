@@ -31,7 +31,7 @@ use std::sync::Arc;
 #[get("/gateways")]
 async fn list_gateways(service: web::Data<Arc<GatewayService>>) -> Result<HttpResponse> {
     let gateway_ids = service.list_gateways();
-    
+
     let mut gateways: Vec<GatewayInfo> = Vec::new();
     for gateway_id in gateway_ids {
         if let Ok(info) = service.get_gateway_info(&gateway_id) {
@@ -82,8 +82,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::gateways::{MidtransClient, XenditClient};
     use crate::modules::gateways::repositories::GatewayRepository;
+    use crate::modules::gateways::{MidtransClient, XenditClient};
     use actix_web::{test, App};
 
     #[actix_web::test]
@@ -91,7 +91,7 @@ mod tests {
         // Create test service
         let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
         let repository = GatewayRepository::new(pool);
-        
+
         let xendit = XenditClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let midtrans = MidtransClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let service = Arc::new(GatewayService::new(repository, xendit, midtrans));
@@ -100,14 +100,13 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(service.clone()))
-                .configure(configure)
-        ).await;
+                .configure(configure),
+        )
+        .await;
 
         // Test request
-        let req = test::TestRequest::get()
-            .uri("/v1/gateways")
-            .to_request();
-        
+        let req = test::TestRequest::get().uri("/v1/gateways").to_request();
+
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
     }
@@ -117,7 +116,7 @@ mod tests {
         // Create test service
         let pool = sqlx::MySqlPool::connect_lazy("mysql://test:test@localhost/test").unwrap();
         let repository = GatewayRepository::new(pool);
-        
+
         let xendit = XenditClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let midtrans = MidtransClient::new("test_key".to_string(), "test_secret".to_string(), None);
         let service = Arc::new(GatewayService::new(repository, xendit, midtrans));
@@ -126,14 +125,15 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(service.clone()))
-                .configure(configure)
-        ).await;
+                .configure(configure),
+        )
+        .await;
 
         // Test valid gateway
         let req = test::TestRequest::get()
             .uri("/v1/gateways/xendit")
             .to_request();
-        
+
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
 
@@ -141,7 +141,7 @@ mod tests {
         let req = test::TestRequest::get()
             .uri("/v1/gateways/invalid")
             .to_request();
-        
+
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_client_error());
     }

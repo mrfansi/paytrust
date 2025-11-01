@@ -130,9 +130,9 @@ mod tests {
     fn test_calculate_line_item_tax_10_percent() {
         let subtotal = Decimal::from_str("100000").unwrap();
         let tax_rate = Decimal::from_str("0.10").unwrap();
-        
+
         let tax = TaxCalculator::calculate_line_item_tax(subtotal, tax_rate);
-        
+
         assert_eq!(tax, Decimal::from_str("10000").unwrap());
     }
 
@@ -140,9 +140,9 @@ mod tests {
     fn test_calculate_line_item_tax_11_percent() {
         let subtotal = Decimal::from_str("100000").unwrap();
         let tax_rate = Decimal::from_str("0.11").unwrap();
-        
+
         let tax = TaxCalculator::calculate_line_item_tax(subtotal, tax_rate);
-        
+
         assert_eq!(tax, Decimal::from_str("11000").unwrap());
     }
 
@@ -150,9 +150,9 @@ mod tests {
     fn test_calculate_line_item_tax_with_rounding() {
         let subtotal = Decimal::from_str("333").unwrap();
         let tax_rate = Decimal::from_str("0.10").unwrap();
-        
+
         let tax = TaxCalculator::calculate_line_item_tax(subtotal, tax_rate);
-        
+
         assert_eq!(tax, Decimal::from_str("33.30").unwrap());
     }
 
@@ -160,21 +160,27 @@ mod tests {
     fn test_calculate_line_item_tax_zero_rate() {
         let subtotal = Decimal::from_str("100000").unwrap();
         let tax_rate = Decimal::ZERO;
-        
+
         let tax = TaxCalculator::calculate_line_item_tax(subtotal, tax_rate);
-        
+
         assert_eq!(tax, Decimal::ZERO);
     }
 
     #[test]
     fn test_calculate_invoice_tax_multiple_items() {
         let line_items = vec![
-            (Decimal::from_str("100000").unwrap(), Decimal::from_str("0.10").unwrap()),
-            (Decimal::from_str("50000").unwrap(), Decimal::from_str("0.11").unwrap()),
+            (
+                Decimal::from_str("100000").unwrap(),
+                Decimal::from_str("0.10").unwrap(),
+            ),
+            (
+                Decimal::from_str("50000").unwrap(),
+                Decimal::from_str("0.11").unwrap(),
+            ),
         ];
 
         let total_tax = TaxCalculator::calculate_invoice_tax(line_items);
-        
+
         // 100000 × 0.10 = 10000
         // 50000 × 0.11 = 5500
         // Total = 15500
@@ -184,12 +190,18 @@ mod tests {
     #[test]
     fn test_calculate_invoice_tax_different_rates() {
         let line_items = vec![
-            (Decimal::from_str("100000").unwrap(), Decimal::from_str("0.10").unwrap()),
-            (Decimal::from_str("50000").unwrap(), Decimal::from_str("0.06").unwrap()),
+            (
+                Decimal::from_str("100000").unwrap(),
+                Decimal::from_str("0.10").unwrap(),
+            ),
+            (
+                Decimal::from_str("50000").unwrap(),
+                Decimal::from_str("0.06").unwrap(),
+            ),
         ];
 
         let total_tax = TaxCalculator::calculate_invoice_tax(line_items);
-        
+
         // 100000 × 0.10 = 10000
         // 50000 × 0.06 = 3000
         // Total = 13000
@@ -203,7 +215,7 @@ mod tests {
         let service_fee = Decimal::from_str("5100").unwrap();
 
         let total = TaxCalculator::calculate_invoice_total(subtotal, tax_total, service_fee);
-        
+
         assert_eq!(total, Decimal::from_str("115100").unwrap());
     }
 
@@ -214,7 +226,7 @@ mod tests {
         let service_fee = Decimal::ZERO;
 
         let total = TaxCalculator::calculate_invoice_total(subtotal, tax_total, service_fee);
-        
+
         assert_eq!(total, Decimal::from_str("110000").unwrap());
     }
 
@@ -240,7 +252,7 @@ mod tests {
     fn test_validate_tax_rate_negative() {
         let tax_rate = Decimal::from_str("-0.05").unwrap();
         let result = TaxCalculator::validate_tax_rate(tax_rate);
-        
+
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Tax rate cannot be negative");
     }
@@ -249,7 +261,7 @@ mod tests {
     fn test_validate_tax_rate_exceeds_100_percent() {
         let tax_rate = Decimal::from_str("1.5").unwrap();
         let result = TaxCalculator::validate_tax_rate(tax_rate);
-        
+
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Tax rate cannot exceed 100%");
     }

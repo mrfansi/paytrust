@@ -79,12 +79,12 @@ pub struct AdjustInstallmentsResponse {
 }
 
 /// GET /invoices/{invoice_id}/installments
-/// 
+///
 /// Returns the installment schedule for an invoice.
-/// 
+///
 /// # Path Parameters
 /// - `invoice_id`: UUID of the invoice
-/// 
+///
 /// # Returns
 /// - 200: Installment schedule with all installments
 /// - 404: Invoice not found
@@ -93,25 +93,28 @@ pub async fn get_installments(
     pool: web::Data<MySqlPool>,
 ) -> Result<HttpResponse> {
     let service = InstallmentService::new(pool.get_ref().clone());
-    
+
     let installments = service.get_installments(&invoice_id).await?;
-    
+
     let response = GetInstallmentsResponse {
         invoice_id: invoice_id.into_inner(),
-        installments: installments.into_iter().map(InstallmentResponse::from).collect(),
+        installments: installments
+            .into_iter()
+            .map(InstallmentResponse::from)
+            .collect(),
     };
-    
+
     Ok(HttpResponse::Ok().json(response))
 }
 
 /// PATCH /invoices/{invoice_id}/installments
-/// 
+///
 /// Adjusts unpaid installment amounts while maintaining total invoice amount.
 /// Only unpaid installments can be modified (FR-077, FR-078).
-/// 
+///
 /// # Path Parameters
 /// - `invoice_id`: UUID of the invoice
-/// 
+///
 /// # Request Body
 /// ```json
 /// {
@@ -121,13 +124,13 @@ pub async fn get_installments(
 ///   ]
 /// }
 /// ```
-/// 
+///
 /// # Business Rules
 /// - FR-077: Only unpaid installments can be adjusted
 /// - FR-078: Paid installments remain unchanged
 /// - FR-079: New amounts recalculate proportional tax/fee
 /// - FR-080: Sum of new amounts must equal remaining total
-/// 
+///
 /// # Returns
 /// - 200: Installments adjusted successfully
 /// - 400: Invalid adjustment request (paid installments, amount mismatch, etc.)
@@ -138,28 +141,34 @@ pub async fn adjust_installments(
     pool: web::Data<MySqlPool>,
 ) -> Result<HttpResponse> {
     let service = InstallmentService::new(pool.get_ref().clone());
-    
+
     // Get existing installments
     let existing_installments = service.get_installments(&invoice_id).await?;
-    
+
     if existing_installments.is_empty() {
-        return Err(crate::core::AppError::not_found("No installments found for this invoice"));
+        return Err(crate::core::AppError::not_found(
+            "No installments found for this invoice",
+        ));
     }
-    
+
     // Parse new amounts from request
-    let mut new_amounts_map: std::collections::HashMap<i32, Decimal> = std::collections::HashMap::new();
+    let mut new_amounts_map: std::collections::HashMap<i32, Decimal> =
+        std::collections::HashMap::new();
     for adjustment in &request.installments {
-        let amount = adjustment.new_amount.parse::<Decimal>()
-            .map_err(|_| crate::core::AppError::validation(
-                format!("Invalid amount format: {}", adjustment.new_amount)
-            ))?;
+        let amount = adjustment.new_amount.parse::<Decimal>().map_err(|_| {
+            crate::core::AppError::validation(format!(
+                "Invalid amount format: {}",
+                adjustment.new_amount
+            ))
+        })?;
         new_amounts_map.insert(adjustment.installment_number, amount);
     }
-    
+
     // Validate that only unpaid installments are being adjusted
     for installment in &existing_installments {
-        if new_amounts_map.contains_key(&installment.installment_number) 
-            && installment.status != InstallmentStatus::Unpaid {
+        if new_amounts_map.contains_key(&installment.installment_number)
+            && installment.status != InstallmentStatus::Unpaid
+        {
             return Err(crate::core::AppError::validation(
                 format!(
                     "Cannot adjust installment {}: only unpaid installments can be modified (status: {})",
@@ -169,48 +178,53 @@ pub async fn adjust_installments(
             ));
         }
     }
-    
+
     // Calculate remaining totals (from unpaid installments)
     let unpaid_installments: Vec<_> = existing_installments
         .iter()
         .filter(|i| i.status == InstallmentStatus::Unpaid)
         .collect();
-    
+
     let remaining_total: Decimal = unpaid_installments.iter().map(|i| i.amount).sum();
     let remaining_tax: Decimal = unpaid_installments.iter().map(|i| i.tax_amount).sum();
-    let remaining_fee: Decimal = unpaid_installments.iter().map(|i| i.service_fee_amount).sum();
-    
+    let remaining_fee: Decimal = unpaid_installments
+        .iter()
+        .map(|i| i.service_fee_amount)
+        .sum();
+
     // Validate that sum of new amounts equals remaining total
     let new_amounts_sum: Decimal = new_amounts_map.values().sum();
     if new_amounts_sum != remaining_total {
-        return Err(crate::core::AppError::validation(
-            format!(
-                "Sum of new amounts ({}) must equal remaining total ({})",
-                new_amounts_sum,
-                remaining_total
-            )
-        ));
+        return Err(crate::core::AppError::validation(format!(
+            "Sum of new amounts ({}) must equal remaining total ({})",
+            new_amounts_sum, remaining_total
+        )));
     }
-    
+
     // Get currency from first installment (all should have same invoice currency)
     // We need to get the invoice to know the currency
     // For now, we'll infer from the installment amounts' precision
     let currency = infer_currency_from_amounts(&existing_installments);
-    
+
     // Adjust unpaid installments
-    let updated_installments = service.adjust_unpaid_installments(
-        &invoice_id,
-        remaining_total,
-        remaining_tax,
-        remaining_fee,
-        currency,
-    ).await?;
-    
+    let updated_installments = service
+        .adjust_unpaid_installments(
+            &invoice_id,
+            remaining_total,
+            remaining_tax,
+            remaining_fee,
+            currency,
+        )
+        .await?;
+
     let response = AdjustInstallmentsResponse {
         invoice_id: invoice_id.into_inner(),
-        installments: updated_installments.into_iter().map(InstallmentResponse::from).collect(),
+        installments: updated_installments
+            .into_iter()
+            .map(InstallmentResponse::from)
+            .collect(),
     };
-    
+
     Ok(HttpResponse::Ok().json(response))
 }
 
@@ -237,7 +251,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/invoices/{invoice_id}")
             .route("/installments", web::get().to(get_installments))
-            .route("/installments", web::patch().to(adjust_installments))
+            .route("/installments", web::patch().to(adjust_installments)),
     );
 }
 
@@ -265,12 +279,15 @@ mod tests {
         };
 
         let response = InstallmentResponse::from(installment);
-        
+
         assert_eq!(response.id, "inst-001");
         assert_eq!(response.installment_number, 1);
         assert_eq!(response.amount, "500000");
         assert_eq!(response.status, "unpaid");
-        assert_eq!(response.payment_url, Some("https://pay.example.com/123".to_string()));
+        assert_eq!(
+            response.payment_url,
+            Some("https://pay.example.com/123".to_string())
+        );
     }
 
     #[test]
@@ -291,7 +308,10 @@ mod tests {
             updated_at: chrono::Utc::now().naive_utc(),
         };
 
-        assert_eq!(infer_currency_from_amounts(&[idr_installment]), Currency::IDR);
+        assert_eq!(
+            infer_currency_from_amounts(&[idr_installment]),
+            Currency::IDR
+        );
 
         let myr_installment = InstallmentSchedule {
             id: "inst-002".to_string(),
@@ -309,6 +329,9 @@ mod tests {
             updated_at: chrono::Utc::now().naive_utc(),
         };
 
-        assert_eq!(infer_currency_from_amounts(&[myr_installment]), Currency::MYR);
+        assert_eq!(
+            infer_currency_from_amounts(&[myr_installment]),
+            Currency::MYR
+        );
     }
 }

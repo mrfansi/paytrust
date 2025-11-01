@@ -12,15 +12,15 @@ pub enum TransactionStatus {
     /// Transaction pending confirmation
     #[serde(rename = "pending")]
     Pending,
-    
+
     /// Payment successfully completed
     #[serde(rename = "completed")]
     Completed,
-    
+
     /// Payment failed
     #[serde(rename = "failed")]
     Failed,
-    
+
     /// Payment refunded
     #[serde(rename = "refunded")]
     Refunded,
@@ -66,38 +66,38 @@ pub struct PaymentTransaction {
     /// Unique transaction ID (UUID)
     #[serde(skip_deserializing)]
     pub id: Option<String>,
-    
+
     /// Related invoice ID
     pub invoice_id: String,
-    
+
     /// Related installment ID (if applicable)
     pub installment_id: Option<String>,
-    
+
     /// Gateway's transaction reference (unique, for idempotency)
     pub gateway_transaction_ref: String,
-    
+
     /// Gateway identifier (xendit, midtrans)
     pub gateway_id: String,
-    
+
     /// Actual amount paid
     pub amount_paid: Decimal,
-    
+
     /// Currency
     pub currency: String,
-    
+
     /// Payment method (credit_card, bank_transfer, ewallet)
     pub payment_method: String,
-    
+
     /// Transaction status
     pub status: String,
-    
+
     /// Full gateway webhook payload (JSON)
     pub gateway_response: Option<serde_json::Value>,
-    
+
     /// Transaction creation timestamp
     #[serde(skip_deserializing)]
     pub created_at: Option<DateTime<Utc>>,
-    
+
     /// Last update timestamp
     #[serde(skip_deserializing)]
     pub updated_at: Option<DateTime<Utc>>,
@@ -142,12 +142,16 @@ impl PaymentTransaction {
 
         // Validate invoice_id is not empty
         if invoice_id.trim().is_empty() {
-            return Err(AppError::validation("Invoice ID cannot be empty".to_string()));
+            return Err(AppError::validation(
+                "Invoice ID cannot be empty".to_string(),
+            ));
         }
 
         // Validate gateway_id is not empty
         if gateway_id.trim().is_empty() {
-            return Err(AppError::validation("Gateway ID cannot be empty".to_string()));
+            return Err(AppError::validation(
+                "Gateway ID cannot be empty".to_string(),
+            ));
         }
 
         // Generate UUID for transaction ID
@@ -198,18 +202,12 @@ impl PaymentTransaction {
 
     /// Check if transaction is completed
     pub fn is_completed(&self) -> bool {
-        matches!(
-            self.get_status(),
-            Ok(TransactionStatus::Completed)
-        )
+        matches!(self.get_status(), Ok(TransactionStatus::Completed))
     }
 
     /// Check if transaction is failed
     pub fn is_failed(&self) -> bool {
-        matches!(
-            self.get_status(),
-            Ok(TransactionStatus::Failed)
-        )
+        matches!(self.get_status(), Ok(TransactionStatus::Failed))
     }
 
     /// Check if transaction can be refunded
@@ -316,7 +314,9 @@ mod tests {
         assert_eq!(transaction.status, "pending");
         assert!(!transaction.is_completed());
 
-        transaction.update_status(TransactionStatus::Completed).unwrap();
+        transaction
+            .update_status(TransactionStatus::Completed)
+            .unwrap();
         assert_eq!(transaction.status, "completed");
         assert!(transaction.is_completed());
         assert!(transaction.can_refund());

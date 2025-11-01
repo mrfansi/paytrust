@@ -73,16 +73,16 @@ where
                 .headers()
                 .get("X-API-Key")
                 .and_then(|h| h.to_str().ok())
-                .ok_or_else(|| {
-                    Error::from(AppError::unauthorized("Missing X-API-Key header"))
-                })?;
+                .ok_or_else(|| Error::from(AppError::unauthorized("Missing X-API-Key header")))?;
 
             // Validate API key against database
-            let api_key_record = validate_api_key(&pool, api_key).await
+            let api_key_record = validate_api_key(&pool, api_key)
+                .await
                 .map_err(Error::from)?;
 
             // Store merchant_id in request extensions for use in handlers
-            req.extensions_mut().insert(api_key_record.merchant_id.clone());
+            req.extensions_mut()
+                .insert(api_key_record.merchant_id.clone());
             req.extensions_mut().insert(api_key_record);
 
             // Continue to the next middleware/handler
@@ -103,7 +103,7 @@ async fn validate_api_key(pool: &MySqlPool, api_key: &str) -> crate::core::Resul
     // Hash the provided API key for comparison
     // Note: In production, you'd use a more sophisticated lookup mechanism
     // For now, we'll look up by key_hash directly
-    
+
     let record = sqlx::query_as::<_, ApiKeyRecord>(
         r#"
         SELECT id, merchant_id, rate_limit, is_active
@@ -140,7 +140,7 @@ pub fn hash_api_key(api_key: &str) -> crate::core::Result<String> {
 
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
-    
+
     argon2
         .hash_password(api_key.as_bytes(), &salt)
         .map(|hash| hash.to_string())
@@ -153,7 +153,7 @@ pub fn verify_api_key(api_key: &str, hash: &str) -> crate::core::Result<bool> {
         .map_err(|e| AppError::internal(format!("Invalid hash format: {}", e)))?;
 
     let argon2 = Argon2::default();
-    
+
     Ok(argon2
         .verify_password(api_key.as_bytes(), &parsed_hash)
         .is_ok())
@@ -167,7 +167,7 @@ mod tests {
     fn test_hash_and_verify_api_key() {
         let api_key = "test_key_123";
         let hash = hash_api_key(api_key).unwrap();
-        
+
         assert!(verify_api_key(api_key, &hash).unwrap());
         assert!(!verify_api_key("wrong_key", &hash).unwrap());
     }

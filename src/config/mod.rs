@@ -53,17 +53,14 @@ impl Config {
                     .unwrap_or_else(|_| "24".to_string())
                     .parse()
                     .map_err(|_| {
-                        AppError::Configuration(
-                            "Invalid DEFAULT_INVOICE_EXPIRY_HOURS".to_string(),
-                        )
+                        AppError::Configuration("Invalid DEFAULT_INVOICE_EXPIRY_HOURS".to_string())
                     })?,
             },
             database: DatabaseConfig::from_env()?,
             server: ServerConfig::from_env()?,
             xendit: GatewayConfig {
-                api_key: env::var("XENDIT_API_KEY").map_err(|_| {
-                    AppError::Configuration("XENDIT_API_KEY not set".to_string())
-                })?,
+                api_key: env::var("XENDIT_API_KEY")
+                    .map_err(|_| AppError::Configuration("XENDIT_API_KEY not set".to_string()))?,
                 webhook_secret: env::var("XENDIT_WEBHOOK_SECRET").map_err(|_| {
                     AppError::Configuration("XENDIT_WEBHOOK_SECRET not set".to_string())
                 })?,
@@ -81,9 +78,8 @@ impl Config {
                     .unwrap_or_else(|_| "https://api.sandbox.midtrans.com".to_string()),
             },
             security: SecurityConfig {
-                api_key_secret: env::var("API_KEY_SECRET").map_err(|_| {
-                    AppError::Configuration("API_KEY_SECRET not set".to_string())
-                })?,
+                api_key_secret: env::var("API_KEY_SECRET")
+                    .map_err(|_| AppError::Configuration("API_KEY_SECRET not set".to_string()))?,
                 rate_limit_per_minute: env::var("RATE_LIMIT_PER_MINUTE")
                     .unwrap_or_else(|_| "1000".to_string())
                     .parse()

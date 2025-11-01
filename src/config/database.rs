@@ -19,9 +19,7 @@ impl DatabaseConfig {
             pool_size: env::var("DATABASE_POOL_SIZE")
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
-                .map_err(|_| {
-                    AppError::Configuration("Invalid DATABASE_POOL_SIZE".to_string())
-                })?,
+                .map_err(|_| AppError::Configuration("Invalid DATABASE_POOL_SIZE".to_string()))?,
             max_connections: env::var("DATABASE_MAX_CONNECTIONS")
                 .unwrap_or_else(|_| "20".to_string())
                 .parse()

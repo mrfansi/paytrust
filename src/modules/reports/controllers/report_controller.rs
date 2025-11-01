@@ -91,7 +91,7 @@ impl From<TaxBreakdown> for TaxBreakdownResponse {
 }
 
 /// GET /reports/financial
-/// 
+///
 /// Returns aggregated financial data including service fees and taxes.
 /// Implements FR-012 (financial reporting), FR-013 (date range filtering),
 /// FR-063 (breakdowns), FR-064 (currency separation).
@@ -118,15 +118,19 @@ async fn handle_get_financial_report(
     query: web::Query<FinancialReportQuery>,
 ) -> Result<FinancialReportResponse> {
     // Parse and validate dates (FR-013)
-    let start_date = NaiveDate::parse_from_str(&query.start_date, "%Y-%m-%d")
-        .map_err(|_| crate::core::AppError::validation(
-            format!("Invalid start_date format: '{}'. Expected YYYY-MM-DD", query.start_date)
-        ))?;
+    let start_date = NaiveDate::parse_from_str(&query.start_date, "%Y-%m-%d").map_err(|_| {
+        crate::core::AppError::validation(format!(
+            "Invalid start_date format: '{}'. Expected YYYY-MM-DD",
+            query.start_date
+        ))
+    })?;
 
-    let end_date = NaiveDate::parse_from_str(&query.end_date, "%Y-%m-%d")
-        .map_err(|_| crate::core::AppError::validation(
-            format!("Invalid end_date format: '{}'. Expected YYYY-MM-DD", query.end_date)
-        ))?;
+    let end_date = NaiveDate::parse_from_str(&query.end_date, "%Y-%m-%d").map_err(|_| {
+        crate::core::AppError::validation(format!(
+            "Invalid end_date format: '{}'. Expected YYYY-MM-DD",
+            query.end_date
+        ))
+    })?;
 
     // Create service and validate date range
     let report_repo = ReportRepository::new(pool.get_ref().clone());
@@ -145,10 +149,7 @@ async fn handle_get_financial_report(
 
 /// Configure routes for reports module
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/reports")
-            .route("/financial", web::get().to(get_financial_report))
-    );
+    cfg.service(web::scope("/reports").route("/financial", web::get().to(get_financial_report)));
 }
 
 #[cfg(test)]
@@ -194,12 +195,18 @@ mod tests {
         let start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
         let end = NaiveDate::from_ymd_opt(2025, 1, 31).unwrap();
 
-        let service_fees = vec![
-            ServiceFeeBreakdown::new("xendit".to_string(), "IDR".to_string(), dec!(100000), 5),
-        ];
-        let taxes = vec![
-            TaxBreakdown::new(dec!(0.11), "IDR".to_string(), dec!(55000), 5),
-        ];
+        let service_fees = vec![ServiceFeeBreakdown::new(
+            "xendit".to_string(),
+            "IDR".to_string(),
+            dec!(100000),
+            5,
+        )];
+        let taxes = vec![TaxBreakdown::new(
+            dec!(0.11),
+            "IDR".to_string(),
+            dec!(55000),
+            5,
+        )];
 
         let report = FinancialReport::new(start, end, service_fees, taxes);
         let response = FinancialReportResponse::from(report);

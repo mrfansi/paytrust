@@ -36,22 +36,18 @@ fn test_financial_report_response_structure() {
     let response = FinancialReportResponse {
         start_date: "2025-01-01".to_string(),
         end_date: "2025-01-31".to_string(),
-        service_fees: vec![
-            ServiceFeeBreakdown {
-                currency: "IDR".to_string(),
-                gateway: "xendit".to_string(),
-                total_amount: "145000".to_string(),
-                transaction_count: 5,
-            },
-        ],
-        taxes: vec![
-            TaxBreakdown {
-                currency: "IDR".to_string(),
-                tax_rate: "0.10".to_string(),
-                total_amount: "500000".to_string(),
-                transaction_count: 5,
-            },
-        ],
+        service_fees: vec![ServiceFeeBreakdown {
+            currency: "IDR".to_string(),
+            gateway: "xendit".to_string(),
+            total_amount: "145000".to_string(),
+            transaction_count: 5,
+        }],
+        taxes: vec![TaxBreakdown {
+            currency: "IDR".to_string(),
+            tax_rate: "0.10".to_string(),
+            total_amount: "500000".to_string(),
+            transaction_count: 5,
+        }],
     };
 
     let json = serde_json::to_value(&response).unwrap();
@@ -181,7 +177,7 @@ fn test_service_fees_grouped_by_gateway() {
 
     // Each gateway has separate entry even for same currency
     assert_eq!(response.service_fees.len(), 2);
-    
+
     let gateways: Vec<_> = response.service_fees.iter().map(|f| &f.gateway).collect();
     assert!(gateways.contains(&&"xendit".to_string()));
     assert!(gateways.contains(&&"midtrans".to_string()));
@@ -212,7 +208,7 @@ fn test_taxes_grouped_by_rate() {
 
     // Each tax rate has separate entry even for same currency
     assert_eq!(response.taxes.len(), 2);
-    
+
     let rates: Vec<_> = response.taxes.iter().map(|t| &t.tax_rate).collect();
     assert!(rates.contains(&&"0.10".to_string()));
     assert!(rates.contains(&&"0.11".to_string()));
@@ -235,7 +231,7 @@ fn test_empty_report_structure() {
     assert!(json.get("end_date").is_some());
     assert!(json["service_fees"].is_array());
     assert!(json["taxes"].is_array());
-    
+
     // Arrays are empty but valid
     assert_eq!(json["service_fees"].as_array().unwrap().len(), 0);
     assert_eq!(json["taxes"].as_array().unwrap().len(), 0);
@@ -268,22 +264,18 @@ fn test_amounts_as_strings() {
     let response = FinancialReportResponse {
         start_date: "2025-01-01".to_string(),
         end_date: "2025-01-31".to_string(),
-        service_fees: vec![
-            ServiceFeeBreakdown {
-                currency: "MYR".to_string(),
-                gateway: "xendit".to_string(),
-                total_amount: "15.50".to_string(), // Decimal as string
-                transaction_count: 2,
-            },
-        ],
-        taxes: vec![
-            TaxBreakdown {
-                currency: "IDR".to_string(),
-                tax_rate: "0.10".to_string(), // Rate as string
-                total_amount: "500000".to_string(),
-                transaction_count: 5,
-            },
-        ],
+        service_fees: vec![ServiceFeeBreakdown {
+            currency: "MYR".to_string(),
+            gateway: "xendit".to_string(),
+            total_amount: "15.50".to_string(), // Decimal as string
+            transaction_count: 2,
+        }],
+        taxes: vec![TaxBreakdown {
+            currency: "IDR".to_string(),
+            tax_rate: "0.10".to_string(), // Rate as string
+            total_amount: "500000".to_string(),
+            transaction_count: 5,
+        }],
     };
 
     let json = serde_json::to_value(&response).unwrap();
@@ -302,29 +294,25 @@ fn test_supported_currencies() {
     let response = FinancialReportResponse {
         start_date: "2025-01-01".to_string(),
         end_date: "2025-01-31".to_string(),
-        service_fees: vec![
-            ServiceFeeBreakdown {
-                currency: "IDR".to_string(),
-                gateway: "xendit".to_string(),
-                total_amount: "145000".to_string(),
-                transaction_count: 3,
-            },
-        ],
-        taxes: vec![
-            TaxBreakdown {
-                currency: "MYR".to_string(),
-                tax_rate: "0.06".to_string(),
-                total_amount: "30.00".to_string(),
-                transaction_count: 2,
-            },
-        ],
+        service_fees: vec![ServiceFeeBreakdown {
+            currency: "IDR".to_string(),
+            gateway: "xendit".to_string(),
+            total_amount: "145000".to_string(),
+            transaction_count: 3,
+        }],
+        taxes: vec![TaxBreakdown {
+            currency: "MYR".to_string(),
+            tax_rate: "0.06".to_string(),
+            total_amount: "30.00".to_string(),
+            transaction_count: 2,
+        }],
     };
 
     // All currencies in response are valid
     for fee in &response.service_fees {
         assert!(valid_currencies.contains(&fee.currency.as_str()));
     }
-    
+
     for tax in &response.taxes {
         assert!(valid_currencies.contains(&tax.currency.as_str()));
     }
@@ -343,7 +331,7 @@ fn test_date_range_required() {
     // Dates must not be empty
     assert!(!response.start_date.is_empty());
     assert!(!response.end_date.is_empty());
-    
+
     // start_date should be before or equal to end_date
     assert!(response.start_date <= response.end_date);
 }

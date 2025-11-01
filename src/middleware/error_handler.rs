@@ -15,7 +15,10 @@ pub fn error_handler<B>(
 }
 
 /// Handle JSON payload errors
-pub fn json_error_handler(err: JsonPayloadError, _req: &actix_web::HttpRequest) -> actix_web::Error {
+pub fn json_error_handler(
+    err: JsonPayloadError,
+    _req: &actix_web::HttpRequest,
+) -> actix_web::Error {
     let error_message = match &err {
         JsonPayloadError::Overflow { .. } => "JSON payload too large",
         JsonPayloadError::ContentType => "Content-Type header is not application/json",
@@ -69,9 +72,7 @@ pub fn query_error_handler(
 
 /// Log errors with appropriate level based on status code
 pub fn log_error(err: &actix_web::Error, req: &actix_web::HttpRequest) {
-    let status = err
-        .as_response_error()
-        .status_code();
+    let status = err.as_response_error().status_code();
 
     let path = req.path();
     let method = req.method();

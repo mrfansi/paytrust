@@ -87,7 +87,10 @@ async fn test_single_payment_flow() {
         .await
         .expect("Failed to fetch invoice status");
 
-    assert_eq!(status, "pending", "Invoice should be pending after creation");
+    assert_eq!(
+        status, "pending",
+        "Invoice should be pending after creation"
+    );
 
     // Step 3: Update status to processing (simulating initiate_payment)
     sqlx::query("UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?")
@@ -135,18 +138,24 @@ async fn test_single_payment_flow() {
         .await
         .expect("Failed to fetch final status");
 
-    assert_eq!(final_status, "paid", "Invoice should be paid after successful payment");
+    assert_eq!(
+        final_status, "paid",
+        "Invoice should be paid after successful payment"
+    );
 
     // Step 7: Verify transaction exists
     let transaction_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM payment_transactions WHERE invoice_id = ? AND status = 'completed'"
+        "SELECT COUNT(*) FROM payment_transactions WHERE invoice_id = ? AND status = 'completed'",
     )
     .bind(&invoice_id)
     .fetch_one(&pool)
     .await
     .expect("Failed to count transactions");
 
-    assert_eq!(transaction_count, 1, "Should have exactly one completed transaction");
+    assert_eq!(
+        transaction_count, 1,
+        "Should have exactly one completed transaction"
+    );
 
     // Cleanup
     cleanup_test_data(&pool, &external_id).await;
@@ -225,11 +234,14 @@ async fn test_idempotent_webhook_processing() {
     .await;
 
     // Should fail due to unique constraint
-    assert!(duplicate_result.is_err(), "Duplicate webhook should be rejected by database");
+    assert!(
+        duplicate_result.is_err(),
+        "Duplicate webhook should be rejected by database"
+    );
 
     // Step 4: Verify only one transaction exists
     let transaction_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM payment_transactions WHERE gateway_transaction_ref = ?"
+        "SELECT COUNT(*) FROM payment_transactions WHERE gateway_transaction_ref = ?",
     )
     .bind(&gateway_ref)
     .fetch_one(&pool)
@@ -301,7 +313,10 @@ async fn test_partial_payment_flow() {
         .await
         .expect("Failed to fetch status");
 
-    assert_eq!(status, "pending", "Invoice should still be pending after partial payment");
+    assert_eq!(
+        status, "pending",
+        "Invoice should still be pending after partial payment"
+    );
 
     // Step 4: Calculate total paid
     let total_paid: String = sqlx::query_scalar(
@@ -343,7 +358,10 @@ async fn test_partial_payment_flow() {
     .await
     .expect("Failed to calculate final total");
 
-    assert_eq!(final_total_paid, "1000000", "Total paid should equal invoice total");
+    assert_eq!(
+        final_total_paid, "1000000",
+        "Total paid should equal invoice total"
+    );
 
     // Step 7: Update invoice to paid (would be done by service layer)
     sqlx::query("UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?")
@@ -360,7 +378,10 @@ async fn test_partial_payment_flow() {
         .await
         .expect("Failed to fetch final status");
 
-    assert_eq!(final_status, "paid", "Invoice should be paid after full payment");
+    assert_eq!(
+        final_status, "paid",
+        "Invoice should be paid after full payment"
+    );
 
     // Cleanup
     cleanup_test_data(&pool, &external_id).await;
@@ -410,7 +431,10 @@ async fn test_concurrent_payment_prevention() {
         .await
         .expect("Failed to fetch status");
 
-    assert_eq!(status, "processing", "Invoice should be in processing state");
+    assert_eq!(
+        status, "processing",
+        "Invoice should be in processing state"
+    );
 
     // Step 4: Business logic should reject concurrent payment attempts
     // (This would be tested in the service layer with pessimistic locking)

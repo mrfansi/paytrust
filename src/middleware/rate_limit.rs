@@ -8,8 +8,8 @@ use governor::{
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter as GovernorRateLimiter,
 };
-use std::num::NonZeroU32;
 use std::future::{ready, Ready};
+use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ impl RateLimiter {
     pub fn new(requests_per_minute: u32) -> Self {
         let quota = Quota::per_minute(NonZeroU32::new(requests_per_minute).unwrap());
         let limiter = Arc::new(GovernorRateLimiter::direct(quota));
-        
+
         Self { limiter }
     }
 }
@@ -86,7 +86,7 @@ where
                 Err(_) => {
                     // Rate limit exceeded - return error response
                     let error_response = AppError::RateLimitExceeded(
-                        "Rate limit exceeded. Maximum 1000 requests per minute.".to_string()
+                        "Rate limit exceeded. Maximum 1000 requests per minute.".to_string(),
                     );
                     let http_response = error_response.error_response();
                     Ok(req.into_response(http_response).map_into_left_body())

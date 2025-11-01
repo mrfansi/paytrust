@@ -16,10 +16,7 @@ pub enum WebhookResult {
         gateway_ref: String,
     },
     /// Webhook processing failed
-    Failed {
-        gateway_ref: String,
-        error: String,
-    },
+    Failed { gateway_ref: String, error: String },
     /// Webhook is a duplicate (already processed)
     Duplicate {
         transaction_id: String,
@@ -59,9 +56,9 @@ impl WebhookHandler {
             transaction_service,
             max_retries: 3,
             retry_delays: vec![
-                Duration::from_secs(60),      // 1 minute
-                Duration::from_secs(300),     // 5 minutes
-                Duration::from_secs(1800),    // 30 minutes
+                Duration::from_secs(60),   // 1 minute
+                Duration::from_secs(300),  // 5 minutes
+                Duration::from_secs(1800), // 30 minutes
             ],
         }
     }
@@ -132,7 +129,9 @@ impl WebhookHandler {
         let mut last_error = None;
         for attempt in 0..=self.max_retries {
             if attempt > 0 {
-                let delay = self.retry_delays.get((attempt - 1) as usize)
+                let delay = self
+                    .retry_delays
+                    .get((attempt - 1) as usize)
                     .copied()
                     .unwrap_or(Duration::from_secs(60));
 
@@ -225,7 +224,7 @@ impl WebhookHandler {
         // Verify webhook signature
         let payload_str = serde_json::to_string(payload)
             .map_err(|e| AppError::validation(format!("Invalid JSON payload: {}", e)))?;
-        
+
         self.gateway_service
             .verify_webhook(gateway_id, signature, &payload_str)
             .await?;
@@ -236,7 +235,7 @@ impl WebhookHandler {
         // Determine if this is an installment payment (T101)
         // Installment external IDs have format: {invoice_id}-installment-{number}
         let is_installment = payment_data.invoice_id.contains("-installment-");
-        
+
         let transaction = if is_installment {
             // Extract invoice ID and installment ID from external_id
             let parts: Vec<&str> = payment_data.invoice_id.splitn(3, '-').collect();
@@ -245,16 +244,17 @@ impl WebhookHandler {
                     "Invalid installment external_id format (expected: {invoice_id}-installment-{number})"
                 ));
             }
-            
+
             let invoice_id = parts[0].to_string();
-            let installment_number: i32 = parts[2].parse()
+            let installment_number: i32 = parts[2]
+                .parse()
                 .map_err(|_| AppError::validation("Invalid installment number in external_id"))?;
-            
+
             // Find the installment ID by invoice and number
             // We'll need to query the installment repository for this
             // For now, we'll construct the installment ID
             let installment_id = format!("{}-inst-{}", invoice_id, installment_number);
-            
+
             info!(
                 invoice_id = invoice_id,
                 installment_id = installment_id,
@@ -262,7 +262,7 @@ impl WebhookHandler {
                 amount_paid = %payment_data.amount,
                 "Processing installment payment webhook"
             );
-            
+
             // Process installment payment with overpayment handling (T101)
             self.transaction_service
                 .process_installment_payment(
@@ -301,18 +301,16 @@ impl WebhookHandler {
     /// * `Result<String>` - Gateway transaction reference
     fn extract_gateway_ref(&self, gateway_id: &str, payload: &Value) -> Result<String> {
         match gateway_id {
-            "xendit" => {
-                payload["id"]
-                    .as_str()
-                    .map(String::from)
-                    .ok_or_else(|| AppError::validation("Missing 'id' in Xendit webhook"))
-            }
-            "midtrans" => {
-                payload["transaction_id"]
-                    .as_str()
-                    .map(String::from)
-                    .ok_or_else(|| AppError::validation("Missing 'transaction_id' in Midtrans webhook"))
-            }
+            "xendit" => payload["id"]
+                .as_str()
+                .map(String::from)
+                .ok_or_else(|| AppError::validation("Missing 'id' in Xendit webhook")),
+            "midtrans" => payload["transaction_id"]
+                .as_str()
+                .map(String::from)
+                .ok_or_else(|| {
+                    AppError::validation("Missing 'transaction_id' in Midtrans webhook")
+                }),
             _ => Err(AppError::validation(format!(
                 "Unsupported gateway: {}",
                 gateway_id
@@ -354,7 +352,8 @@ impl WebhookHandler {
             .as_str()
             .ok_or_else(|| AppError::validation("Missing 'currency' in Xendit webhook"))?;
 
-        let currency = currency_str.parse::<Currency>()
+        let currency = currency_str
+            .parse::<Currency>()
             .map_err(|e| AppError::validation(format!("Invalid currency: {}", e)))?;
 
         let payment_method = payload["payment_method"]
@@ -401,9 +400,9 @@ impl WebhookHandler {
             .unwrap_or("unknown")
             .to_string();
 
-        let transaction_status = payload["transaction_status"]
-            .as_str()
-            .ok_or_else(|| AppError::validation("Missing 'transaction_status' in Midtrans webhook"))?;
+        let transaction_status = payload["transaction_status"].as_str().ok_or_else(|| {
+            AppError::validation("Missing 'transaction_status' in Midtrans webhook")
+        })?;
 
         let status = match transaction_status {
             "settlement" | "capture" => TransactionStatus::Completed,
@@ -441,11 +440,11 @@ mod tests {
     fn test_retry_delay_configuration() {
         // Test default retry configuration
         let delays = vec![
-            Duration::from_secs(60),      // 1 minute
-            Duration::from_secs(300),     // 5 minutes
-            Duration::from_secs(1800),    // 30 minutes
+            Duration::from_secs(60),   // 1 minute
+            Duration::from_secs(300),  // 5 minutes
+            Duration::from_secs(1800), // 30 minutes
         ];
-        
+
         assert_eq!(delays.len(), 3);
         assert_eq!(delays[0], Duration::from_secs(60));
         assert_eq!(delays[1], Duration::from_secs(300));
@@ -460,7 +459,10 @@ mod tests {
             gateway_ref: "gateway-ref-456".to_string(),
         };
         match success {
-            WebhookResult::Success { transaction_id, gateway_ref } => {
+            WebhookResult::Success {
+                transaction_id,
+                gateway_ref,
+            } => {
                 assert_eq!(transaction_id, "txn-123");
                 assert_eq!(gateway_ref, "gateway-ref-456");
             }
@@ -486,7 +488,10 @@ mod tests {
             gateway_ref: "gateway-ref-duplicate".to_string(),
         };
         match duplicate {
-            WebhookResult::Duplicate { transaction_id, gateway_ref } => {
+            WebhookResult::Duplicate {
+                transaction_id,
+                gateway_ref,
+            } => {
                 assert_eq!(transaction_id, "txn-existing");
                 assert_eq!(gateway_ref, "gateway-ref-duplicate");
             }

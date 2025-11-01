@@ -74,16 +74,19 @@ impl TransactionService {
 
         // Start transaction with pessimistic locking (FR-053)
         let pool = self.transaction_repo.pool();
-        let mut tx = pool.begin().await
+        let mut tx = pool
+            .begin()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to start transaction: {}", e)))?;
 
         // Acquire lock on invoice (FOR UPDATE)
-        let invoice = crate::modules::invoices::repositories::InvoiceRepository::find_by_id_for_update(
-            &mut tx,
-            &invoice_id,
-        )
-        .await?
-        .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
+        let invoice =
+            crate::modules::invoices::repositories::InvoiceRepository::find_by_id_for_update(
+                &mut tx,
+                &invoice_id,
+            )
+            .await?
+            .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
 
         // Check if payment is already in progress (FR-054)
         if invoice.status == crate::modules::invoices::models::InvoiceStatus::Processing {
@@ -121,7 +124,10 @@ impl TransactionService {
         }
 
         // Save transaction within transaction
-        let saved_transaction = self.transaction_repo.create_with_tx(&transaction, &mut *tx).await?;
+        let saved_transaction = self
+            .transaction_repo
+            .create_with_tx(&transaction, &mut *tx)
+            .await?;
 
         // Update invoice status to Processing (marks payment in progress)
         if saved_transaction.status != TransactionStatus::Failed.to_string() {
@@ -130,7 +136,7 @@ impl TransactionService {
                 UPDATE invoices
                 SET status = 'processing', updated_at = NOW()
                 WHERE id = ?
-                "#
+                "#,
             )
             .bind(&invoice_id)
             .execute(&mut *tx)
@@ -139,12 +145,14 @@ impl TransactionService {
         }
 
         // Commit transaction
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to commit transaction: {}", e)))?;
 
         // Update invoice status if payment is completed (outside the lock)
         if saved_transaction.is_completed() {
-            self.update_invoice_status_after_payment(&invoice_id).await?;
+            self.update_invoice_status_after_payment(&invoice_id)
+                .await?;
         }
 
         Ok(saved_transaction)
@@ -185,7 +193,10 @@ impl TransactionService {
     ///
     /// # Returns
     /// * `Result<Vec<PaymentTransaction>>` - List of transactions
-    pub async fn list_invoice_transactions(&self, invoice_id: &str) -> Result<Vec<PaymentTransaction>> {
+    pub async fn list_invoice_transactions(
+        &self,
+        invoice_id: &str,
+    ) -> Result<Vec<PaymentTransaction>> {
         // Verify invoice exists
         self.invoice_repo
             .find_by_id(invoice_id)
@@ -241,7 +252,10 @@ impl TransactionService {
             .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
 
         // Calculate total paid
-        let total_paid = self.transaction_repo.calculate_total_paid(invoice_id).await?;
+        let total_paid = self
+            .transaction_repo
+            .calculate_total_paid(invoice_id)
+            .await?;
 
         // Get invoice total
         let invoice_total = invoice.total.unwrap_or_default();
@@ -256,7 +270,9 @@ impl TransactionService {
 
         // Only update if status has changed
         if invoice.status != new_status {
-            self.invoice_repo.update_status(invoice_id, new_status).await?;
+            self.invoice_repo
+                .update_status(invoice_id, new_status)
+                .await?;
         }
 
         Ok(())
@@ -276,7 +292,10 @@ impl TransactionService {
             .await?
             .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
 
-        let total_paid = self.transaction_repo.calculate_total_paid(invoice_id).await?;
+        let total_paid = self
+            .transaction_repo
+            .calculate_total_paid(invoice_id)
+            .await?;
         let invoice_total = invoice.total.unwrap_or_default();
 
         Ok(total_paid >= invoice_total)
@@ -296,24 +315,21 @@ impl TransactionService {
             .await?
             .ok_or_else(|| AppError::not_found(format!("Invoice '{}' not found", invoice_id)))?;
 
-        let total_paid = self.transaction_repo.calculate_total_paid(invoice_id).await?;
+        let total_paid = self
+            .transaction_repo
+            .calculate_total_paid(invoice_id)
+            .await?;
         let invoice_total = invoice.total.unwrap_or_default();
         let transactions = self.transaction_repo.find_by_invoice_id(invoice_id).await?;
 
-        let completed_count = transactions
-            .iter()
-            .filter(|t| t.is_completed())
-            .count();
+        let completed_count = transactions.iter().filter(|t| t.is_completed()).count();
 
         let pending_count = transactions
             .iter()
             .filter(|t| matches!(t.get_status(), Ok(TransactionStatus::Pending)))
             .count();
 
-        let failed_count = transactions
-            .iter()
-            .filter(|t| t.is_failed())
-            .count();
+        let failed_count = transactions.iter().filter(|t| t.is_failed()).count();
 
         Ok(PaymentStats {
             invoice_total,
@@ -350,8 +366,8 @@ impl TransactionService {
         amount_paid: Decimal,
         gateway_transaction_ref: String,
     ) -> Result<PaymentTransaction> {
-        use crate::modules::installments::repositories::InstallmentRepository;
         use crate::modules::installments::models::InstallmentStatus;
+        use crate::modules::installments::repositories::InstallmentRepository;
 
         // Check for idempotency first
         if let Some(existing) = self
@@ -367,33 +383,32 @@ impl TransactionService {
         }
 
         let pool = self.transaction_repo.pool();
-        
+
         // Get installment repository
         let installment_repo = InstallmentRepository::new(pool.clone());
-        
+
         // Get all installments for this invoice
         let mut installments = installment_repo.find_by_invoice(&invoice_id).await?;
         installments.sort_by_key(|i| i.installment_number);
-        
+
         // Find the current installment
         let current_installment = installments
             .iter()
             .find(|i| i.id == installment_id)
             .ok_or_else(|| AppError::not_found("Installment not found"))?;
-        
+
         // FR-068, FR-069: Validate sequential payment order
         for inst in &installments {
             if inst.installment_number < current_installment.installment_number {
                 if inst.status != InstallmentStatus::Paid {
                     return Err(AppError::validation(format!(
                         "Cannot pay installment #{} before installment #{} is paid (FR-068)",
-                        current_installment.installment_number,
-                        inst.installment_number
+                        current_installment.installment_number, inst.installment_number
                     )));
                 }
             }
         }
-        
+
         // FR-070: Check if current installment is fully paid
         if current_installment.status == InstallmentStatus::Paid {
             return Err(AppError::validation(format!(
@@ -403,7 +418,9 @@ impl TransactionService {
         }
 
         // Get invoice to extract currency
-        let invoice = self.invoice_repo.find_by_id(&invoice_id)
+        let invoice = self
+            .invoice_repo
+            .find_by_id(&invoice_id)
             .await?
             .ok_or_else(|| AppError::not_found("Invoice not found"))?;
 
@@ -417,24 +434,26 @@ impl TransactionService {
             "installment_payment".to_string(),
             None,
         )?;
-        
+
         // Link transaction to installment
         transaction.installment_id = Some(installment_id.clone());
-        
+
         // Update transaction status to completed
         transaction.update_status(TransactionStatus::Completed)?;
-        
+
         // Save transaction
         let saved_transaction = self.transaction_repo.create(&transaction).await?;
-        
+
         // Handle overpayment auto-application (T100 - FR-073, FR-074, FR-075, FR-076)
-        let excess = self.apply_overpayment_to_installments(
-            &invoice_id,
-            &installment_id,
-            amount_paid,
-            &mut installments,
-        ).await?;
-        
+        let excess = self
+            .apply_overpayment_to_installments(
+                &invoice_id,
+                &installment_id,
+                amount_paid,
+                &mut installments,
+            )
+            .await?;
+
         if excess > Decimal::ZERO {
             tracing::warn!(
                 invoice_id = invoice_id,
@@ -442,7 +461,7 @@ impl TransactionService {
                 "Overpayment detected - excess amount after all installments paid"
             );
         }
-        
+
         Ok(saved_transaction)
     }
 
@@ -463,44 +482,44 @@ impl TransactionService {
         payment_amount: Decimal,
         installments: &mut [crate::modules::installments::models::InstallmentSchedule],
     ) -> Result<Decimal> {
-        use crate::modules::installments::repositories::InstallmentRepository;
         use crate::modules::installments::models::InstallmentStatus;
-        
+        use crate::modules::installments::repositories::InstallmentRepository;
+
         let pool = self.transaction_repo.pool();
         let installment_repo = InstallmentRepository::new(pool.clone());
-        
+
         // Find current installment index
         let current_idx = installments
             .iter()
             .position(|i| i.id == current_installment_id)
             .ok_or_else(|| AppError::not_found("Current installment not found"))?;
-        
+
         let mut remaining = payment_amount;
-        
+
         // Apply payment starting from current installment
         for i in current_idx..installments.len() {
             let installment = &mut installments[i];
-            
+
             if remaining <= Decimal::ZERO {
                 break;
             }
-            
+
             if installment.status == InstallmentStatus::Paid {
                 continue; // Skip already paid installments
             }
-            
+
             let required = installment.amount;
-            
+
             if remaining >= required {
                 // Full payment for this installment (FR-074, FR-075)
                 remaining -= required;
                 installment.status = InstallmentStatus::Paid;
                 installment.paid_at = Some(chrono::Utc::now().naive_utc());
                 installment.updated_at = chrono::Utc::now().naive_utc();
-                
+
                 // Update in database
                 installment_repo.update(&installment).await?;
-                
+
                 tracing::info!(
                     installment_number = installment.installment_number,
                     amount = %required,
@@ -518,15 +537,19 @@ impl TransactionService {
                 break;
             }
         }
-        
+
         // Check if all installments are paid (FR-020)
-        let all_paid = installments.iter().all(|i| i.status == InstallmentStatus::Paid);
-        
+        let all_paid = installments
+            .iter()
+            .all(|i| i.status == InstallmentStatus::Paid);
+
         if all_paid {
             // Mark invoice as fully paid
             use crate::modules::invoices::models::InvoiceStatus;
-            self.invoice_repo.update_status(invoice_id, InvoiceStatus::Paid).await?;
-            
+            self.invoice_repo
+                .update_status(invoice_id, InvoiceStatus::Paid)
+                .await?;
+
             tracing::info!(
                 invoice_id = invoice_id,
                 "All installments paid - invoice marked as fully paid"
@@ -534,9 +557,11 @@ impl TransactionService {
         } else {
             // Mark invoice as partially paid (FR-019)
             use crate::modules::invoices::models::InvoiceStatus;
-            self.invoice_repo.update_status(invoice_id, InvoiceStatus::PartiallyPaid).await?;
+            self.invoice_repo
+                .update_status(invoice_id, InvoiceStatus::PartiallyPaid)
+                .await?;
         }
-        
+
         Ok(remaining) // Return excess amount (FR-076)
     }
 }

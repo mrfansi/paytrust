@@ -11,27 +11,27 @@ use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
 use crate::core::{AppError, Currency, Result};
+use crate::modules::installments::models::InstallmentConfig;
 use crate::modules::invoices::{
     models::{Invoice, LineItem},
     services::InvoiceService,
 };
-use crate::modules::installments::models::InstallmentConfig;
 
 /// Request to create an invoice
 #[derive(Debug, Deserialize)]
 pub struct CreateInvoiceRequest {
     /// Merchant's reference ID (must be unique)
     pub external_id: String,
-    
+
     /// Payment gateway ID to use
     pub gateway_id: String,
-    
+
     /// Invoice currency (IDR, MYR, USD)
     pub currency: Currency,
-    
+
     /// Line items (must have at least one)
     pub line_items: Vec<CreateLineItemRequest>,
-    
+
     /// Installment configuration (T093: 2-12 installments, optional)
     #[serde(default)]
     pub installment_config: Option<InstallmentConfig>,
@@ -42,17 +42,17 @@ pub struct CreateInvoiceRequest {
 pub struct CreateLineItemRequest {
     /// Product/service description
     pub description: String,
-    
+
     /// Quantity (must be positive)
     pub quantity: i32,
-    
+
     /// Price per unit
     pub unit_price: rust_decimal::Decimal,
-    
+
     /// Tax rate (e.g., 0.10 for 10%, optional)
     #[serde(default)]
     pub tax_rate: Option<rust_decimal::Decimal>,
-    
+
     /// Tax category (e.g., "VAT", "GST", optional)
     #[serde(default)]
     pub tax_category: Option<String>,
@@ -98,7 +98,7 @@ impl From<Invoice> for InvoiceResponse {
         let tax_total = invoice.tax_total.unwrap_or_default();
         let service_fee = invoice.service_fee.unwrap_or_default();
         let total = invoice.get_total();
-        
+
         Self {
             id: invoice.id.unwrap_or_default(),
             external_id: invoice.external_id.clone(),
@@ -139,7 +139,7 @@ impl From<LineItem> for LineItemResponse {
 }
 
 /// POST /invoices - Create a new invoice
-/// 
+///
 /// # Request Body
 /// ```json
 /// {
@@ -155,7 +155,7 @@ impl From<LineItem> for LineItemResponse {
 ///   ]
 /// }
 /// ```
-/// 
+///
 /// # Response
 /// - 201 Created: Invoice created successfully
 /// - 400 Bad Request: Validation error
@@ -212,10 +212,10 @@ pub async fn create_invoice(
 }
 
 /// GET /invoices/{id} - Get invoice by ID
-/// 
+///
 /// # Path Parameters
 /// - `id`: Invoice ID (UUID)
-/// 
+///
 /// # Response
 /// - 200 OK: Invoice found
 /// - 404 Not Found: Invoice not found
@@ -237,17 +237,17 @@ pub async fn get_invoice(
 pub struct ListInvoicesQuery {
     /// Maximum results (default: 20, max: 100)
     pub limit: Option<i64>,
-    
+
     /// Results to skip (default: 0)
     pub offset: Option<i64>,
 }
 
 /// GET /invoices - List invoices with pagination
-/// 
+///
 /// # Query Parameters
 /// - `limit`: Maximum results (default: 20, max: 100)
 /// - `offset`: Results to skip (default: 0)
-/// 
+///
 /// # Response
 /// - 200 OK: List of invoices
 /// - 500 Internal Server Error: Database error
@@ -258,11 +258,8 @@ pub async fn list_invoices(
     let service = InvoiceService::new(pool.get_ref().clone());
 
     let invoices = service.list_invoices(query.limit, query.offset).await?;
-    
-    let response: Vec<InvoiceResponse> = invoices
-        .into_iter()
-        .map(InvoiceResponse::from)
-        .collect();
+
+    let response: Vec<InvoiceResponse> = invoices.into_iter().map(InvoiceResponse::from).collect();
 
     Ok(HttpResponse::Ok().json(response))
 }
@@ -272,26 +269,26 @@ pub async fn list_invoices(
 pub struct CreateSupplementaryInvoiceRequest {
     /// Excess payment amount to record
     pub excess_amount: rust_decimal::Decimal,
-    
+
     /// Description for the supplementary invoice
     pub description: String,
 }
 
 /// Create a supplementary invoice for excess overpayment (T105)
-/// 
+///
 /// POST /invoices/{id}/supplementary
-/// 
+///
 /// Creates a new invoice to record excess payment that exceeds all installments.
 /// The supplementary invoice is automatically marked as paid since the payment
 /// was already received.
-/// 
+///
 /// # Path Parameters
 /// * `id` - Original invoice ID that received the overpayment
-/// 
+///
 /// # Request Body
 /// * `excess_amount` - Amount of excess payment
 /// * `description` - Description for the supplementary invoice line item
-/// 
+///
 /// # Returns
 /// * `200 OK` - Created supplementary invoice
 /// * `400 Bad Request` - Invalid excess amount or original invoice not found
@@ -303,7 +300,7 @@ async fn create_supplementary_invoice(
 ) -> Result<HttpResponse> {
     let original_invoice_id = path.into_inner();
     let service = InvoiceService::new(pool.get_ref().clone());
-    
+
     let supplementary = service
         .create_supplementary_invoice(
             &original_invoice_id,
@@ -311,7 +308,7 @@ async fn create_supplementary_invoice(
             body.description.clone(),
         )
         .await?;
-    
+
     let response = InvoiceResponse::from(supplementary);
     Ok(HttpResponse::Ok().json(response))
 }
@@ -323,7 +320,10 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(create_invoice))
             .route("", web::get().to(list_invoices))
             .route("/{id}", web::get().to(get_invoice))
-            .route("/{id}/supplementary", web::post().to(create_supplementary_invoice)),
+            .route(
+                "/{id}/supplementary",
+                web::post().to(create_supplementary_invoice),
+            ),
     );
 }
 

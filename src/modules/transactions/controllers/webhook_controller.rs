@@ -30,7 +30,7 @@ impl WebhookController {
     /// * `cfg` - Service configuration
     pub fn configure(cfg: &mut web::ServiceConfig, webhook_handler: WebhookHandler) {
         let controller = web::Data::new(Self::new(webhook_handler));
-        
+
         cfg.service(
             web::scope("/webhooks")
                 .app_data(controller)
@@ -96,10 +96,7 @@ async fn process_webhook(
 ) -> Result<HttpResponse> {
     let gateway_id = path.into_inner();
 
-    info!(
-        gateway_id = gateway_id.as_str(),
-        "Received webhook request"
-    );
+    info!(gateway_id = gateway_id.as_str(), "Received webhook request");
 
     // Extract signature from headers based on gateway
     let signature = extract_signature(&req, &gateway_id)?;
@@ -147,10 +144,8 @@ async fn process_webhook(
                 error = error,
                 "Webhook processing failed after all retries"
             );
-            return Ok(HttpResponse::InternalServerError().json(WebhookResponse::Failed {
-                gateway_ref,
-                error,
-            }));
+            return Ok(HttpResponse::InternalServerError()
+                .json(WebhookResponse::Failed { gateway_ref, error }));
         }
     };
 

@@ -8,25 +8,25 @@ use sqlx::FromRow;
 pub struct PaymentGatewayConfig {
     pub id: String,
     pub name: String,
-    
+
     #[sqlx(json)]
     pub supported_currencies: Vec<String>,
-    
+
     pub fee_percentage: Decimal,
     pub fee_fixed: Decimal,
-    
+
     #[sqlx(skip)]
     #[serde(skip)]
     pub api_key_encrypted: Vec<u8>,
-    
+
     pub webhook_secret: String,
     pub webhook_url: String,
     pub is_active: bool,
     pub environment: GatewayEnvironment,
-    
+
     #[sqlx(default)]
     pub created_at: chrono::NaiveDateTime,
-    
+
     #[sqlx(default)]
     pub updated_at: chrono::NaiveDateTime,
 }

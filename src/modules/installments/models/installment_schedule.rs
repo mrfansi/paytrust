@@ -78,7 +78,7 @@ impl TryFrom<String> for InstallmentStatus {
 
 impl InstallmentSchedule {
     /// Create a new installment schedule entry
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Parent invoice ID
     /// * `installment_number` - Sequential number (1-based)
@@ -96,9 +96,10 @@ impl InstallmentSchedule {
     ) -> Result<Self> {
         // Validate installment number (FR-014: 2-12 installments)
         if installment_number < 1 || installment_number > 12 {
-            return Err(AppError::validation(
-                format!("Installment number must be between 1 and 12, got {}", installment_number)
-            ));
+            return Err(AppError::validation(format!(
+                "Installment number must be between 1 and 12, got {}",
+                installment_number
+            )));
         }
 
         // Validate amounts
@@ -111,7 +112,9 @@ impl InstallmentSchedule {
         }
 
         if service_fee_amount < Decimal::ZERO {
-            return Err(AppError::validation("Service fee amount cannot be negative"));
+            return Err(AppError::validation(
+                "Service fee amount cannot be negative",
+            ));
         }
 
         let now = chrono::Utc::now().naive_utc();
@@ -134,7 +137,7 @@ impl InstallmentSchedule {
     }
 
     /// Check if this installment can be paid (FR-068: sequential enforcement)
-    /// 
+    ///
     /// An installment can be paid if:
     /// - It is the first installment (number 1), OR
     /// - All previous installments have been paid
@@ -149,7 +152,7 @@ impl InstallmentSchedule {
             let prev_paid = previous_installments
                 .iter()
                 .any(|inst| inst.installment_number == i && inst.status == InstallmentStatus::Paid);
-            
+
             if !prev_paid {
                 return false;
             }
@@ -159,7 +162,7 @@ impl InstallmentSchedule {
     }
 
     /// Check if this installment can be adjusted (FR-077)
-    /// 
+    ///
     /// Only unpaid installments can be adjusted after first payment
     pub fn can_be_adjusted(&self) -> bool {
         self.status == InstallmentStatus::Unpaid
@@ -168,9 +171,10 @@ impl InstallmentSchedule {
     /// Mark installment as paid
     pub fn mark_as_paid(&mut self, gateway_reference: String) -> Result<()> {
         if self.status == InstallmentStatus::Paid {
-            return Err(AppError::validation(
-                format!("Installment {} is already paid", self.installment_number)
-            ));
+            return Err(AppError::validation(format!(
+                "Installment {} is already paid",
+                self.installment_number
+            )));
         }
 
         self.status = InstallmentStatus::Paid;
@@ -185,7 +189,7 @@ impl InstallmentSchedule {
     pub fn mark_as_overdue(&mut self) -> Result<()> {
         if self.status == InstallmentStatus::Paid {
             return Err(AppError::validation(
-                "Cannot mark paid installment as overdue"
+                "Cannot mark paid installment as overdue",
             ));
         }
 
@@ -232,40 +236,38 @@ impl InstallmentConfig {
     pub fn validate(&self, invoice_total: Decimal) -> Result<()> {
         // FR-014: 2-12 installments
         if self.installment_count < 2 || self.installment_count > 12 {
-            return Err(AppError::validation(
-                format!("Installment count must be between 2 and 12, got {}", self.installment_count)
-            ));
+            return Err(AppError::validation(format!(
+                "Installment count must be between 2 and 12, got {}",
+                self.installment_count
+            )));
         }
 
         // If custom amounts provided, validate
         if let Some(ref amounts) = self.custom_amounts {
             if amounts.len() != self.installment_count as usize {
-                return Err(AppError::validation(
-                    format!(
-                        "Custom amounts count ({}) must match installment count ({})",
-                        amounts.len(),
-                        self.installment_count
-                    )
-                ));
+                return Err(AppError::validation(format!(
+                    "Custom amounts count ({}) must match installment count ({})",
+                    amounts.len(),
+                    self.installment_count
+                )));
             }
 
             // FR-017: Sum must equal invoice total
             let sum: Decimal = amounts.iter().sum();
             if sum != invoice_total {
-                return Err(AppError::validation(
-                    format!(
-                        "Sum of custom amounts ({}) must equal invoice total ({})",
-                        sum, invoice_total
-                    )
-                ));
+                return Err(AppError::validation(format!(
+                    "Sum of custom amounts ({}) must equal invoice total ({})",
+                    sum, invoice_total
+                )));
             }
 
             // All amounts must be positive
             for (i, amount) in amounts.iter().enumerate() {
                 if *amount <= Decimal::ZERO {
-                    return Err(AppError::validation(
-                        format!("Installment {} amount must be positive", i + 1)
-                    ));
+                    return Err(AppError::validation(format!(
+                        "Installment {} amount must be positive",
+                        i + 1
+                    )));
                 }
             }
         }
@@ -353,7 +355,8 @@ mod tests {
             dec!(0),
             dec!(0),
             NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(inst.can_be_paid(&[]));
     }
@@ -367,7 +370,8 @@ mod tests {
             dec!(0),
             dec!(0),
             NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         let inst2 = InstallmentSchedule::new(
             "inv-123".to_string(),
@@ -376,7 +380,8 @@ mod tests {
             dec!(0),
             dec!(0),
             NaiveDate::from_ymd_opt(2025, 12, 15).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         // Second installment cannot be paid before first
         assert!(!inst2.can_be_paid(&[inst1.clone()]));
@@ -397,7 +402,8 @@ mod tests {
             dec!(0),
             dec!(0),
             NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(inst.status, InstallmentStatus::Unpaid);
         assert!(inst.paid_at.is_none());
@@ -418,7 +424,8 @@ mod tests {
             dec!(0),
             dec!(0),
             NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         inst.mark_as_paid("ref-1".to_string()).unwrap();
         let result = inst.mark_as_paid("ref-2".to_string());
@@ -436,7 +443,8 @@ mod tests {
             dec!(0),
             dec!(0),
             NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(inst.can_be_adjusted());
 

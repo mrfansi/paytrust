@@ -128,11 +128,7 @@ impl TaxRepository {
     }
 
     /// Update tax rate active status
-    pub async fn update_active_status(
-        &self,
-        id: &str,
-        is_active: bool,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update_active_status(&self, id: &str, is_active: bool) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query(

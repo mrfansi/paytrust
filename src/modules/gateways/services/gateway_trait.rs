@@ -27,25 +27,25 @@ pub trait PaymentGateway: Send + Sync {
 pub struct PaymentRequest {
     /// Invoice ID (external reference)
     pub external_id: String,
-    
+
     /// Payment amount
     pub amount: Decimal,
-    
+
     /// Currency
     pub currency: Currency,
-    
+
     /// Description
     pub description: String,
-    
+
     /// Payer information (optional)
     pub payer_email: Option<String>,
-    
+
     /// Success redirect URL
     pub success_redirect_url: Option<String>,
-    
+
     /// Failure redirect URL
     pub failure_redirect_url: Option<String>,
-    
+
     /// Installment information (optional) - FR-065, FR-066, FR-067
     pub installment_info: Option<InstallmentInfo>,
 }
@@ -55,13 +55,13 @@ pub struct PaymentRequest {
 pub struct InstallmentInfo {
     /// Installment schedule ID
     pub installment_id: String,
-    
+
     /// Installment number (1, 2, 3, etc.)
     pub installment_number: i32,
-    
+
     /// Total number of installments
     pub total_installments: i32,
-    
+
     /// Description for this installment
     pub description_suffix: String,
 }
@@ -71,13 +71,13 @@ pub struct InstallmentInfo {
 pub struct PaymentResponse {
     /// Gateway transaction reference
     pub gateway_reference: String,
-    
+
     /// Payment URL for customer
     pub payment_url: String,
-    
+
     /// Expiration time (if applicable)
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
-    
+
     /// Payment status
     pub status: PaymentStatus,
 }
@@ -97,19 +97,19 @@ pub enum PaymentStatus {
 pub struct WebhookPayload {
     /// Gateway transaction reference
     pub gateway_reference: String,
-    
+
     /// External ID (invoice ID)
     pub external_id: String,
-    
+
     /// Amount paid
     pub amount_paid: Decimal,
-    
+
     /// Payment method used
     pub payment_method: String,
-    
+
     /// Payment status
     pub status: PaymentStatus,
-    
+
     /// Full gateway response (JSON)
     pub raw_response: serde_json::Value,
 }

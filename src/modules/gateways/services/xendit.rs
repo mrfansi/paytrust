@@ -1,4 +1,6 @@
-use super::gateway_trait::{PaymentGateway, PaymentRequest, PaymentResponse, PaymentStatus, WebhookPayload};
+use super::gateway_trait::{
+    PaymentGateway, PaymentRequest, PaymentResponse, PaymentStatus, WebhookPayload,
+};
 use crate::core::{AppError, Currency, Result};
 use async_trait::async_trait;
 use reqwest::{Client, StatusCode};
@@ -49,7 +51,7 @@ impl XenditClient {
         mac.update(payload.as_bytes());
 
         let expected_signature = hex::encode(mac.finalize().into_bytes());
-        
+
         // Constant-time comparison
         signature == expected_signature
     }
@@ -104,7 +106,11 @@ impl PaymentGateway for XenditClient {
                 if e.is_connect() || e.is_timeout() {
                     AppError::gateway(format!(
                         "Xendit gateway unavailable: {} ({})",
-                        if e.is_timeout() { "timeout" } else { "connection failed" },
+                        if e.is_timeout() {
+                            "timeout"
+                        } else {
+                            "connection failed"
+                        },
                         e
                     ))
                 } else {
@@ -160,7 +166,9 @@ impl PaymentGateway for XenditClient {
             gateway_reference: xendit_webhook.id,
             external_id: xendit_webhook.external_id,
             amount_paid: xendit_webhook.amount,
-            payment_method: xendit_webhook.payment_method.unwrap_or_else(|| "unknown".to_string()),
+            payment_method: xendit_webhook
+                .payment_method
+                .unwrap_or_else(|| "unknown".to_string()),
             status,
             raw_response,
         })
@@ -226,19 +234,15 @@ mod tests {
 
     #[test]
     fn test_hmac_verification() {
-        let client = XenditClient::new(
-            "test_api_key".to_string(),
-            "test_secret".to_string(),
-            None,
-        );
+        let client = XenditClient::new("test_api_key".to_string(), "test_secret".to_string(), None);
 
         let payload = r#"{"test":"data"}"#;
-        
+
         // Generate expected signature
         use hmac::{Hmac, Mac};
         use sha2::Sha256;
         type HmacSha256 = Hmac<Sha256>;
-        
+
         let mut mac = HmacSha256::new_from_slice(b"test_secret").unwrap();
         mac.update(payload.as_bytes());
         let expected_sig = hex::encode(mac.finalize().into_bytes());

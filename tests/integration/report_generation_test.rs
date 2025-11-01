@@ -76,22 +76,26 @@ fn generate_financial_report(
     // Convert to breakdown structures
     let service_fees: Vec<ServiceFeeBreakdown> = service_fee_map
         .into_iter()
-        .map(|((currency, gateway), (total_amount, transaction_count))| ServiceFeeBreakdown {
-            currency,
-            gateway,
-            total_amount,
-            transaction_count,
-        })
+        .map(
+            |((currency, gateway), (total_amount, transaction_count))| ServiceFeeBreakdown {
+                currency,
+                gateway,
+                total_amount,
+                transaction_count,
+            },
+        )
         .collect();
 
     let taxes: Vec<TaxBreakdown> = tax_map
         .into_iter()
-        .map(|((currency, tax_rate_str), (total_amount, transaction_count))| TaxBreakdown {
-            currency,
-            tax_rate: Decimal::from_str(&tax_rate_str).unwrap(),
-            total_amount,
-            transaction_count,
-        })
+        .map(
+            |((currency, tax_rate_str), (total_amount, transaction_count))| TaxBreakdown {
+                currency,
+                tax_rate: Decimal::from_str(&tax_rate_str).unwrap(),
+                total_amount,
+                transaction_count,
+            },
+        )
         .collect();
 
     FinancialReport {
@@ -156,8 +160,11 @@ fn test_service_fee_breakdown_by_gateway_and_currency() {
         .iter()
         .find(|f| f.gateway == "xendit" && f.currency == "IDR")
         .unwrap();
-    
-    assert_eq!(xendit_breakdown.total_amount, Decimal::from_str("13100").unwrap()); // 5100 + 8000
+
+    assert_eq!(
+        xendit_breakdown.total_amount,
+        Decimal::from_str("13100").unwrap()
+    ); // 5100 + 8000
     assert_eq!(xendit_breakdown.transaction_count, 2);
 
     // Find Midtrans breakdown
@@ -166,8 +173,11 @@ fn test_service_fee_breakdown_by_gateway_and_currency() {
         .iter()
         .find(|f| f.gateway == "midtrans" && f.currency == "IDR")
         .unwrap();
-    
-    assert_eq!(midtrans_breakdown.total_amount, Decimal::from_str("3000").unwrap());
+
+    assert_eq!(
+        midtrans_breakdown.total_amount,
+        Decimal::from_str("3000").unwrap()
+    );
     assert_eq!(midtrans_breakdown.transaction_count, 1);
 }
 
@@ -225,8 +235,11 @@ fn test_tax_breakdown_by_rate_and_currency() {
         .iter()
         .find(|t| t.tax_rate == Decimal::from_str("0.10").unwrap() && t.currency == "IDR")
         .unwrap();
-    
-    assert_eq!(tax_10_breakdown.total_amount, Decimal::from_str("30000").unwrap()); // 10000 + 20000
+
+    assert_eq!(
+        tax_10_breakdown.total_amount,
+        Decimal::from_str("30000").unwrap()
+    ); // 10000 + 20000
     assert_eq!(tax_10_breakdown.transaction_count, 2);
 
     // Find 11% tax breakdown
@@ -235,8 +248,11 @@ fn test_tax_breakdown_by_rate_and_currency() {
         .iter()
         .find(|t| t.tax_rate == Decimal::from_str("0.11").unwrap() && t.currency == "IDR")
         .unwrap();
-    
-    assert_eq!(tax_11_breakdown.total_amount, Decimal::from_str("16500").unwrap());
+
+    assert_eq!(
+        tax_11_breakdown.total_amount,
+        Decimal::from_str("16500").unwrap()
+    );
     assert_eq!(tax_11_breakdown.transaction_count, 1);
 }
 
@@ -297,19 +313,11 @@ fn test_separate_totals_by_currency() {
     assert_eq!(report.taxes.len(), 2);
 
     // IDR taxes
-    let idr_taxes = report
-        .taxes
-        .iter()
-        .find(|t| t.currency == "IDR")
-        .unwrap();
+    let idr_taxes = report.taxes.iter().find(|t| t.currency == "IDR").unwrap();
     assert_eq!(idr_taxes.total_amount, Decimal::from_str("10000").unwrap());
 
     // MYR taxes
-    let myr_taxes = report
-        .taxes
-        .iter()
-        .find(|t| t.currency == "MYR")
-        .unwrap();
+    let myr_taxes = report.taxes.iter().find(|t| t.currency == "MYR").unwrap();
     assert_eq!(myr_taxes.total_amount, Decimal::from_str("6.00").unwrap());
 }
 
@@ -399,10 +407,22 @@ fn test_complex_multi_currency_multi_gateway_aggregation() {
     assert_eq!(report.taxes.len(), 3);
 
     // Verify each combination exists
-    assert!(report.service_fees.iter().any(|f| f.currency == "IDR" && f.gateway == "xendit"));
-    assert!(report.service_fees.iter().any(|f| f.currency == "IDR" && f.gateway == "midtrans"));
-    assert!(report.service_fees.iter().any(|f| f.currency == "MYR" && f.gateway == "xendit"));
-    assert!(report.service_fees.iter().any(|f| f.currency == "USD" && f.gateway == "xendit"));
+    assert!(report
+        .service_fees
+        .iter()
+        .any(|f| f.currency == "IDR" && f.gateway == "xendit"));
+    assert!(report
+        .service_fees
+        .iter()
+        .any(|f| f.currency == "IDR" && f.gateway == "midtrans"));
+    assert!(report
+        .service_fees
+        .iter()
+        .any(|f| f.currency == "MYR" && f.gateway == "xendit"));
+    assert!(report
+        .service_fees
+        .iter()
+        .any(|f| f.currency == "USD" && f.gateway == "xendit"));
 }
 
 /// Test: Transaction count accuracy
@@ -453,30 +473,34 @@ fn test_transaction_count_accuracy() {
     // Should have 1 service fee breakdown
     assert_eq!(report.service_fees.len(), 1);
     assert_eq!(report.service_fees[0].transaction_count, 3);
-    assert_eq!(report.service_fees[0].total_amount, Decimal::from_str("24100").unwrap());
+    assert_eq!(
+        report.service_fees[0].total_amount,
+        Decimal::from_str("24100").unwrap()
+    );
 
     // Should have 1 tax breakdown
     assert_eq!(report.taxes.len(), 1);
     assert_eq!(report.taxes[0].transaction_count, 3);
-    assert_eq!(report.taxes[0].total_amount, Decimal::from_str("60000").unwrap());
+    assert_eq!(
+        report.taxes[0].total_amount,
+        Decimal::from_str("60000").unwrap()
+    );
 }
 
 /// Test: Zero tax transactions included in report
 #[test]
 fn test_zero_tax_transactions_in_report() {
-    let transactions = vec![
-        Transaction {
-            id: "tx-001".to_string(),
-            invoice_id: "inv-001".to_string(),
-            currency: "IDR".to_string(),
-            gateway: "xendit".to_string(),
-            subtotal: Decimal::from_str("100000").unwrap(),
-            tax_rate: Decimal::ZERO,
-            tax_amount: Decimal::ZERO,
-            service_fee: Decimal::from_str("5100").unwrap(),
-            created_at: "2025-11-01T10:00:00Z".to_string(),
-        },
-    ];
+    let transactions = vec![Transaction {
+        id: "tx-001".to_string(),
+        invoice_id: "inv-001".to_string(),
+        currency: "IDR".to_string(),
+        gateway: "xendit".to_string(),
+        subtotal: Decimal::from_str("100000").unwrap(),
+        tax_rate: Decimal::ZERO,
+        tax_amount: Decimal::ZERO,
+        service_fee: Decimal::from_str("5100").unwrap(),
+        created_at: "2025-11-01T10:00:00Z".to_string(),
+    }];
 
     let report = generate_financial_report(
         transactions,
@@ -486,7 +510,10 @@ fn test_zero_tax_transactions_in_report() {
 
     // Service fee should be reported
     assert_eq!(report.service_fees.len(), 1);
-    assert_eq!(report.service_fees[0].total_amount, Decimal::from_str("5100").unwrap());
+    assert_eq!(
+        report.service_fees[0].total_amount,
+        Decimal::from_str("5100").unwrap()
+    );
 
     // Tax breakdown should include zero tax
     assert_eq!(report.taxes.len(), 1);
@@ -512,19 +539,17 @@ fn test_date_range_in_report_metadata() {
 /// Test: Service fee and tax totals are independent
 #[test]
 fn test_service_fee_and_tax_totals_independent() {
-    let transactions = vec![
-        Transaction {
-            id: "tx-001".to_string(),
-            invoice_id: "inv-001".to_string(),
-            currency: "IDR".to_string(),
-            gateway: "xendit".to_string(),
-            subtotal: Decimal::from_str("100000").unwrap(),
-            tax_rate: Decimal::from_str("0.10").unwrap(),
-            tax_amount: Decimal::from_str("10000").unwrap(),
-            service_fee: Decimal::from_str("5100").unwrap(),
-            created_at: "2025-11-01T10:00:00Z".to_string(),
-        },
-    ];
+    let transactions = vec![Transaction {
+        id: "tx-001".to_string(),
+        invoice_id: "inv-001".to_string(),
+        currency: "IDR".to_string(),
+        gateway: "xendit".to_string(),
+        subtotal: Decimal::from_str("100000").unwrap(),
+        tax_rate: Decimal::from_str("0.10").unwrap(),
+        tax_amount: Decimal::from_str("10000").unwrap(),
+        service_fee: Decimal::from_str("5100").unwrap(),
+        created_at: "2025-11-01T10:00:00Z".to_string(),
+    }];
 
     let report = generate_financial_report(
         transactions,
@@ -534,7 +559,7 @@ fn test_service_fee_and_tax_totals_independent() {
 
     // Service fee total
     let service_fee_total = report.service_fees[0].total_amount;
-    
+
     // Tax total
     let tax_total = report.taxes[0].total_amount;
 

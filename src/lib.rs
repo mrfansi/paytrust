@@ -8,7 +8,7 @@ pub mod middleware;
 pub mod modules;
 
 // Re-export commonly used types
+pub use modules::gateways;
 pub use modules::invoices;
 pub use modules::taxes;
 pub use modules::transactions;
-pub use modules::gateways;

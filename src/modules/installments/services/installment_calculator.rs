@@ -25,13 +25,13 @@ impl InstallmentCalculator {
     }
 
     /// Calculate equal installments (simplified version for testing)
-    /// 
+    ///
     /// # Arguments
     /// * `total_amount` - Total to distribute
     /// * `installment_count` - Number of installments
     /// * `total_tax` - Optional total tax to distribute
     /// * `total_service_fee` - Optional total service fee to distribute
-    /// 
+    ///
     /// # Returns
     /// Vector of InstallmentResult with distributed amounts
     pub fn calculate_equal_installments(
@@ -42,7 +42,9 @@ impl InstallmentCalculator {
         total_service_fee: Option<Decimal>,
     ) -> Result<Vec<InstallmentResult>> {
         if installment_count == 0 || installment_count > 12 {
-            return Err(AppError::validation("Installment count must be between 2 and 12"));
+            return Err(AppError::validation(
+                "Installment count must be between 2 and 12",
+            ));
         }
 
         let tax = total_tax.unwrap_or(Decimal::ZERO);
@@ -50,7 +52,8 @@ impl InstallmentCalculator {
 
         // Use USD scale (2) for general calculations, will work for tests
         let currency = Currency::USD;
-        let base_amounts = Self::calculate_equal_amounts(total_amount, installment_count, currency)?;
+        let base_amounts =
+            Self::calculate_equal_amounts(total_amount, installment_count, currency)?;
 
         let mut results = Vec::new();
         let mut total_distributed_tax = Decimal::ZERO;
@@ -86,14 +89,14 @@ impl InstallmentCalculator {
     }
 
     /// Calculate custom installments with specified amounts
-    /// 
+    ///
     /// # Arguments
     /// * `total_amount` - Total to validate against
     /// * `installment_count` - Number of installments
     /// * `custom_amounts` - Specified amounts for each installment
     /// * `total_tax` - Optional total tax to distribute
     /// * `total_service_fee` - Optional total service fee to distribute
-    /// 
+    ///
     /// # Returns
     /// Vector of InstallmentResult with custom amounts and proportional tax/fees
     pub fn calculate_custom_installments(
@@ -105,7 +108,9 @@ impl InstallmentCalculator {
         total_service_fee: Option<Decimal>,
     ) -> Result<Vec<InstallmentResult>> {
         if custom_amounts.len() != installment_count {
-            return Err(AppError::validation("Custom amounts count must match installment count"));
+            return Err(AppError::validation(
+                "Custom amounts count must match installment count",
+            ));
         }
 
         let amounts_sum: Decimal = custom_amounts.iter().sum();
@@ -154,10 +159,10 @@ impl InstallmentCalculator {
     }
 
     /// Calculate installment schedules for an invoice
-    /// 
+    ///
     /// Distributes the invoice total, taxes, and service fees proportionally across installments.
     /// The last installment absorbs any rounding differences to ensure exact total match.
-    /// 
+    ///
     /// # Arguments
     /// * `invoice_id` - Parent invoice ID
     /// * `invoice_total` - Total invoice amount (subtotal only, excluding tax and fees for proportion calculation)
@@ -166,7 +171,7 @@ impl InstallmentCalculator {
     /// * `config` - Installment configuration (count and optional custom amounts)
     /// * `currency` - Invoice currency for precision handling
     /// * `start_date` - First installment due date
-    /// 
+    ///
     /// # Returns
     /// Vector of InstallmentSchedule objects with proportionally distributed amounts
     pub fn calculate_schedules(
@@ -252,12 +257,10 @@ impl InstallmentCalculator {
                 "Installment amount mismatch: distributed {} vs invoice {}",
                 total_distributed_amount, invoice_total
             );
-            return Err(AppError::validation(
-                format!(
-                    "Installment amounts ({}) do not sum to invoice total ({})",
-                    total_distributed_amount, invoice_total
-                )
-            ));
+            return Err(AppError::validation(format!(
+                "Installment amounts ({}) do not sum to invoice total ({})",
+                total_distributed_amount, invoice_total
+            )));
         }
 
         if total_distributed_tax != tax_total {
@@ -265,12 +268,10 @@ impl InstallmentCalculator {
                 "Tax distribution mismatch: distributed {} vs total {}",
                 total_distributed_tax, tax_total
             );
-            return Err(AppError::validation(
-                format!(
-                    "Distributed tax ({}) does not match total tax ({})",
-                    total_distributed_tax, tax_total
-                )
-            ));
+            return Err(AppError::validation(format!(
+                "Distributed tax ({}) does not match total tax ({})",
+                total_distributed_tax, tax_total
+            )));
         }
 
         if total_distributed_fee != service_fee_total {
@@ -278,12 +279,10 @@ impl InstallmentCalculator {
                 "Fee distribution mismatch: distributed {} vs total {}",
                 total_distributed_fee, service_fee_total
             );
-            return Err(AppError::validation(
-                format!(
-                    "Distributed service fee ({}) does not match total ({})",
-                    total_distributed_fee, service_fee_total
-                )
-            ));
+            return Err(AppError::validation(format!(
+                "Distributed service fee ({}) does not match total ({})",
+                total_distributed_fee, service_fee_total
+            )));
         }
 
         info!(
@@ -318,7 +317,7 @@ impl InstallmentCalculator {
 
             if amount <= Decimal::ZERO {
                 return Err(AppError::validation(
-                    "Calculated installment amount must be positive"
+                    "Calculated installment amount must be positive",
                 ));
             }
 
@@ -330,16 +329,16 @@ impl InstallmentCalculator {
     }
 
     /// Recalculate installment schedules after adjustment (FR-077, FR-078, FR-079, FR-080)
-    /// 
+    ///
     /// Only unpaid installments can be recalculated. Paid installments remain unchanged.
-    /// 
+    ///
     /// # Arguments
     /// * `existing_schedules` - Current installment schedules
     /// * `remaining_total` - Remaining unpaid invoice amount
     /// * `remaining_tax` - Remaining unpaid tax amount
     /// * `remaining_fee` - Remaining unpaid service fee amount
     /// * `currency` - Invoice currency
-    /// 
+    ///
     /// # Returns
     /// Updated schedules for unpaid installments
     pub fn recalculate_unpaid_schedules(
@@ -369,11 +368,8 @@ impl InstallmentCalculator {
         let unpaid_count = unpaid.len();
 
         // Calculate new equal amounts for unpaid installments
-        let new_base_amounts = Self::calculate_equal_amounts(
-            remaining_total,
-            unpaid_count,
-            currency,
-        )?;
+        let new_base_amounts =
+            Self::calculate_equal_amounts(remaining_total, unpaid_count, currency)?;
 
         // Redistribute tax and fees proportionally
         let mut total_distributed_tax = Decimal::ZERO;
@@ -468,8 +464,16 @@ mod tests {
             let tax_diff = (schedule.tax_amount - expected_tax).abs();
             let fee_diff = (schedule.service_fee_amount - expected_fee).abs();
 
-            assert!(tax_diff <= dec!(2), "Tax difference too large: {}", tax_diff);
-            assert!(fee_diff <= dec!(2), "Fee difference too large: {}", fee_diff);
+            assert!(
+                tax_diff <= dec!(2),
+                "Tax difference too large: {}",
+                tax_diff
+            );
+            assert!(
+                fee_diff <= dec!(2),
+                "Fee difference too large: {}",
+                fee_diff
+            );
         }
     }
 
@@ -544,7 +548,8 @@ mod tests {
                 dec!(11000),
                 dec!(5000),
                 NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-            ).unwrap(),
+            )
+            .unwrap(),
             InstallmentSchedule::new(
                 "inv-123".to_string(),
                 2,
@@ -552,7 +557,8 @@ mod tests {
                 dec!(11000),
                 dec!(5000),
                 NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
-            ).unwrap(),
+            )
+            .unwrap(),
             InstallmentSchedule::new(
                 "inv-123".to_string(),
                 3,
@@ -560,7 +566,8 @@ mod tests {
                 dec!(11000),
                 dec!(5000),
                 NaiveDate::from_ymd_opt(2026, 2, 1).unwrap(),
-            ).unwrap(),
+            )
+            .unwrap(),
         ];
 
         // Mark first as paid
@@ -612,10 +619,20 @@ mod tests {
             &config,
             Currency::IDR,
             start,
-        ).unwrap();
+        )
+        .unwrap();
 
-        assert_eq!(schedules[0].due_date, NaiveDate::from_ymd_opt(2025, 11, 15).unwrap());
-        assert_eq!(schedules[1].due_date, NaiveDate::from_ymd_opt(2025, 12, 15).unwrap());
-        assert_eq!(schedules[2].due_date, NaiveDate::from_ymd_opt(2026, 1, 15).unwrap());
+        assert_eq!(
+            schedules[0].due_date,
+            NaiveDate::from_ymd_opt(2025, 11, 15).unwrap()
+        );
+        assert_eq!(
+            schedules[1].due_date,
+            NaiveDate::from_ymd_opt(2025, 12, 15).unwrap()
+        );
+        assert_eq!(
+            schedules[2].due_date,
+            NaiveDate::from_ymd_opt(2026, 1, 15).unwrap()
+        );
     }
 }

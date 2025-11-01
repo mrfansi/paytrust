@@ -70,7 +70,7 @@ impl GatewayRepository {
     /// List gateways that support a specific currency
     pub async fn find_by_currency(&self, currency: Currency) -> Result<Vec<PaymentGatewayConfig>> {
         let currency_str = format!("{:?}", currency);
-        
+
         let gateways = sqlx::query_as::<_, PaymentGatewayConfig>(
             r#"
             SELECT id, name, supported_currencies, fee_percentage, fee_fixed,

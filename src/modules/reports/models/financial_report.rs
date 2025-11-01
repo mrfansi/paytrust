@@ -65,24 +65,23 @@ impl FinancialReport {
 
     /// Get total service fees across all gateways and currencies
     pub fn total_service_fees(&self) -> Decimal {
-        self.service_fees
-            .iter()
-            .map(|sf| sf.total_amount)
-            .sum()
+        self.service_fees.iter().map(|sf| sf.total_amount).sum()
     }
 
     /// Get total taxes across all rates and currencies
     pub fn total_taxes(&self) -> Decimal {
-        self.taxes
-            .iter()
-            .map(|t| t.total_amount)
-            .sum()
+        self.taxes.iter().map(|t| t.total_amount).sum()
     }
 }
 
 impl ServiceFeeBreakdown {
     /// Create a new service fee breakdown
-    pub fn new(gateway: String, currency: String, total_amount: Decimal, transaction_count: i64) -> Self {
+    pub fn new(
+        gateway: String,
+        currency: String,
+        total_amount: Decimal,
+        transaction_count: i64,
+    ) -> Self {
         Self {
             gateway,
             currency,
@@ -94,7 +93,12 @@ impl ServiceFeeBreakdown {
 
 impl TaxBreakdown {
     /// Create a new tax breakdown
-    pub fn new(tax_rate: Decimal, currency: String, total_amount: Decimal, transaction_count: i64) -> Self {
+    pub fn new(
+        tax_rate: Decimal,
+        currency: String,
+        total_amount: Decimal,
+        transaction_count: i64,
+    ) -> Self {
         Self {
             tax_rate,
             currency,
@@ -113,16 +117,22 @@ mod tests {
     fn test_financial_report_creation() {
         let start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
         let end = NaiveDate::from_ymd_opt(2025, 1, 31).unwrap();
-        
-        let service_fees = vec![
-            ServiceFeeBreakdown::new("xendit".to_string(), "IDR".to_string(), dec!(100000), 5),
-        ];
-        let taxes = vec![
-            TaxBreakdown::new(dec!(0.11), "IDR".to_string(), dec!(55000), 5),
-        ];
+
+        let service_fees = vec![ServiceFeeBreakdown::new(
+            "xendit".to_string(),
+            "IDR".to_string(),
+            dec!(100000),
+            5,
+        )];
+        let taxes = vec![TaxBreakdown::new(
+            dec!(0.11),
+            "IDR".to_string(),
+            dec!(55000),
+            5,
+        )];
 
         let report = FinancialReport::new(start, end, service_fees, taxes);
-        
+
         assert_eq!(report.start_date, start);
         assert_eq!(report.end_date, end);
         assert_eq!(report.service_fees.len(), 1);
@@ -134,9 +144,9 @@ mod tests {
     fn test_empty_report() {
         let start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
         let end = NaiveDate::from_ymd_opt(2025, 1, 31).unwrap();
-        
+
         let report = FinancialReport::new(start, end, vec![], vec![]);
-        
+
         assert!(report.is_empty());
         assert_eq!(report.total_service_fees(), dec!(0));
         assert_eq!(report.total_taxes(), dec!(0));
@@ -146,7 +156,7 @@ mod tests {
     fn test_total_calculations() {
         let start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
         let end = NaiveDate::from_ymd_opt(2025, 1, 31).unwrap();
-        
+
         let service_fees = vec![
             ServiceFeeBreakdown::new("xendit".to_string(), "IDR".to_string(), dec!(100000), 5),
             ServiceFeeBreakdown::new("midtrans".to_string(), "IDR".to_string(), dec!(50000), 3),
@@ -158,7 +168,7 @@ mod tests {
         ];
 
         let report = FinancialReport::new(start, end, service_fees, taxes);
-        
+
         // Total service fees: 100000 + 50000 + 10.50 = 150010.50
         assert_eq!(report.total_service_fees(), dec!(150010.50));
         // Total taxes: 55000 + 5.00 = 55005.00
@@ -167,8 +177,9 @@ mod tests {
 
     #[test]
     fn test_service_fee_breakdown_creation() {
-        let breakdown = ServiceFeeBreakdown::new("xendit".to_string(), "IDR".to_string(), dec!(100000), 5);
-        
+        let breakdown =
+            ServiceFeeBreakdown::new("xendit".to_string(), "IDR".to_string(), dec!(100000), 5);
+
         assert_eq!(breakdown.gateway, "xendit");
         assert_eq!(breakdown.currency, "IDR");
         assert_eq!(breakdown.total_amount, dec!(100000));
@@ -178,7 +189,7 @@ mod tests {
     #[test]
     fn test_tax_breakdown_creation() {
         let breakdown = TaxBreakdown::new(dec!(0.11), "IDR".to_string(), dec!(55000), 5);
-        
+
         assert_eq!(breakdown.tax_rate, dec!(0.11));
         assert_eq!(breakdown.currency, "IDR");
         assert_eq!(breakdown.total_amount, dec!(55000));

@@ -11,25 +11,25 @@ use serde::{Deserialize, Serialize};
 pub struct Tax {
     /// Unique identifier for the tax rate
     pub id: String,
-    
+
     /// Tax category (e.g., "VAT", "GST", "Sales Tax")
     pub category: String,
-    
+
     /// Tax rate as a decimal (e.g., 0.10 for 10%)
     pub rate: Decimal,
-    
+
     /// Currency this tax applies to (IDR, MYR, USD)
     pub currency: String,
-    
+
     /// Date from which this rate is effective (YYYY-MM-DD)
     pub effective_from: String,
-    
+
     /// Whether this tax rate is currently active
     pub is_active: bool,
-    
+
     /// When this tax rate was created
     pub created_at: String,
-    
+
     /// When this tax rate was last updated
     pub updated_at: String,
 }
@@ -44,7 +44,7 @@ impl Tax {
         effective_from: String,
     ) -> Self {
         let now = chrono::Utc::now().to_rfc3339();
-        
+
         Self {
             id,
             category,
@@ -56,20 +56,20 @@ impl Tax {
             updated_at: now,
         }
     }
-    
+
     /// Validate tax rate is within acceptable range (0-100%)
     pub fn validate_rate(&self) -> Result<(), String> {
         if self.rate < Decimal::ZERO {
             return Err("Tax rate cannot be negative".to_string());
         }
-        
+
         if self.rate > Decimal::ONE {
             return Err("Tax rate cannot exceed 100%".to_string());
         }
-        
+
         Ok(())
     }
-    
+
     /// Check if tax rate is valid for a given currency
     pub fn is_valid_for_currency(&self, currency: &str) -> bool {
         self.currency == currency && self.is_active
@@ -81,16 +81,16 @@ impl Tax {
 pub enum TaxCategory {
     /// Value Added Tax
     VAT,
-    
+
     /// Goods and Services Tax
     GST,
-    
+
     /// Sales Tax
     SalesTax,
-    
+
     /// Service Tax
     ServiceTax,
-    
+
     /// Custom tax category
     Other,
 }
@@ -158,9 +158,9 @@ mod tests {
             "IDR".to_string(),
             "2025-01-01".to_string(),
         );
-        
+
         tax.rate = Decimal::from_str("-0.05").unwrap();
-        
+
         assert!(tax.validate_rate().is_err());
         assert_eq!(
             tax.validate_rate().unwrap_err(),
@@ -177,9 +177,9 @@ mod tests {
             "IDR".to_string(),
             "2025-01-01".to_string(),
         );
-        
+
         tax.rate = Decimal::from_str("1.5").unwrap();
-        
+
         assert!(tax.validate_rate().is_err());
         assert_eq!(
             tax.validate_rate().unwrap_err(),
@@ -210,7 +210,7 @@ mod tests {
             "IDR".to_string(),
             "2025-01-01".to_string(),
         );
-        
+
         tax.is_active = false;
 
         assert!(!tax.is_valid_for_currency("IDR"));

@@ -141,7 +141,10 @@ async fn get_invoice_transactions(
 ) -> Result<HttpResponse> {
     let invoice_id = path.into_inner();
 
-    info!(invoice_id = invoice_id.as_str(), "Fetching invoice transactions");
+    info!(
+        invoice_id = invoice_id.as_str(),
+        "Fetching invoice transactions"
+    );
 
     let transactions = controller
         .transaction_service

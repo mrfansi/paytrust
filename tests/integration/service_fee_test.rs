@@ -12,8 +12,8 @@ use std::str::FromStr;
 #[derive(Debug, Clone)]
 struct GatewayFeeConfig {
     gateway_name: String,
-    percentage_rate: Decimal,  // e.g., 0.029 for 2.9%
-    fixed_fee: Decimal,        // e.g., 2200 for IDR 2,200
+    percentage_rate: Decimal, // e.g., 0.029 for 2.9%
+    fixed_fee: Decimal,       // e.g., 2200 for IDR 2,200
 }
 
 /// Mock Invoice with service fee
@@ -29,7 +29,11 @@ struct Invoice {
 }
 
 /// Calculate service fee: (subtotal × percentage) + fixed_fee
-fn calculate_service_fee(subtotal: Decimal, percentage_rate: Decimal, fixed_fee: Decimal) -> Decimal {
+fn calculate_service_fee(
+    subtotal: Decimal,
+    percentage_rate: Decimal,
+    fixed_fee: Decimal,
+) -> Decimal {
     let percentage_component = subtotal * percentage_rate;
     let total_fee = percentage_component + fixed_fee;
     total_fee.round_dp(2)
@@ -106,11 +110,8 @@ fn test_same_subtotal_different_gateways() {
     );
 
     // Midtrans: 2.0% + 0
-    let midtrans_fee = calculate_service_fee(
-        subtotal,
-        Decimal::from_str("0.020").unwrap(),
-        Decimal::ZERO,
-    );
+    let midtrans_fee =
+        calculate_service_fee(subtotal, Decimal::from_str("0.020").unwrap(), Decimal::ZERO);
 
     // Xendit: (500,000 × 0.029) + 2,200 = 14,500 + 2,200 = 16,700
     assert_eq!(xendit_fee, Decimal::from_str("16700").unwrap());
@@ -120,7 +121,7 @@ fn test_same_subtotal_different_gateways() {
 
     // Different fees for same subtotal
     assert_ne!(xendit_fee, midtrans_fee);
-    
+
     // Xendit more expensive due to fixed fee
     assert!(xendit_fee > midtrans_fee);
 }
@@ -159,8 +160,8 @@ fn test_custom_gateway_myr_currency() {
 fn test_zero_percentage_only_fixed_fee() {
     let gateway = GatewayFeeConfig {
         gateway_name: "fixed-only-gateway".to_string(),
-        percentage_rate: Decimal::ZERO,                   // 0%
-        fixed_fee: Decimal::from_str("5000").unwrap(),   // IDR 5,000
+        percentage_rate: Decimal::ZERO,                // 0%
+        fixed_fee: Decimal::from_str("5000").unwrap(), // IDR 5,000
     };
 
     let subtotal = Decimal::from_str("1000000").unwrap();
@@ -171,7 +172,8 @@ fn test_zero_percentage_only_fixed_fee() {
 
     // Fee same regardless of subtotal
     let small_subtotal = Decimal::from_str("10000").unwrap();
-    let small_fee = calculate_service_fee(small_subtotal, gateway.percentage_rate, gateway.fixed_fee);
+    let small_fee =
+        calculate_service_fee(small_subtotal, gateway.percentage_rate, gateway.fixed_fee);
     assert_eq!(small_fee, service_fee);
 }
 
@@ -192,7 +194,8 @@ fn test_zero_fixed_only_percentage() {
 
     // Scales linearly with subtotal
     let double_subtotal = Decimal::from_str("400000").unwrap();
-    let double_fee = calculate_service_fee(double_subtotal, gateway.percentage_rate, gateway.fixed_fee);
+    let double_fee =
+        calculate_service_fee(double_subtotal, gateway.percentage_rate, gateway.fixed_fee);
     assert_eq!(double_fee, service_fee * Decimal::from_str("2").unwrap());
 }
 
@@ -224,10 +227,10 @@ fn test_service_fee_with_taxes() {
 
     // Service fee: (100,000 × 0.029) + 2,200 = 5,100
     assert_eq!(invoice.service_fee, Decimal::from_str("5100").unwrap());
-    
+
     // Tax: 100,000 × 0.10 = 10,000
     assert_eq!(invoice.tax_total, Decimal::from_str("10000").unwrap());
-    
+
     // Total: 100,000 + 10,000 + 5,100 = 115,100
     assert_eq!(invoice.total, Decimal::from_str("115100").unwrap());
 }
@@ -262,7 +265,7 @@ fn test_small_subtotal_xendit() {
 
     // (10,000 × 0.029) + 2,200 = 290 + 2,200 = 2,490
     assert_eq!(service_fee, Decimal::from_str("2490").unwrap());
-    
+
     // Fixed fee is larger than percentage component
     let percentage_component = subtotal * gateway.percentage_rate;
     assert!(gateway.fixed_fee > percentage_component);
@@ -296,7 +299,7 @@ fn test_gateway_selection_affects_total() {
         Decimal::from_str("0.029").unwrap(),
         Decimal::from_str("2200").unwrap(),
     );
-    
+
     let invoice_xendit = Invoice {
         id: "inv-xendit".to_string(),
         gateway_id: "gateway-xendit-123".to_string(),
@@ -308,12 +311,9 @@ fn test_gateway_selection_affects_total() {
     };
 
     // Invoice with Midtrans
-    let midtrans_fee = calculate_service_fee(
-        subtotal,
-        Decimal::from_str("0.020").unwrap(),
-        Decimal::ZERO,
-    );
-    
+    let midtrans_fee =
+        calculate_service_fee(subtotal, Decimal::from_str("0.020").unwrap(), Decimal::ZERO);
+
     let invoice_midtrans = Invoice {
         id: "inv-midtrans".to_string(),
         gateway_id: "gateway-midtrans-456".to_string(),
@@ -325,11 +325,17 @@ fn test_gateway_selection_affects_total() {
     };
 
     // Xendit: (300,000 × 0.029) + 2,200 = 8,700 + 2,200 = 10,900
-    assert_eq!(invoice_xendit.service_fee, Decimal::from_str("10900").unwrap());
+    assert_eq!(
+        invoice_xendit.service_fee,
+        Decimal::from_str("10900").unwrap()
+    );
     assert_eq!(invoice_xendit.total, Decimal::from_str("340900").unwrap());
 
     // Midtrans: (300,000 × 0.020) = 6,000
-    assert_eq!(invoice_midtrans.service_fee, Decimal::from_str("6000").unwrap());
+    assert_eq!(
+        invoice_midtrans.service_fee,
+        Decimal::from_str("6000").unwrap()
+    );
     assert_eq!(invoice_midtrans.total, Decimal::from_str("336000").unwrap());
 
     // Different totals due to gateway fees
