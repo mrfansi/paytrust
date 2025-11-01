@@ -103,6 +103,24 @@ path = "tests/integration/gateway_validation_test.rs"
 name = "invoice_expiration_test"
 path = "tests/integration/invoice_expiration_test.rs"
 
+# Contract Tests - Phase 4
+[[test]]
+name = "report_api_test"
+path = "tests/contract/report_api_test.rs"
+
+# Integration Tests - Phase 4
+[[test]]
+name = "tax_locking_test"
+path = "tests/integration/tax_calculation_test.rs"
+
+[[test]]
+name = "gateway_fee_test"
+path = "tests/integration/service_fee_test.rs"
+
+[[test]]
+name = "report_generation_test"
+path = "tests/integration/report_generation_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
