@@ -4,4 +4,4 @@ pub mod services;
 
 pub use models::{InstallmentConfig, InstallmentSchedule, InstallmentStatus};
 pub use repositories::InstallmentRepository;
-pub use services::InstallmentCalculator;
+pub use services::{InstallmentCalculator, InstallmentService};
