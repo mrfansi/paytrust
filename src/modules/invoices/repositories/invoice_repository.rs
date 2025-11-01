@@ -8,6 +8,7 @@
 // - Update invoice status (with immutability checks)
 // - Check external_id uniqueness per merchant
 
+use rust_decimal::Decimal;
 use sqlx::{MySql, MySqlPool, Transaction};
 use uuid::Uuid;
 
@@ -394,6 +395,9 @@ impl InvoiceRow {
             external_id: self.external_id,
             gateway_id: self.gateway_id,
             currency,
+            subtotal: Some(self.total), // TODO: Add subtotal column to DB
+            tax_total: Some(Decimal::ZERO), // TODO: Add tax_total column to DB
+            service_fee: Some(Decimal::ZERO), // TODO: Add service_fee column to DB
             total: Some(self.total),
             status,
             expires_at: Some(self.expires_at),
@@ -430,6 +434,9 @@ impl LineItemRow {
             unit_price: self.unit_price,
             currency,
             subtotal: Some(self.subtotal),
+            tax_rate: Some(Decimal::ZERO), // TODO: Add tax_rate column to DB
+            tax_category: None, // TODO: Add tax_category column to DB
+            tax_amount: Some(Decimal::ZERO), // TODO: Add tax_amount column to DB
         })
     }
 }

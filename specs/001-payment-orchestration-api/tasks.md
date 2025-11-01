@@ -160,15 +160,15 @@
 
 **Tax Module**
 
-- [ ] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
-- [ ] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
-- [ ] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
-- [ ] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
+- [x] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
+- [x] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
+- [x] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
+- [x] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
 
 **Invoice Module Updates**
 
-- [ ] T070 [US2] Update Invoice model to include tax_total and service_fee fields
-- [ ] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
+- [x] T070 [US2] Update Invoice model to include tax_total and service_fee fields
+- [x] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
 - [ ] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
 - [ ] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
 - [ ] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)

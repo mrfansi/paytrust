@@ -41,6 +41,20 @@ pub struct LineItem {
     #[serde(skip_deserializing)]
     #[sqlx(try_from = "rust_decimal::Decimal")]
     pub subtotal: Option<Decimal>,
+    
+    /// Tax rate applied to this line item (e.g., 0.10 for 10%, FR-057)
+    #[sqlx(try_from = "rust_decimal::Decimal")]
+    #[serde(default)]
+    pub tax_rate: Option<Decimal>,
+    
+    /// Tax category for this line item (e.g., "VAT", "GST", FR-058)
+    #[serde(default)]
+    pub tax_category: Option<String>,
+    
+    /// Calculated tax amount (subtotal × tax_rate, FR-057)
+    #[serde(skip_deserializing)]
+    #[sqlx(try_from = "rust_decimal::Decimal")]
+    pub tax_amount: Option<Decimal>,
 }
 
 impl LineItem {
@@ -73,10 +87,34 @@ impl LineItem {
             unit_price,
             currency,
             subtotal: None,
+            tax_rate: None,
+            tax_category: None,
+            tax_amount: None,
         };
         
         // Calculate subtotal immediately
         line_item.calculate_subtotal();
+        
+        Ok(line_item)
+    }
+    
+    /// Create a new line item with tax information
+    pub fn new_with_tax(
+        description: String,
+        quantity: i32,
+        unit_price: Decimal,
+        currency: Currency,
+        tax_rate: Decimal,
+        tax_category: Option<String>,
+    ) -> Result<Self> {
+        let mut line_item = Self::new(description, quantity, unit_price, currency)?;
+        
+        // Set tax information
+        line_item.tax_rate = Some(tax_rate);
+        line_item.tax_category = tax_category;
+        
+        // Calculate tax amount
+        line_item.calculate_tax();
         
         Ok(line_item)
     }
@@ -99,6 +137,31 @@ impl LineItem {
             self.calculate_subtotal();
         }
         self.subtotal.unwrap_or(Decimal::ZERO)
+    }
+    
+    /// Calculate tax for this line item (FR-057)
+    /// 
+    /// Formula: tax_amount = subtotal × tax_rate
+    /// Rounding: Per currency scale (2 decimal places)
+    /// 
+    /// # Updates
+    /// * Sets `self.tax_amount` to calculated value
+    pub fn calculate_tax(&mut self) {
+        if let Some(tax_rate) = self.tax_rate {
+            let subtotal = self.get_subtotal();
+            let raw_tax = subtotal * tax_rate;
+            self.tax_amount = Some(raw_tax.round_dp(2));
+        } else {
+            self.tax_amount = Some(Decimal::ZERO);
+        }
+    }
+    
+    /// Get the tax amount, calculating if not set
+    pub fn get_tax_amount(&mut self) -> Decimal {
+        if self.tax_amount.is_none() {
+            self.calculate_tax();
+        }
+        self.tax_amount.unwrap_or(Decimal::ZERO)
     }
     
     /// Validate description

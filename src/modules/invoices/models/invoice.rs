@@ -89,7 +89,22 @@ pub struct Invoice {
     #[sqlx(try_from = "String")]
     pub currency: Currency,
     
-    /// Total amount (sum of line item subtotals)
+    /// Subtotal amount (sum of line item subtotals, before tax and fees)
+    #[serde(skip_deserializing)]
+    #[sqlx(try_from = "rust_decimal::Decimal")]
+    pub subtotal: Option<Decimal>,
+    
+    /// Total tax amount (sum of line item taxes, FR-057, FR-058)
+    #[serde(skip_deserializing)]
+    #[sqlx(try_from = "rust_decimal::Decimal")]
+    pub tax_total: Option<Decimal>,
+    
+    /// Service fee charged by payment gateway (FR-009, FR-047)
+    #[serde(skip_deserializing)]
+    #[sqlx(try_from = "rust_decimal::Decimal")]
+    pub service_fee: Option<Decimal>,
+    
+    /// Total amount (subtotal + tax_total + service_fee, FR-056)
     #[serde(skip_deserializing)]
     #[sqlx(try_from = "rust_decimal::Decimal")]
     pub total: Option<Decimal>,
@@ -150,6 +165,9 @@ impl Invoice {
             external_id,
             gateway_id,
             currency,
+            subtotal: None,
+            tax_total: None,
+            service_fee: None,
             total: None,
             status: InvoiceStatus::Pending,
             expires_at: Some(expires_at),
@@ -158,26 +176,66 @@ impl Invoice {
             line_items,
         };
         
-        // Calculate total immediately
-        invoice.calculate_total();
+        // Calculate subtotal immediately (total calculated after taxes/fees set)
+        invoice.calculate_subtotal();
         
         Ok(invoice)
     }
     
-    /// Calculate total from all line items
+    /// Calculate subtotal from all line items (before tax and fees)
     /// 
-    /// Formula: total = sum(line_item.subtotal)
+    /// Formula: subtotal = sum(line_item.subtotal)
+    /// Rounding: Per currency scale
+    /// 
+    /// # Updates
+    /// * Sets `self.subtotal` to calculated value
+    pub fn calculate_subtotal(&mut self) {
+        let raw_subtotal: Decimal = self.line_items
+            .iter_mut()
+            .map(|item| item.get_subtotal())
+            .sum();
+        
+        self.subtotal = Some(self.currency.round(raw_subtotal));
+    }
+    
+    /// Calculate tax total from all line items (FR-057, FR-058)
+    /// 
+    /// Formula: tax_total = sum(line_item.tax_amount)
+    /// Rounding: Per currency scale
+    /// 
+    /// # Updates
+    /// * Sets `self.tax_total` to calculated value
+    pub fn calculate_tax_total(&mut self) {
+        let raw_tax: Decimal = self.line_items
+            .iter()
+            .map(|item| item.tax_amount.unwrap_or(Decimal::ZERO))
+            .sum();
+        
+        self.tax_total = Some(self.currency.round(raw_tax));
+    }
+    
+    /// Calculate final total (FR-056)
+    /// 
+    /// Formula: total = subtotal + tax_total + service_fee
     /// Rounding: Per currency scale
     /// 
     /// # Updates
     /// * Sets `self.total` to calculated value
     pub fn calculate_total(&mut self) {
-        let raw_total: Decimal = self.line_items
-            .iter_mut()
-            .map(|item| item.get_subtotal())
-            .sum();
+        let subtotal = self.subtotal.unwrap_or(Decimal::ZERO);
+        let tax_total = self.tax_total.unwrap_or(Decimal::ZERO);
+        let service_fee = self.service_fee.unwrap_or(Decimal::ZERO);
         
+        let raw_total = subtotal + tax_total + service_fee;
         self.total = Some(self.currency.round(raw_total));
+    }
+    
+    /// Get the subtotal, calculating if not set
+    pub fn get_subtotal(&mut self) -> Decimal {
+        if self.subtotal.is_none() {
+            self.calculate_subtotal();
+        }
+        self.subtotal.unwrap_or(Decimal::ZERO)
     }
     
     /// Get the total, calculating if not set
