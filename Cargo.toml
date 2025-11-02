@@ -58,6 +58,8 @@ governor = "0.7"
 
 # Security
 argon2 = "0.5"
+sha2 = "0.10"
+base64 = "0.22"
 
 # Utilities
 uuid = { version = "1.10", features = ["v4", "serde"] }

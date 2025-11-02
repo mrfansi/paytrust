@@ -1,2 +1,3 @@
-// Invoice controller implementations will be added here
-// pub mod invoice_controller;
+pub mod invoice_controller;
+
+pub use invoice_controller::configure;

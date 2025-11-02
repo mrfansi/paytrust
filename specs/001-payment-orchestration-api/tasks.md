@@ -57,7 +57,7 @@
 ### Middleware & Security
 
 - [X] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
-- [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository (including all aggregation queries in ReportRepository per G2 finding). Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention including financial report aggregations
+- [X] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository (including all aggregation queries in ReportRepository per G2 finding). Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention including financial report aggregations
 - [X] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [X] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -120,20 +120,20 @@
 
 **Invoice Module**
 
-- [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
-- [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
-- [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007)
-- [ ] T042a [US1] Implement expires_at validation logic in InvoiceService per FR-044a: (a) parse ISO 8601 timestamp from request, (b) validate not in past (reject 400 "Expiration time cannot be in the past"), (c) validate >= created_at + 1 hour (reject 400 "Expiration must be at least 1 hour from now"), (d) validate <= created_at + 30 days (reject 400 "Expiration must be within 30 days from now"), (e) if invoice has installments: validate expires_at >= last_installment.due_date (reject 400 "Invoice expiration cannot occur before final installment due date {due_date}"). Default to created_at + 24 hours if expires_at not provided per FR-044
-- [ ] T042b [US1] Implement payment_initiated_at timestamp logic in InvoiceService per FR-051(a): Set payment_initiated_at (TIMESTAMP NULL) on Invoice entity when first payment attempt occurs, defined as: (a) gateway payment URL generation (when calling gateway API to create payment), OR (b) payment_transaction record creation (when recording payment attempt), whichever occurs first. Once payment_initiated_at IS NOT NULL, enforce invoice immutability per FR-051 by rejecting modification requests with 400 Bad Request. Timestamp is write-once (never updated after initial set). Use UTC timezone per FR-087
-- [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
-- [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
-- [ ] T044a [US1] Validate gateway supports invoice currency in InvoiceService before invoice creation per FR-046 (check gateway_configs.supported_currencies)
+- [X] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
+- [X] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
+- [X] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
+- [X] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007)
+- [X] T042a [US1] Implement expires_at validation logic in InvoiceService per FR-044a: (a) parse ISO 8601 timestamp from request, (b) validate not in past (reject 400 "Expiration time cannot be in the past"), (c) validate >= created_at + 1 hour (reject 400 "Expiration must be at least 1 hour from now"), (d) validate <= created_at + 30 days (reject 400 "Expiration must be within 30 days from now"), (e) if invoice has installments: validate expires_at >= last_installment.due_date (reject 400 "Invoice expiration cannot occur before final installment due date {due_date}"). Default to created_at + 24 hours if expires_at not provided per FR-044
+- [X] T042b [US1] Implement payment_initiated_at timestamp logic in InvoiceService per FR-051(a): Set payment_initiated_at (TIMESTAMP NULL) on Invoice entity when first payment attempt occurs, defined as: (a) gateway payment URL generation (when calling gateway API to create payment), OR (b) payment_transaction record creation (when recording payment attempt), whichever occurs first. Once payment_initiated_at IS NOT NULL, enforce invoice immutability per FR-051 by rejecting modification requests with 400 Bad Request. Timestamp is write-once (never updated after initial set). Use UTC timezone per FR-087
+- [X] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
+- [X] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
+- [X] T044a [US1] Validate gateway supports invoice currency in InvoiceService before invoice creation per FR-046 (check gateway_configs.supported_currencies)
 
 **Gateway Module**
 
-- [ ] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
-- [ ] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
+- [X] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
+- [X] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
 - [ ] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
 - [ ] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
 

@@ -136,6 +136,23 @@ where
 #[derive(Debug, Clone)]
 pub struct TenantId(pub String);
 
+impl actix_web::FromRequest for TenantId {
+    type Error = actix_web::Error;
+    type Future = std::future::Ready<Result<Self, Self::Error>>;
+
+    fn from_request(
+        req: &actix_web::HttpRequest,
+        _payload: &mut actix_web::dev::Payload,
+    ) -> Self::Future {
+        match req.extensions().get::<TenantId>() {
+            Some(tenant_id) => std::future::ready(Ok(tenant_id.clone())),
+            None => std::future::ready(Err(actix_web::error::ErrorUnauthorized(
+                "Missing tenant authentication",
+            ))),
+        }
+    }
+}
+
 /// Verify API key against database using argon2
 async fn verify_api_key(pool: &MySqlPool, api_key: &str) -> Result<String, String> {
     // Query database for API key hash (runtime query)

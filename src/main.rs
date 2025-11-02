@@ -6,6 +6,9 @@ mod modules;
 use actix_web::{web, App, HttpServer};
 use config::Config;
 use middleware::{configure_cors, ApiKeyAuth, ErrorHandler, InMemoryRateLimiter, RateLimitMiddleware};
+use modules::gateways::repositories::gateway_repository::MySqlGatewayRepository;
+use modules::invoices::repositories::invoice_repository::MySqlInvoiceRepository;
+use modules::invoices::services::invoice_service::InvoiceService;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -69,7 +72,18 @@ async fn main() -> std::io::Result<()> {
 
     let bind_address = server_config.bind_address();
 
+    // Initialize repositories
+    let gateway_repo = Arc::new(MySqlGatewayRepository::new(pool.clone()));
+    let invoice_repo = Arc::new(MySqlInvoiceRepository::new(pool.clone()));
+
+    // Initialize services
+    let invoice_service = Arc::new(InvoiceService::new(
+        invoice_repo.clone(),
+        gateway_repo.clone(),
+    ));
+
     tracing::info!("Payment gateways loaded: xendit, midtrans");
+    tracing::info!("Invoice service initialized");
 
     // Start HTTP server
     HttpServer::new(move || {
@@ -77,6 +91,7 @@ async fn main() -> std::io::Result<()> {
             // App data
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(config.clone()))
+            .app_data(web::Data::new(invoice_service.clone()))
             // Middleware stack (order matters!)
             .wrap(configure_cors())
             .wrap(ErrorHandler)
@@ -89,12 +104,8 @@ async fn main() -> std::io::Result<()> {
                 web::scope("")
                     .wrap(ApiKeyAuth)
                     .wrap(RateLimitMiddleware::new(rate_limiter.clone()))
-                    // API routes will be mounted here
-                    // .configure(invoices::routes)
-                    // .configure(gateways::routes)
-                    // .configure(transactions::routes)
-                    // .configure(installments::routes)
-                    // .configure(reports::routes)
+                    // API routes
+                    .configure(modules::invoices::controllers::configure)
             )
     })
     .workers(server_config.workers)
