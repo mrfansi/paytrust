@@ -30,7 +30,7 @@ impl TimezoneConverter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
+    use chrono::{TimeZone, Timelike};
 
     #[test]
     fn test_utc_to_jakarta_conversion() {
