@@ -70,7 +70,7 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 
 ### Session 2025-11-01
 
-- Q: Which authentication mechanism should the API use for developer authentication? → A: API Key in Header - Static key passed in request header (e.g., X-API-Key), simple and standard. Each API key represents a separate developer/merchant tenant with isolated data access.
+- Q: Which authentication mechanism should the API use for developer authentication? → A: API Key in Header - Static key passed in `X-API-Key` request header (industry standard), simple and widely supported. Each API key represents a separate developer/merchant tenant with isolated data access.
 - Q: How should the system handle payment gateway failures when processing invoices? → A: Immediate Fail with Error Response - Return error immediately, let developer retry manually with idempotency
 - Q: What rate limiting should be applied to prevent API abuse? → A: 1000 requests per minute per API key - Balanced limit for production use
 - Q: How should the system handle failed webhook deliveries from payment gateways? → A: Fixed Interval Retries - 3 retries with increasing delays (1min, 5min, 30min after initial failure)
@@ -234,6 +234,7 @@ A developer manages API keys for authentication and creates supplementary invoic
 - **FR-013**: System MUST generate financial reports showing total taxes collected by currency
 - **FR-063**: System MUST provide tax breakdown in reports grouped by tax rate percentage and currency (e.g., IDR_10%, MYR_6%, USD_0%)
 - **FR-064**: System MUST include transaction count for each tax rate category in financial reports
+- **FR-064a**: System MUST accept tax_rate (percentage as decimal, e.g., 0.10 for 10%) and optional tax_category (string identifier, e.g., "VAT", "GST") per line item in POST /invoices request body. Tax rates are NOT stored in database configuration - they are provided per-invoice by the API consumer based on their business logic or external tax service integration. System validates: (a) tax_rate >= 0 and <= 1.0 (0-100%), (b) tax_rate has maximum 4 decimal places (0.0001 precision = 0.01% minimum rate), (c) reject invalid rates with 400 Bad Request "Invalid tax_rate: must be between 0 and 1.0 with max 4 decimal places"
 
 #### Installment Payments
 
@@ -283,7 +284,7 @@ A developer manages API keys for authentication and creates supplementary invoic
 
 #### API Authentication & Security
 
-- **FR-033**: System MUST authenticate API requests using API keys passed in request header (X-API-Key header)
+- **FR-033**: System MUST authenticate API requests using API keys passed in `X-API-Key` request header (case-insensitive header name per HTTP/1.1 RFC 7230). Header value format: 64-character hexadecimal string (256-bit key). Reject requests with missing header (401 Unauthorized), malformed header value (400 Bad Request), or invalid key (401 Unauthorized)
 - **FR-034**: System MUST validate webhook authenticity using gateway-provided signatures
 - **FR-035**: System MUST log all API requests and responses for audit trail
 - **FR-036**: System MUST return appropriate HTTP status codes and error messages for all API operations
@@ -337,7 +338,7 @@ A developer manages API keys for authentication and creates supplementary invoic
 - Each installment is processed as an independent payment transaction to the gateway (not using gateway-native installment features)
 - Gateway-specific payment methods (credit card, bank transfer, e-wallet) are abstracted by gateway APIs
 - IDR amounts are whole numbers (no decimal places), MYR and USD use 2 decimal places
-- Tax rates are configured per invoice/merchant and not automatically determined by location
+- Tax rates are provided per-invoice by API consumers (not stored in PayTrust configuration). Consumers determine applicable rates using their own business logic or external tax calculation services (e.g., Avalara, TaxJar). PayTrust stores and applies the provided rates but does not determine tax jurisdiction or calculate rates based on location
 - Refund processing is handled directly with payment gateways, not through PayTrust API
 - Default invoice expiration is 24 hours but can be configured per invoice at creation time
 
