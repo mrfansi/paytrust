@@ -57,9 +57,7 @@
 ### Middleware & Security
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
-- [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository. Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention
-- [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041) - depends on T027a RateLimiter trait definition
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
+- [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository (including all aggregation queries in ReportRepository per G2 finding). Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention including financial report aggregations
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -72,12 +70,14 @@
 - [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
 - [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-073)
 - [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
-- [ ] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-043 (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
+- [ ] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-042 Audit Logging section (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
 
 ### Gateway Module Foundation
 
 - [ ] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
 - [ ] T027a [P] [FOUNDATION] Create RateLimiter trait definition in `contracts/rate_limiter_trait.rs` with rate_limit() method signature per FR-040. Trait methods: async fn check_rate_limit(&self, api_key: &str) -> Result<(), RateLimitError> and async fn record_request(&self, api_key: &str) -> Result<(), RateLimitError>. This trait enables pluggable rate limiting backends (InMemoryRateLimiter for v1.0, RedisRateLimiter for future multi-instance deployment)
+- [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041) - depends on T027a RateLimiter trait definition
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
 - [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
 - [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
@@ -91,7 +91,7 @@
 
 - [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
 
-**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. **Constitution III Compliance Validated**: T029b code review gate and T029c automated CI check enforce real database testing per NFR-008. User story implementation can now begin in parallel.
+**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. **Constitution III Compliance MUST BE VALIDATED**: Execute T029a (test database setup), T029b (code review gate), and T029c (CI validation) and verify all pass before proceeding. Validation criteria: (1) Real MySQL test database operational with connection pool, (2) CI mock detection active and passing, (3) Test database migrations match production schema. **BLOCK all Phase 3+ work until this checkpoint passes**. User story implementation can begin in parallel only after validation complete.
 
 ---
 
@@ -142,9 +142,10 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-042 Audit Logging section
 - [ ] T052a [US1] Performance test for webhook retry queue capacity in `tests/integration/webhook_queue_capacity_test.rs` - depends on T052 webhook handler implementation (verify queue handles 10,000 pending retries per NFR-010, verify <100ms queue operation latency at 10k queue depth, test enqueue/dequeue operations under load)
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
+- [ ] T053a [US1] Implement refund webhook handlers in WebhookController for processing refund events per FR-086: (a) Xendit invoice.refunded event handler, (b) Midtrans refund notification handler, (c) update payment_transactions table with refund information (refund_id, refund_amount, refund_timestamp, refund_reason), (d) update transaction status to reflect refund, (e) store refund records for GET /invoices/{id}/refunds endpoint query
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
 - [ ] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
@@ -338,9 +339,9 @@
 
 - [ ] T016a [P] [US5] Create ApiKeyController in `src/modules/auth/controllers/api_key_controller.rs` with endpoints: POST /api-keys (generate new key with argon2 hash), PUT /api-keys/{id}/rotate (invalidate old, generate new), DELETE /api-keys/{id} (revoke key), all with audit logging to database per FR-083
 - [ ] T016b [P] [US5] Create api_key_audit_log table migration in `migrations/009_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used) per FR-083. Columns: id, api_key_id, operation_type ENUM('created','rotated','revoked','used'), actor_identifier, ip_address, old_key_hash (for rotation), success_status BOOLEAN, created_at TIMESTAMP
-- [ ] T016c [P] [US5] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from ADMIN_API_KEY env var at startup with validation (reject startup if missing/empty/<32 chars), return 401 Unauthorized for missing/invalid admin key in X-Admin-Key header
+- [ ] T016c [P] [US5] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from ADMIN_API_KEY env var at startup with validation (reject startup if missing/empty/<32 chars/invalid character set), validate key contains only alphanumeric + symbols (reject other characters with error "Admin key must contain only alphanumeric and symbol characters"), return 401 Unauthorized for missing/invalid admin key in X-Admin-Key header
 - [ ] T111g [US5] Create ApiKeyService in `src/modules/auth/services/api_key_service.rs` for key generation, hashing, validation, rotation logic
-- [ ] T111h [US5] Create ApiKeyRepository in `src/modules/auth/repositories/api_key_repository.rs` for database operations and audit logging. Implement GET /api-keys/audit endpoint with pagination (page, page_size) and date filtering (start_date, end_date ISO 8601) per FR-083a. Audit log retention: 1 year minimum per NFR-011
+- [ ] T111h [US5] Create ApiKeyRepository in `src/modules/auth/repositories/api_key_repository.rs` for database operations and audit logging. Implement GET /api-keys/audit endpoint with pagination (page, page_size) and date filtering (start_date, end_date ISO 8601) per FR-083(b). Audit log retention: 1 year minimum per NFR-011
 
 **Supplementary Invoice Support** (moved from Phase 5)
 
@@ -360,6 +361,7 @@
 
 - [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
+- [ ] T127a [P] Create initial OpenAPI 3.0 specification in `specs/001-payment-orchestration-api/contracts/openapi.yaml` with all User Story 1 endpoints per NFR-006: POST /invoices, GET /invoices/{id}, GET /invoices, POST /webhooks/{gateway}, GET /webhooks/failed, GET /invoices/{id}/transactions, GET /gateways. Include request/response schemas, authentication requirements, error responses
 - [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006. Implementation: (a) create static file handler in `src/middleware/openapi.rs` using actix-files crate, (b) read openapi.yaml at startup and cache in memory, (c) serve as application/json with proper CORS headers (Access-Control-Allow-Origin: *), (d) register route in main.rs before auth middleware (public endpoint), (e) add integration test in `tests/integration/openapi_endpoint_test.rs` to verify endpoint returns valid JSON and matches openapi.yaml content
 - [ ] T128b [P] Implement GET /docs endpoint to serve interactive Swagger UI rendering the OpenAPI specification per NFR-006
 - [ ] T128c [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
@@ -378,6 +380,7 @@
 - [ ] T134 Security audit: validate all input sanitization and SQL injection prevention using sqlx compile-time checks
 - [ ] T135 Performance optimization: add database indexes per data-model.md (migration 007)
 - [ ] T136 Performance testing: verify <2s response time for invoice creation using k6 load testing tool (NFR-001 - 95th percentile measurement)
+- [ ] T136a [P] Load testing for daily volume: verify system handles 10,000 invoice creations over 24-hour period per SC-008 using k6 with distributed load (sustained peak of 500 invoices/hour during business hours, not burst). Monitor for performance degradation over time
 - [ ] T137 Load testing: verify 100 concurrent requests sustained for 5 minutes using k6 with concurrent virtual users (NFR-002)
 - [ ] T138 Implement graceful shutdown handling in main.rs
 
