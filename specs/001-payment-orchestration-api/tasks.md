@@ -58,7 +58,7 @@
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
 - [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041)
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040) - depends on T017a passing. **TODO**: Single-instance in-memory implementation only; multi-instance horizontal scaling requires Redis-backed distributed rate limiting (future enhancement per plan.md:L23)
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040) - depends on T017a passing. Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. **CONSTRAINT**: Single-instance in-memory implementation only per NFR-009; multi-instance horizontal scaling requires Redis-backed distributed rate limiting (future enhancement per plan.md:L23)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -71,6 +71,7 @@
 - [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
 - [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-076)
 - [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
+- [ ] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-043 (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
 
 ### Gateway Module Foundation
 
@@ -80,7 +81,8 @@
 
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
-- [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup, migration runner (executes same migrations T020-T026 as production for schema parity), test fixtures, and cleanup utilities. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
+- [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
+- [ ] T029b **[CONSTITUTION CRITICAL]** Audit all integration test tasks (T036-T038, T063-T065, T086-T087, T109-T110) for Constitution III compliance after implementation - verify all tests use real MySQL connections from T029a, no mocks/stubs present in integration tests. Mark complete only after manual code review confirms compliance. This is a validation checkpoint, not implementation task
 
 ### Application Entry Point
 
@@ -102,13 +104,11 @@
 
 - [ ] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
 - [ ] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
-- [ ] T033 [P] [US1] Contract test for POST /invoices endpoint in `tests/contract/invoice_api_test.rs` validating OpenAPI schema (7 tests)
-- [ ] T034 [P] [US1] Contract test for GET /invoices/{id} endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
-- [ ] T035 [P] [US1] Contract test for GET /invoices endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
+- [ ] T033 [P] [US1] Contract tests for invoice API endpoints in `tests/contract/invoice_api_test.rs` validating OpenAPI schema: POST /invoices, GET /invoices/{id}, GET /invoices (7 tests total covering all three endpoints)
 - [ ] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
 - [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
 - [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
-- [ ] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/invoice_expiration_test.rs` (verify max 30 days, min 1 hour, reject past dates, reject if < last installment due_date per FR-044a)
+- [ ] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/invoice_expiration_test.rs` - verify all 4 validations from FR-044a: (a) max 30 days from creation, (b) min 1 hour from creation, (c) reject past dates with 400 "Expiration time cannot be in the past", (d) if invoice has installments expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date"
 - [ ] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-085)
 
 ### Implementation for User Story 1
@@ -135,7 +135,7 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
@@ -316,24 +316,25 @@
 - [ ] T111c [P] [US5] Contract test for DELETE /api-keys/{id} endpoint in `tests/contract/api_key_api_test.rs`
 - [ ] T111d [P] [US5] Integration test for API key authentication flow in `tests/integration/api_key_auth_test.rs` (generate, use, rotate, verify old key rejected)
 - [ ] T111e [P] [US5] Integration test for supplementary invoice creation in `tests/integration/supplementary_invoice_test.rs` (create parent, start payment, add supplementary, verify inheritance and isolation)
-- [ ] T111f [P] [US5] Integration test for supplementary invoice validation in `tests/integration/supplementary_invoice_test.rs` (reject if parent missing, reject if parent is itself supplementary per FR-082, reject if parent status is expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice")
+- [ ] T111f [P] [US5] Integration test for supplementary invoice validation in `tests/integration/supplementary_invoice_test.rs` (reject if parent missing, reject if parent is draft status with 400 "Cannot create supplementary invoice for draft parent invoice", reject if parent is itself supplementary per FR-082, reject if parent status is expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice")
 - [ ] T111i [P] [US5] Integration test for admin API key authentication in `tests/integration/admin_auth_test.rs` (verify valid admin key in X-Admin-Key header succeeds for POST /api-keys, verify missing admin key returns 401 Unauthorized, verify invalid admin key returns 401, verify admin key loaded from ADMIN_API_KEY env var at startup per FR-084)
 - [ ] T111j [P] [US5] Integration test for API key rotation zero-downtime in `tests/integration/api_key_rotation_test.rs` (verify active requests with old key succeed during rotation window, verify rotation completes within 2 seconds per SC-011)
+- [ ] T111k [P] [US5] Unit test for admin key validation in `tests/unit/admin_key_validation_test.rs` - verify FR-084 requirements: minimum 32 characters, alphanumeric + symbols allowed, reject startup if ADMIN_API_KEY env var missing or empty, reject if key < 32 chars
 
 ### Implementation for User Story 5
 
 **API Key Management Module**
 
 - [ ] T016a [P] [US5] Create ApiKeyController in `src/modules/auth/controllers/api_key_controller.rs` with endpoints: POST /api-keys (generate new key with argon2 hash), PUT /api-keys/{id}/rotate (invalidate old, generate new), DELETE /api-keys/{id} (revoke key), all with audit logging to database per FR-083
-- [ ] T016b [P] [US5] Create api_key_audit_log table migration in `migrations/008_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used)
-- [ ] T016c [P] [US5] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from .env as ADMIN_API_KEY, return 401 for missing/invalid admin key
+- [ ] T016b [P] [US5] Create api_key_audit_log table migration in `migrations/009_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used) per FR-083. Columns: id, api_key_id, operation_type ENUM('created','rotated','revoked','used'), actor_identifier, ip_address, old_key_hash (for rotation), success_status BOOLEAN, created_at TIMESTAMP
+- [ ] T016c [P] [US5] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from ADMIN_API_KEY env var at startup with validation (reject startup if missing/empty/<32 chars), return 401 Unauthorized for missing/invalid admin key in X-Admin-Key header
 - [ ] T111g [US5] Create ApiKeyService in `src/modules/auth/services/api_key_service.rs` for key generation, hashing, validation, rotation logic
-- [ ] T111h [US5] Create ApiKeyRepository in `src/modules/auth/repositories/api_key_repository.rs` for database operations and audit logging
+- [ ] T111h [US5] Create ApiKeyRepository in `src/modules/auth/repositories/api_key_repository.rs` for database operations and audit logging. Implement GET /api-keys/audit endpoint with pagination (page, page_size) and date filtering (start_date, end_date ISO 8601) per FR-083a. Audit log retention: 1 year minimum per NFR-011
 
 **Supplementary Invoice Support** (moved from Phase 5)
 
 - [ ] T103 [US5] Update Invoice model to support original_invoice_id reference (BIGINT UNSIGNED NULL, foreign key to invoices.id per FR-082)
-- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation per FR-082: (a) reference valid parent invoice_id, (b) validate parent exists and status is draft/pending/partially_paid/paid (reject if expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice"), (c) validate parent is not itself supplementary (reject with 400 "Cannot create supplementary invoice from another supplementary invoice"), (d) inherit currency and gateway from parent, (e) maintain separate payment schedule
+- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation per FR-082: (a) reference valid parent invoice_id, (b) validate parent exists and status is pending/partially_paid/paid (reject if draft/expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice"), (c) draft status explicitly rejected because supplementary invoices only for orders with active payment flows (draft = no payment initiated per FR-085), (d) validate parent is not itself supplementary (reject with 400 "Cannot create supplementary invoice from another supplementary invoice"), (e) inherit currency and gateway from parent, (f) maintain separate payment schedule
 - [ ] T105 [US5] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation (parent exists, not already supplementary, inherit currency/gateway) and audit logging per FR-082
 
 **Checkpoint**: ✅ User Story 5 complete - API key management enables production security, supplementary invoices enable flexible order modifications.
@@ -515,14 +516,14 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 179  
+**Total Tasks**: 182  
 **Setup**: 6 tasks  
-**Foundational**: 27 tasks (BLOCKING - includes T029a for test database setup, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, excludes API key management moved to US5)  
-**User Story 1 (P1 - MVP)**: 34 tasks (10 tests + 24 implementation - added T038a, T038b, T044a, T054c, T054d)  
+**Foundational**: 29 tasks (BLOCKING - includes T029a for test database setup, T029b for Constitution compliance audit, T026a for webhook retry log migration, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, excludes API key management moved to US5)  
+**User Story 1 (P1 - MVP)**: 33 tasks (9 tests + 24 implementation - consolidated T033-T035 into single T033, added T038a, T038b, T044a, T054c, T054d)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 23 tasks (9 tests + 14 implementation - added T087a, supplementary invoices moved to US5, removed T119 duplicate)  
 **User Story 4 (P4)**: 20 tasks (6 tests + 14 implementation - removed T119 moved to US1 as T044a)  
-**User Story 5 (P2)**: 16 tasks (8 tests + 8 implementation - added T111i, T111j, API key management + supplementary invoices)  
+**User Story 5 (P2)**: 17 tasks (9 tests + 8 implementation - added T111i, T111j, T111k for admin key validation, API key management + supplementary invoices)  
 **Polish**: 29 tasks (removed T146 - moved to T017a in Foundational, added T128d for OpenAPI maintenance docs)
 
 **Parallel Opportunities**: ~70 tasks can run in parallel (marked with [P])
