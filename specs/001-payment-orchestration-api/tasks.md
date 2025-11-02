@@ -142,22 +142,22 @@
 - [X] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [X] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [X] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-042 Audit Logging section
+- [X] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-042 Audit Logging section
 - [ ] T052a [US1] Performance test for webhook retry queue capacity in `tests/integration/webhook_queue_capacity_test.rs` - depends on T052 webhook handler implementation (verify queue handles 10,000 pending retries per NFR-010, verify <100ms queue operation latency at 10k queue depth, test enqueue/dequeue operations under load)
-- [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
+- [X] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
 - [ ] T053a [US1] Implement refund webhook handlers in WebhookController for processing refund events per FR-086: (a) Xendit invoice.refunded event handler, (b) Midtrans refund notification handler, (c) update payment_transactions table with refund information (refund_id, refund_amount, refund_timestamp, refund_reason), (d) update transaction status to reflect refund, (e) store refund records for GET /invoices/{id}/refunds endpoint query
 - [X] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
-- [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
-- [ ] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
-- [ ] T054d [US1] Implement refund history endpoint in TransactionController for GET /invoices/{id}/refunds returning refund records (refund_id, refund_amount, refund_timestamp, refund_reason) per FR-086
+- [X] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
+- [X] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
+- [X] T054d [US1] Implement refund history endpoint in TransactionController for GET /invoices/{id}/refunds returning refund records (refund_id, refund_amount, refund_timestamp, refund_reason) per FR-086
 
 **Integration & Error Handling**
 
-- [ ] T055 [US1] Implement pessimistic locking for concurrent payment requests using MySQL SELECT FOR UPDATE (FR-053, FR-054)
-- [ ] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
-- [ ] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
-- [ ] T058 [US1] Add logging for all invoice and payment operations using tracing
-- [ ] T058a [US1] Implement invoice expiration background job in `src/modules/invoices/services/expiration_checker.rs` per FR-045 - runs every 5 minutes using tokio interval timer, queries invoices with expires_at < current_time AND status IN ('draft', 'pending', 'partially_paid'), updates status to 'expired', logs expiration events. Background task spawned in main.rs during server startup
+- [X] T055 [US1] Implement pessimistic locking for concurrent payment requests using MySQL SELECT FOR UPDATE (FR-053, FR-054)
+- [X] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
+- [X] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
+- [X] T058 [US1] Add logging for all invoice and payment operations using tracing
+- [X] T058a [US1] Implement invoice expiration background job in `src/modules/invoices/services/expiration_checker.rs` per FR-045 - runs every 5 minutes using tokio interval timer, queries invoices with expires_at < current_time AND status IN ('draft', 'pending', 'partially_paid'), updates status to 'expired', logs expiration events. Background task spawned in main.rs during server startup
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - developers can create invoices, process payments, receive webhooks, and query status. This is MVP ready.
 

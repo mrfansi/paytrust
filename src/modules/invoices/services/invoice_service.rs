@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
 use rust_decimal::Decimal;
+use tracing::{debug, error, info, warn};
 
 use crate::core::error::AppError;
 use crate::modules::gateways::repositories::gateway_repository::GatewayRepository;
@@ -35,16 +36,33 @@ impl InvoiceService {
         request: CreateInvoiceRequest,
         tenant_id: &str,
     ) -> Result<InvoiceResponse, AppError> {
+        info!(
+            tenant_id = %tenant_id,
+            external_id = %request.external_id,
+            currency = %request.currency,
+            gateway_id = request.gateway_id,
+            line_items_count = request.line_items.len(),
+            "Creating invoice"
+        );
+
         // Validate gateway exists and supports currency (FR-007, FR-046)
         let gateway = self
             .gateway_repo
             .find_by_id(request.gateway_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("Gateway not found".to_string()))?;
+            .ok_or_else(|| {
+                error!(gateway_id = request.gateway_id, "Gateway not found");
+                AppError::NotFound("Gateway not found".to_string())
+            })?;
 
         // FR-046: Validate gateway supports invoice currency
         let currency_str = request.currency.to_string();
         if !gateway.supports_currency(&currency_str) {
+            warn!(
+                gateway_id = request.gateway_id,
+                currency = %request.currency,
+                "Gateway does not support currency"
+            );
             return Err(AppError::Validation(format!(
                 "Gateway does not support currency {}",
                 request.currency
@@ -53,6 +71,7 @@ impl InvoiceService {
 
         // Validate line items exist
         if request.line_items.is_empty() {
+            warn!("Invoice creation attempted with no line items");
             return Err(AppError::Validation(
                 "Invoice must have at least one line item".to_string(),
             ));
@@ -102,6 +121,15 @@ impl InvoiceService {
             .create(&invoice, &line_items, tenant_id)
             .await?;
 
+        info!(
+            invoice_id = created_invoice.id,
+            tenant_id = %tenant_id,
+            external_id = %created_invoice.external_id,
+            total_amount = %created_invoice.total_amount,
+            currency = %created_invoice.currency,
+            "Invoice created successfully"
+        );
+
         // Fetch line items for response
         let line_items_response = self
             .invoice_repo
@@ -117,13 +145,24 @@ impl InvoiceService {
         id: i64,
         tenant_id: &str,
     ) -> Result<InvoiceResponse, AppError> {
+        debug!(invoice_id = id, tenant_id = %tenant_id, "Fetching invoice");
+
         let invoice = self
             .invoice_repo
             .find_by_id(id, tenant_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("Invoice not found".to_string()))?;
+            .ok_or_else(|| {
+                warn!(invoice_id = id, tenant_id = %tenant_id, "Invoice not found");
+                AppError::NotFound("Invoice not found".to_string())
+            })?;
 
         let line_items = self.invoice_repo.find_line_items(id, tenant_id).await?;
+
+        debug!(
+            invoice_id = id,
+            status = ?invoice.status,
+            "Invoice fetched successfully"
+        );
 
         Ok(self.to_response(invoice, line_items, None))
     }
@@ -173,6 +212,28 @@ impl InvoiceService {
             self.invoice_repo
                 .update_status(invoice_id, InvoiceStatus::Pending, tenant_id)
                 .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Check if invoice is immutable and reject modifications (FR-051, FR-052)
+    /// Returns error if invoice has payment_initiated_at set
+    pub async fn check_immutability(
+        &self,
+        invoice_id: i64,
+        tenant_id: &str,
+    ) -> Result<(), AppError> {
+        let invoice = self
+            .invoice_repo
+            .find_by_id(invoice_id, tenant_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Invoice not found".to_string()))?;
+
+        if invoice.is_immutable() {
+            return Err(AppError::Validation(
+                "Cannot modify invoice after payment has been initiated (FR-051)".to_string(),
+            ));
         }
 
         Ok(())

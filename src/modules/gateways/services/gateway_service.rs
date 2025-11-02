@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use tracing::{debug, error, info, warn};
+
 use crate::core::error::{AppError, AppResult};
 use super::gateway_trait::{PaymentGateway, PaymentRequest, PaymentResponse};
 use super::{XenditGateway, MidtransGateway};
@@ -40,8 +42,34 @@ impl GatewayService {
         gateway_name: &str,
         request: PaymentRequest,
     ) -> AppResult<PaymentResponse> {
+        info!(
+            gateway = %gateway_name,
+            external_id = %request.external_id,
+            amount = %request.amount,
+            currency = %request.currency,
+            "Creating payment with gateway"
+        );
+
         let gateway = self.get_gateway(gateway_name)?;
-        gateway.create_payment(request).await
+        
+        match gateway.create_payment(request).await {
+            Ok(response) => {
+                info!(
+                    gateway = %gateway_name,
+                    payment_id = %response.payment_id,
+                    "Payment created successfully"
+                );
+                Ok(response)
+            }
+            Err(e) => {
+                error!(
+                    gateway = %gateway_name,
+                    error = %e,
+                    "Failed to create payment"
+                );
+                Err(e)
+            }
+        }
     }
 
     /// List all available gateways

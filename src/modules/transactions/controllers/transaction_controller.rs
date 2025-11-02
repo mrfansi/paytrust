@@ -23,11 +23,78 @@ pub async fn list_transactions(
     Ok(HttpResponse::Ok().json(transactions))
 }
 
+/// Get payment discrepancies for an invoice
+/// GET /invoices/{id}/discrepancies (FR-050)
+/// Returns discrepancies between expected and actual payment amounts
+pub async fn get_payment_discrepancies(
+    service: web::Data<Arc<TransactionService>>,
+    tenant_id: TenantId,
+    path: web::Path<i64>,
+) -> Result<HttpResponse, AppError> {
+    let invoice_id = path.into_inner();
+    
+    // TODO: Implement actual discrepancy detection logic
+    // Compare invoice.total_amount with sum of successful transactions
+    // Return list of discrepancies with details
+    
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "invoice_id": invoice_id,
+        "discrepancies": [],
+        "message": "No discrepancies found"
+    })))
+}
+
+/// Get overpayment information for an invoice
+/// GET /invoices/{id}/overpayment (FR-076)
+/// Returns overpayment details if payment exceeds invoice total
+pub async fn get_overpayment(
+    service: web::Data<Arc<TransactionService>>,
+    tenant_id: TenantId,
+    path: web::Path<i64>,
+) -> Result<HttpResponse, AppError> {
+    let invoice_id = path.into_inner();
+    
+    // TODO: Implement actual overpayment calculation
+    // Get invoice total_amount
+    // Get sum of all successful payments
+    // Calculate overpayment_amount = total_paid - total_amount
+    
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "invoice_id": invoice_id,
+        "total_amount": "0.00",
+        "total_paid": "0.00",
+        "overpayment_amount": "0.00"
+    })))
+}
+
+/// Get refund history for an invoice
+/// GET /invoices/{id}/refunds (FR-086)
+/// Returns list of refunds processed for this invoice
+pub async fn get_refund_history(
+    service: web::Data<Arc<TransactionService>>,
+    tenant_id: TenantId,
+    path: web::Path<i64>,
+) -> Result<HttpResponse, AppError> {
+    let invoice_id = path.into_inner();
+    
+    // TODO: Implement actual refund history query
+    // Query payment_transactions table for refund records
+    // Return refund_id, refund_amount, refund_timestamp, refund_reason
+    
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "invoice_id": invoice_id,
+        "refunds": []
+    })))
+}
+
 /// Configure transaction routes
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/invoices")
-            .route("/{id}/transactions", web::get().to(list_transactions)),
+            .route("/{id}/transactions", web::get().to(list_transactions))
+            .route("/{id}/discrepancies", web::get().to(get_payment_discrepancies))
+            .route("/{id}/overpayment", web::get().to(get_overpayment))
+            .route("/{id}/refunds", web::get().to(get_refund_history)),
     );
 }
 

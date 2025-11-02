@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use rust_decimal::Decimal;
+use tracing::{debug, error, info, warn};
 
 use crate::core::error::AppError;
 use crate::modules::invoices::models::InvoiceStatus;
@@ -34,8 +35,22 @@ impl TransactionService {
         transaction: PaymentTransaction,
         tenant_id: &str,
     ) -> Result<TransactionResponse, AppError> {
+        info!(
+            invoice_id = transaction.invoice_id,
+            amount = %transaction.amount,
+            status = ?transaction.status,
+            gateway_tx_ref = %transaction.gateway_transaction_ref,
+            "Recording payment transaction"
+        );
+
         // Create transaction (with idempotency check)
         let created_tx = self.transaction_repo.create(&transaction).await?;
+
+        info!(
+            transaction_id = created_tx.id,
+            invoice_id = created_tx.invoice_id,
+            "Payment transaction recorded successfully"
+        );
 
         // Update invoice status based on payment
         self.update_invoice_status_from_payment(&created_tx, tenant_id)
@@ -117,6 +132,56 @@ impl TransactionService {
         self.transaction_repo
             .record_refund(transaction_id, refund_id, refund_amount, refund_reason)
             .await
+    }
+
+    /// Process webhook event from payment gateway
+    /// This is called by WebhookHandler with retry logic
+    pub async fn process_webhook_event(
+        &self,
+        gateway: &str,
+        webhook_data: &serde_json::Value,
+    ) -> Result<(), AppError> {
+        // Parse webhook data based on gateway type
+        let (invoice_id, transaction_status, amount, gateway_tx_ref) = 
+            self.parse_webhook_data(gateway, webhook_data)?;
+
+        // TODO: Implement actual webhook processing logic
+        // 1. Find or create transaction record
+        // 2. Update transaction status
+        // 3. Update invoice status
+        // 4. Handle overpayments if applicable
+        
+        tracing::info!(
+            gateway = %gateway,
+            invoice_id = invoice_id,
+            status = ?transaction_status,
+            amount = %amount,
+            "Processing webhook event"
+        );
+
+        Ok(())
+    }
+
+    /// Parse webhook data based on gateway type
+    fn parse_webhook_data(
+        &self,
+        gateway: &str,
+        data: &serde_json::Value,
+    ) -> Result<(i64, TransactionStatus, Decimal, String), AppError> {
+        // TODO: Implement actual parsing for Xendit and Midtrans webhooks
+        // This is a placeholder that needs gateway-specific implementation
+        
+        match gateway.to_lowercase().as_str() {
+            "xendit" => {
+                // Parse Xendit webhook format
+                Ok((0, TransactionStatus::Pending, Decimal::ZERO, String::new()))
+            }
+            "midtrans" => {
+                // Parse Midtrans webhook format
+                Ok((0, TransactionStatus::Pending, Decimal::ZERO, String::new()))
+            }
+            _ => Err(AppError::Validation(format!("Unknown gateway: {}", gateway))),
+        }
     }
 
     /// Update invoice status based on payment transaction

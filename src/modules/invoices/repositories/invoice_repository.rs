@@ -63,6 +63,16 @@ pub trait InvoiceRepository: Send + Sync {
         invoice_id: i64,
         tenant_id: &str,
     ) -> Result<Vec<LineItem>, AppError>;
+
+    /// Find invoice by ID with pessimistic lock (SELECT FOR UPDATE)
+    /// Used for concurrent payment processing (FR-053, FR-054)
+    /// Tenant isolation: filters by tenant_id
+    async fn find_by_id_for_update(
+        &self,
+        id: i64,
+        tenant_id: &str,
+        tx: &mut sqlx::Transaction<'_, MySql>,
+    ) -> Result<Option<Invoice>, AppError>;
 }
 
 /// MySQL implementation of InvoiceRepository
@@ -304,6 +314,32 @@ impl InvoiceRepository for MySqlInvoiceRepository {
         .await?;
 
         Ok(line_items)
+    }
+
+    async fn find_by_id_for_update(
+        &self,
+        id: i64,
+        tenant_id: &str,
+        tx: &mut sqlx::Transaction<'_, MySql>,
+    ) -> Result<Option<Invoice>, AppError> {
+        // Pessimistic locking with SELECT FOR UPDATE (FR-053, FR-054)
+        // Tenant isolation: filter by tenant_id per FR-088
+        let invoice = sqlx::query_as::<_, Invoice>(
+            r#"
+            SELECT id, tenant_id, external_id, currency, subtotal, tax_total, service_fee,
+                   total_amount, status, gateway_id, original_invoice_id, payment_initiated_at,
+                   expires_at, created_at, updated_at
+            FROM invoices
+            WHERE id = ? AND tenant_id = ?
+            FOR UPDATE
+            "#,
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        Ok(invoice)
     }
 }
 

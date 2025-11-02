@@ -26,6 +26,12 @@ pub enum AppError {
     #[error("Gateway error: {0}")]
     Gateway(String),
 
+    #[error("Gateway error: {0}")]
+    GatewayError(String),
+
+    #[error("Network error: {0}")]
+    NetworkError(String),
+
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
 
@@ -55,6 +61,8 @@ impl ResponseError for AppError {
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
             AppError::Conflict(_) => StatusCode::CONFLICT,
             AppError::Gateway(_) => StatusCode::BAD_GATEWAY,
+            AppError::GatewayError(_) => StatusCode::BAD_GATEWAY,
+            AppError::NetworkError(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::RateLimitExceeded => StatusCode::TOO_MANY_REQUESTS,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
