@@ -91,7 +91,7 @@
 
 - [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
 
-**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. User story implementation can now begin in parallel.
+**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. **Constitution III Compliance Validated**: T029b code review gate and T029c automated CI check enforce real database testing per NFR-008. User story implementation can now begin in parallel.
 
 ---
 
