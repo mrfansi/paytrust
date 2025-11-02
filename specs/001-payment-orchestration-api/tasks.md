@@ -20,12 +20,12 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [x] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
-- [x] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
-- [x] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
-- [x] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
-- [x] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
-- [x] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
+- [ ] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
+- [ ] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
+- [ ] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
+- [ ] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
+- [ ] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
+- [ ] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
 
 **Checkpoint**: ✅ Project structure ready for foundational development
 
@@ -39,45 +39,45 @@
 
 ### Database & Configuration
 
-- [x] T007 Create database migration framework setup in `migrations/` directory
-- [x] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
-- [x] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
-- [x] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
+- [ ] T007 Create database migration framework setup in `migrations/` directory
+- [ ] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
+- [ ] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
+- [ ] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
 
 ### Core Utilities
 
-- [x] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
-- [x] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
-- [x] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
-- [x] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
-- [x] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
+- [ ] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
+- [ ] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
+- [ ] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
+- [ ] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
+- [ ] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
 
 ### Middleware & Security
 
-- [x] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
-- [x] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
-- [x] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
-- [x] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
+- [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
+- [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
+- [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
 ### Database Migrations
 
-- [x] T020 Create migration 001: payment_gateways table in `migrations/001_create_payment_gateways_table.sql`
-- [x] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [x] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql`
-- [x] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
-- [x] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
-- [x] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
-- [x] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
+- [ ] T020 Create migration 001: payment_gateways table in `migrations/001_create_payment_gateways_table.sql`
+- [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
+- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql`
+- [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
+- [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
+- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
+- [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
 
 ### Gateway Module Foundation
 
-- [x] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
-- [x] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
-- [x] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
+- [ ] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
+- [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
+- [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
 ### Application Entry Point
 
-- [x] T030 Implement main.rs application setup: database pool, middleware registration, route mounting, server startup using actix-web and tokio
+- [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting, server startup using actix-web and tokio
 
 **Checkpoint**: ✅ Foundation ready - all core utilities, database schema, and middleware are functional. User story implementation can now begin in parallel.
 
@@ -93,48 +93,48 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [x] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
-- [x] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
-- [x] T033 [P] [US1] Contract test for POST /invoices endpoint in `tests/contract/invoice_api_test.rs` validating OpenAPI schema (7 tests)
-- [x] T034 [P] [US1] Contract test for GET /invoices/{id} endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
-- [x] T035 [P] [US1] Contract test for GET /invoices endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
-- [x] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
-- [x] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
-- [x] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
+- [ ] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
+- [ ] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
+- [ ] T033 [P] [US1] Contract test for POST /invoices endpoint in `tests/contract/invoice_api_test.rs` validating OpenAPI schema (7 tests)
+- [ ] T034 [P] [US1] Contract test for GET /invoices/{id} endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
+- [ ] T035 [P] [US1] Contract test for GET /invoices endpoint in `tests/contract/invoice_api_test.rs` (covered by T033 schema tests)
+- [ ] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
+- [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
+- [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
 
 ### Implementation for User Story 1
 
 **Invoice Module**
 
-- [x] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
-- [x] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
-- [x] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [x] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway, set expiration)
-- [x] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
-- [x] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
+- [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
+- [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
+- [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
+- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway, set expiration)
+- [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
+- [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
 
 **Gateway Module**
 
-- [x] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
-- [x] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
-- [x] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
-- [x] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
+- [ ] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
+- [ ] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
+- [ ] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
+- [ ] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
 
 **Transaction Module**
 
-- [x] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
-- [x] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
-- [x] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [x] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with exponential backoff (FR-042, FR-043)
-- [x] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
-- [x] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
+- [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
+- [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
+- [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with exponential backoff (FR-042, FR-043)
+- [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
+- [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 
 **Integration & Error Handling**
 
-- [x] T055 [US1] Implement pessimistic locking for concurrent payment requests (FR-053, FR-054)
-- [x] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
-- [x] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
-- [x] T058 [US1] Add logging for all invoice and payment operations using tracing
+- [ ] T055 [US1] Implement pessimistic locking for concurrent payment requests (FR-053, FR-054)
+- [ ] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
+- [ ] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
+- [ ] T058 [US1] Add logging for all invoice and payment operations using tracing
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - developers can create invoices, process payments, receive webhooks, and query status. This is MVP ready.
 
@@ -148,38 +148,38 @@
 
 ### Tests for User Story 2 (TDD Required)
 
-- [x] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
-- [x] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
-- [x] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
-- [x] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
-- [x] T063 [P] [US2] Integration test for tax calculation and locking in `tests/integration/tax_calculation_test.rs` (FR-061, FR-062)
-- [x] T064 [P] [US2] Integration test for service fee calculation per gateway in `tests/integration/service_fee_test.rs`
-- [x] T065 [P] [US2] Integration test for financial report generation in `tests/integration/report_generation_test.rs` (FR-063, FR-064)
+- [ ] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
+- [ ] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
+- [ ] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
+- [ ] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
+- [ ] T063 [P] [US2] Integration test for tax calculation and locking in `tests/integration/tax_calculation_test.rs` (FR-061, FR-062)
+- [ ] T064 [P] [US2] Integration test for service fee calculation per gateway in `tests/integration/service_fee_test.rs`
+- [ ] T065 [P] [US2] Integration test for financial report generation in `tests/integration/report_generation_test.rs` (FR-063, FR-064)
 
 ### Implementation for User Story 2
 
 **Tax Module**
 
-- [x] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
-- [x] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
-- [x] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
-- [x] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
+- [ ] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
+- [ ] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
+- [ ] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
+- [ ] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
 
 **Invoice Module Updates**
 
-- [x] T070 [US2] Update Invoice model to include tax_total and service_fee fields
-- [x] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
-- [x] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
-- [x] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
-- [x] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
-- [x] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
+- [ ] T070 [US2] Update Invoice model to include tax_total and service_fee fields
+- [ ] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
+- [ ] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
+- [ ] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
+- [ ] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
+- [ ] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
 
 **Reports Module**
 
-- [x] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
-- [x] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
-- [x] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
-- [x] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
+- [ ] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
+- [ ] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
+- [ ] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
+- [ ] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
 
 **Checkpoint**: At this point, User Stories 1 AND 2 work independently - invoices include accurate taxes and fees, financial reports show breakdowns by currency and rate.
 
@@ -193,49 +193,49 @@
 
 ### Tests for User Story 3 (TDD Required)
 
-- [x] T080 [P] [US3] Property-based test for proportional tax distribution in `tests/unit/installment_calculator_test.rs` (FR-059)
-- [x] T081 [P] [US3] Property-based test for proportional service fee distribution in `tests/unit/installment_calculator_test.rs` (FR-060)
-- [x] T082 [P] [US3] Property-based test for rounding and last installment absorption in `tests/unit/installment_calculator_test.rs` (FR-071, FR-072)
-- [x] T083 [P] [US3] Property-based test for overpayment auto-application in `tests/unit/installment_overpayment_test.rs` (FR-073, FR-074, FR-075, FR-076)
-- [x] T084 [P] [US3] Contract test for GET /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
-- [x] T085 [P] [US3] Contract test for PATCH /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
-- [x] T086 [P] [US3] Integration test for sequential installment payment enforcement in `tests/integration/installment_flow_test.rs` (FR-068, FR-069, FR-070)
-- [x] T087 [P] [US3] Integration test for installment adjustment after first payment in `tests/integration/installment_adjustment_test.rs` (FR-077, FR-078, FR-079, FR-080)
+- [ ] T080 [P] [US3] Property-based test for proportional tax distribution in `tests/unit/installment_calculator_test.rs` (FR-059)
+- [ ] T081 [P] [US3] Property-based test for proportional service fee distribution in `tests/unit/installment_calculator_test.rs` (FR-060)
+- [ ] T082 [P] [US3] Property-based test for rounding and last installment absorption in `tests/unit/installment_calculator_test.rs` (FR-071, FR-072)
+- [ ] T083 [P] [US3] Property-based test for overpayment auto-application in `tests/unit/installment_overpayment_test.rs` (FR-073, FR-074, FR-075, FR-076)
+- [ ] T084 [P] [US3] Contract test for GET /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
+- [ ] T085 [P] [US3] Contract test for PATCH /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
+- [ ] T086 [P] [US3] Integration test for sequential installment payment enforcement in `tests/integration/installment_flow_test.rs` (FR-068, FR-069, FR-070)
+- [ ] T087 [P] [US3] Integration test for installment adjustment after first payment in `tests/integration/installment_adjustment_test.rs` (FR-077, FR-078, FR-079, FR-080)
 
 ### Implementation for User Story 3
 
 **Installment Module**
 
-- [x] T088 [P] [US3] Create InstallmentSchedule model in `src/modules/installments/models/installment_schedule.rs` with validation (FR-014, FR-017)
-- [x] T089 [US3] Implement InstallmentCalculator in `src/modules/installments/services/installment_calculator.rs` for proportional distribution (FR-059, FR-060, FR-071, FR-072)
-- [x] T090 [US3] Implement InstallmentRepository in `src/modules/installments/repositories/installment_repository.rs` with CRUD and status queries
-- [x] T091 [US3] Implement InstallmentService in `src/modules/installments/services/installment_service.rs` for schedule management (create, adjust, validate sequence)
-- [x] T092 [US3] Implement InstallmentController in `src/modules/installments/controllers/installment_controller.rs` for GET and PATCH /invoices/{id}/installments
+- [ ] T088 [P] [US3] Create InstallmentSchedule model in `src/modules/installments/models/installment_schedule.rs` with validation (FR-014, FR-017)
+- [ ] T089 [US3] Implement InstallmentCalculator in `src/modules/installments/services/installment_calculator.rs` for proportional distribution (FR-059, FR-060, FR-071, FR-072)
+- [ ] T090 [US3] Implement InstallmentRepository in `src/modules/installments/repositories/installment_repository.rs` with CRUD and status queries
+- [ ] T091 [US3] Implement InstallmentService in `src/modules/installments/services/installment_service.rs` for schedule management (create, adjust, validate sequence)
+- [ ] T092 [US3] Implement InstallmentController in `src/modules/installments/controllers/installment_controller.rs` for GET and PATCH /invoices/{id}/installments
 
 **Invoice Module Updates**
 
-- [x] T093 [US3] Update InvoiceService to support installment configuration at creation (count, custom_amounts)
-- [x] T094 [US3] Update InvoiceService to handle partially_paid status when first installment paid (FR-019)
-- [x] T095 [US3] Update InvoiceService to mark fully_paid when all installments complete (FR-020)
+- [ ] T093 [US3] Update InvoiceService to support installment configuration at creation (count, custom_amounts)
+- [ ] T094 [US3] Update InvoiceService to handle partially_paid status when first installment paid (FR-019)
+- [ ] T095 [US3] Update InvoiceService to mark fully_paid when all installments complete (FR-020)
 
 **Gateway Integration**
 
-- [x] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067)
-- [x] T097 [US3] Update Xendit client to generate installment-specific payment URLs
-- [x] T098 [US3] Update Midtrans client to generate installment-specific payment URLs
+- [ ] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067)
+- [ ] T097 [US3] Update Xendit client to generate installment-specific payment URLs
+- [ ] T098 [US3] Update Midtrans client to generate installment-specific payment URLs
 
 **Transaction Module Updates**
 
-- [x] T099 [US3] Update TransactionService to handle installment payments with sequential enforcement (FR-068, FR-069, FR-070)
-- [x] T100 [US3] Update TransactionService to handle overpayment auto-application (FR-073, FR-074, FR-075, FR-076)
-- [x] T101 [US3] Update WebhookController to update installment status and apply excess payment
-- [x] T102 [US3] Update TransactionRepository to link transactions to specific installments
+- [ ] T099 [US3] Update TransactionService to handle installment payments with sequential enforcement (FR-068, FR-069, FR-070)
+- [ ] T100 [US3] Update TransactionService to handle overpayment auto-application (FR-073, FR-074, FR-075, FR-076)
+- [ ] T101 [US3] Update WebhookController to update installment status and apply excess payment
+- [ ] T102 [US3] Update TransactionRepository to link transactions to specific installments
 
 **Supplementary Invoice Support**
 
-- [x] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082)
-- [x] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082)
-- [x] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint
+- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082)
+- [ ] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082)
+- [ ] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint
 
 **Checkpoint**: ✅ All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, sequential enforcement, and supplementary invoice support.
 
@@ -249,7 +249,7 @@
 
 ### Tests for User Story 4 (TDD Required)
 
-- [x] T106 [P] [US4] Property-based test for currency-specific decimal handling in `tests/unit/currency_handling_test.rs` (IDR scale=0, MYR/USD scale=2) - Covered by src/core/currency.rs unit tests
+- [ ] T106 [P] [US4] Property-based test for currency-specific decimal handling in `tests/unit/currency_handling_test.rs` (IDR scale=0, MYR/USD scale=2) - Covered by src/core/currency.rs unit tests
 - [ ] T107 [P] [US4] Property-based test for currency isolation in calculations in `tests/unit/currency_isolation_test.rs` (FR-023, FR-024) - Deferred
 - [ ] T108 [P] [US4] Contract test for multi-currency invoice creation in `tests/contract/currency_api_test.rs` - Deferred
 - [ ] T109 [P] [US4] Integration test for currency mismatch rejection in `tests/integration/currency_validation_test.rs` (FR-024) - Deferred
@@ -259,36 +259,36 @@
 
 **Currency Module Enhancement**
 
-- [x] T111 [US4] Enhance Currency enum in `src/core/currency.rs` with decimal precision methods (IDR scale=0, MYR/USD scale=2) per FR-026
-- [x] T112 [US4] Add currency validation helpers for arithmetic operations (prevent mixing)
-- [x] T113 [US4] Add currency-specific rounding functions for installment calculations
+- [ ] T111 [US4] Enhance Currency enum in `src/core/currency.rs` with decimal precision methods (IDR scale=0, MYR/USD scale=2) per FR-026
+- [ ] T112 [US4] Add currency validation helpers for arithmetic operations (prevent mixing)
+- [ ] T113 [US4] Add currency-specific rounding functions for installment calculations
 
 **Invoice Module Updates**
 
-- [x] T114 [US4] Update Invoice model validation to enforce single currency per invoice (FR-023)
-- [x] T115 [US4] Update InvoiceService to apply currency-specific decimal handling in calculations
-- [x] T116 [US4] Add currency mismatch validation in payment processing (FR-024)
+- [ ] T114 [US4] Update Invoice model validation to enforce single currency per invoice (FR-023)
+- [ ] T115 [US4] Update InvoiceService to apply currency-specific decimal handling in calculations
+- [ ] T116 [US4] Add currency mismatch validation in payment processing (FR-024)
 
 **Transaction Module Updates**
 
-- [x] T117 [US4] Update TransactionRepository to reject payments in different currency than invoice (FR-024)
-- [x] T118 [US4] Update TransactionService to validate currency consistency before processing
+- [ ] T117 [US4] Update TransactionRepository to reject payments in different currency than invoice (FR-024)
+- [ ] T118 [US4] Update TransactionService to validate currency consistency before processing
 
 **Gateway Module Updates**
 
-- [x] T119 [US4] Update GatewayService to validate gateway supports invoice currency (FR-046)
-- [x] T120 [US4] Update gateway configuration to track supported_currencies per gateway
+- [ ] T119 [US4] Update GatewayService to validate gateway supports invoice currency (FR-046)
+- [ ] T120 [US4] Update gateway configuration to track supported_currencies per gateway
 
 **Reports Module Updates**
 
-- [x] T121 [US4] Update ReportService to separate totals by currency (FR-025)
-- [x] T122 [US4] Update ReportRepository aggregation queries to GROUP BY currency
-- [x] T123 [US4] Update ReportController to return separate currency sections in response (no conversion, FR-063)
+- [ ] T121 [US4] Update ReportService to separate totals by currency (FR-025)
+- [ ] T122 [US4] Update ReportRepository aggregation queries to GROUP BY currency
+- [ ] T123 [US4] Update ReportController to return separate currency sections in response (no conversion, FR-063)
 
 **Installment Module Updates**
 
-- [x] T124 [US4] Update InstallmentCalculator to use currency-specific rounding (IDR whole numbers)
-- [x] T125 [US4] Update InstallmentCalculator to handle last installment absorption with currency precision
+- [ ] T124 [US4] Update InstallmentCalculator to use currency-specific rounding (IDR whole numbers)
+- [ ] T125 [US4] Update InstallmentCalculator to handle last installment absorption with currency precision
 
 **Checkpoint**: All 4 user stories work independently - multi-currency support is complete with strict isolation, no mixing, and accurate currency-specific calculations.
 
@@ -300,45 +300,45 @@
 
 ### Documentation
 
-- [x] T126 [P] Create API usage examples in `docs/examples/` for each user story
-- [x] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
-- [x] T128 [P] Generate OpenAPI documentation endpoint in actix-web serving `contracts/openapi.yaml`
-- [x] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
-- [x] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
+- [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
+- [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
+- [ ] T128 [P] Generate OpenAPI documentation endpoint in actix-web serving `contracts/openapi.yaml`
+- [ ] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
+- [ ] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
 ### Code Quality
 
-- [x] T130 Run cargo fmt across all source files
-- [x] T131 Run cargo clippy and fix all warnings (fixed .clippy.toml configuration, 53 warnings remain - mostly unused imports)
+- [ ] T130 Run cargo fmt across all source files
+- [ ] T131 Run cargo clippy and fix all warnings (fixed .clippy.toml configuration, 53 warnings remain - mostly unused imports)
 - [ ] T132 Add comprehensive inline documentation (/// doc comments) for all public APIs
 - [ ] T133 Review and refactor duplicate code across modules
 
 ### Security & Performance
 
-- [x] T134 Security audit: validate all input sanitization and SQL injection prevention (sqlx compile-time checks) - 3 vulnerabilities found and fixed: API key hashing, error disclosure, webhook secret exposure
-- [x] T135 Performance optimization: add database indexes per data-model.md (already in migration 007) - 27 indexes verified across 4 tables, all data-model.md requirements satisfied
-- [x] T136 Performance testing: verify <2s response time for invoice creation (NFR-001) - Performance test suite created with 6 test scenarios, requires test data setup to run
-- [x] T137 Load testing: verify 100 concurrent requests handling (NFR-002)
+- [ ] T134 Security audit: validate all input sanitization and SQL injection prevention (sqlx compile-time checks) - 3 vulnerabilities found and fixed: API key hashing, error disclosure, webhook secret exposure
+- [ ] T135 Performance optimization: add database indexes per data-model.md (already in migration 007) - 27 indexes verified across 4 tables, all data-model.md requirements satisfied
+- [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001) - Performance test suite created with 6 test scenarios, requires test data setup to run
+- [ ] T137 Load testing: verify 100 concurrent requests handling (NFR-002)
   - Implemented 4 load test scenarios (tests/performance/load_test.rs)
   - Test 1: 100 concurrent requests (9.3ms total, 93µs avg)
   - Test 2: 100 concurrent lookups (7.5ms total, 75µs avg)
   - Test 3: 200 requests with 10-connection pool (381ms, 20x oversubscription)
   - Test 4: Mixed workload 50 reads + 50 writes (15.7ms, 157µs avg)
   - All tests passing, system handles 100+ concurrent requests successfully
-- [x] T138 Implement graceful shutdown handling in main.rs
+- [ ] T138 Implement graceful shutdown handling in main.rs
 
 ### Monitoring & Observability
 
-- [x] T139 Add structured logging for all API endpoints with request IDs
-- [x] T140 Add metrics collection for response times, error rates, gateway success rates
+- [ ] T139 Add structured logging for all API endpoints with request IDs
+- [ ] T140 Add metrics collection for response times, error rates, gateway success rates
   - Implemented MetricsCollector with thread-safe in-memory storage
   - Implemented MetricsMiddleware for automatic collection
   - Added GET /metrics endpoint (docs/METRICS-COLLECTION-2025-11.md)
   - Tracks: total_requests, success/error rates, response times (avg/min/max)
   - Endpoint-level metrics with per-path counters
   - 6 unit tests + 3 integration tests passing
-- [x] T141 Add health check endpoint GET /health with database connectivity check
-- [x] T142 Add readiness probe endpoint GET /ready
+- [ ] T141 Add health check endpoint GET /health with database connectivity check
+- [ ] T142 Add readiness probe endpoint GET /ready
 
 ### Additional Testing (Optional)
 
@@ -350,9 +350,9 @@
 ### Validation & Deployment Prep
 
 - [ ] T147 Run full quickstart.md validation from specs/001-payment-orchestration-api/quickstart.md
-- [x] T148 Run all tests: `cargo test` (unit + integration + contract) - Unit tests: 114 passed
-- [x] T149 Build production binary: `cargo build --release` - Successfully built
-- [x] T150 Create Docker configuration if needed for deployment
+- [ ] T148 Run all tests: `cargo test` (unit + integration + contract) - Unit tests: 114 passed
+- [ ] T149 Build production binary: `cargo build --release` - Successfully built
+- [ ] T150 Create Docker configuration if needed for deployment
   - Created Dockerfile with multi-stage build (builder + slim runtime)
   - Created .dockerignore for optimized build context
   - Created docker-compose.yml with MySQL and API services
