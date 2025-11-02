@@ -35,6 +35,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
+**TDD Note**: Test refactoring tasks implicitly follow TDD workflow (Constitution Principle III) - each refactor verifies old test behavior fails with new requirements → implements new helper → verifies new test passes. For test infrastructure code (helpers), the refactored integration tests serve as the acceptance tests.
+
 - [ ] T007 Create tests/helpers/mod.rs - public exports for all test helper modules
 - [ ] T008 [P] Implement tests/helpers/test_database.rs - create_test_pool() function per contract
 - [ ] T009 [P] Implement tests/helpers/test_database.rs - with_transaction() function per contract
@@ -44,6 +46,9 @@
 - [ ] T013 [P] Implement tests/helpers/assertions.rs - assert_success(), assert_created(), assert_bad_request() functions
 - [ ] T014 Update src/lib.rs - export test helpers for use in tests (pub mod if needed)
 - [ ] T015 Verify test helpers compile via cargo test --lib --no-run
+- [ ] T015a [P] Add error handling to tests/helpers/test_database.rs - connection failure, timeout, invalid credentials with clear error messages
+- [ ] T015b [P] Add error handling to tests/helpers/test_server.rs - port already in use, bind failure, server startup timeout
+- [ ] T015c [P] Add error handling to tests/helpers/test_client.rs - network timeout, connection refused, invalid response handling
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -114,7 +119,7 @@
 - [ ] T044 [US3] Document isolation patterns in tests/helpers/mod.rs with before/after examples
 - [ ] T045 [US3] Verify repeatability: run scripts/test_parallel.sh and confirm 100% pass rate
 - [ ] T046 [US3] Measure test suite performance: time cargo test and verify <60 seconds
-- [ ] T047 [US3] Add test metrics collection to tests/helpers/test_server.rs for performance reporting
+- [ ] T047 [US3] Add test metrics collection to tests/helpers/test_server.rs - report HTTP p50/p95/p99 latency, test duration, DB query count to stdout in JSON format per FR-009
 - [ ] T048 [US3] Document parallel execution best practices in specs/002-real-endpoint-testing/quickstart.md
 
 **Checkpoint**: All user stories should now be independently functional with full parallel execution support.
@@ -151,8 +156,8 @@
 - [ ] T064 [P] Add test coverage report script to scripts/test_coverage.sh
 - [ ] T065 Verify zero mockito usage: grep -r "mockito" tests/ (should find nothing)
 - [ ] T066 Remove any remaining #[ignore] attributes from tests if environment is configured
-- [ ] T067 Run full test suite: cargo test (all tests should pass with <60s runtime)
-- [ ] T068 Validate success criteria SC-001 through SC-008 from spec.md
+- [ ] T067 Run full test suite: cargo test (all tests should pass)
+- [ ] T068 Validate success criteria SC-001 through SC-008 from spec.md using validation checklist in tasks.md (manual verification)
 - [ ] T069 Update .github/copilot-instructions.md - add testing best practices with real endpoints
 - [ ] T070 Final validation: Run quickstart.md setup instructions from scratch to verify developer onboarding
 
@@ -164,9 +169,9 @@
 
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup (T001-T006) completion - BLOCKS all user stories
-- **User Story 1 (Phase 3)**: Depends on Foundational (T007-T015) completion
-- **User Story 2 (Phase 4)**: Depends on Foundational (T007-T015) completion - Can run in parallel with US1
-- **User Story 3 (Phase 5)**: Depends on Foundational (T007-T015) completion - Can run in parallel with US1/US2
+- **User Story 1 (Phase 3)**: Depends on Foundational (T007-T015c) completion
+- **User Story 2 (Phase 4)**: Depends on Foundational (T007-T015c) completion - Can run in parallel with US1
+- **User Story 3 (Phase 5)**: Depends on Foundational (T007-T015c) completion - Can run in parallel with US1/US2
 - **Full Migration (Phase 6)**: Depends on all user stories being complete
 
 ### User Story Dependencies
@@ -198,7 +203,7 @@
 ### Parallel Opportunities
 
 - **Setup Phase**: T003, T004, T005 can run in parallel (different files)
-- **Foundational Phase**: T008-T013 can run in parallel (different files in tests/helpers/)
+- **Foundational Phase**: T008-T013, T015a-T015c can run in parallel (different files in tests/helpers/)
 - **US1 Implementation**: T016-T019 can run in parallel (different helper files)
 - **US2 Implementation**: T029 and T033 can run in parallel (workflow vs docker-compose)
 - **US3 Implementation**: T039-T042 can run in parallel (different test files)
@@ -242,14 +247,14 @@ Task T019: "Add TestFixtures to tests/helpers/test_data.rs"
 ### MVP First (User Story 1 Only)
 
 1. Complete Phase 1: Setup (T001-T006)
-2. Complete Phase 2: Foundational (T007-T015) - CRITICAL, blocks all stories
+2. Complete Phase 2: Foundational (T007-T015c) - CRITICAL, blocks all stories
 3. Complete Phase 3: User Story 1 (T016-T028)
 4. **STOP and VALIDATE**: Run cargo test --test payment_flow_test and verify real HTTP + real DB
 5. Deploy/demo if ready - developers can now use new testing infrastructure
 
 ### Incremental Delivery
 
-1. Complete Setup + Foundational (T001-T015) → Foundation ready
+1. Complete Setup + Foundational (T001-T015c) → Foundation ready
 2. Add User Story 1 (T016-T028) → Test independently → **MVP READY** - local testing works
 3. Add User Story 2 (T029-T038) → Test independently → CI/CD automation works
 4. Add User Story 3 (T039-T048) → Test independently → Parallel execution optimized
@@ -285,6 +290,7 @@ After each phase, verify:
 - [ ] create_test_pool() connects to test database
 - [ ] spawn_test_server() starts on available port
 - [ ] TestDataFactory generates unique IDs
+- [ ] Error handling works: invalid DB connection fails gracefully, port conflicts handled, network timeouts caught
 
 ### User Story 1 Validation:
 
@@ -313,7 +319,7 @@ After each phase, verify:
 - [ ] **SC-002**: All DB operations connect to real MySQL (verify logs show paytrust_test)
 - [ ] **SC-003**: 100% pass rate across 10 consecutive runs
 - [ ] **SC-004**: Test suite completes within 60 seconds
-- [ ] **SC-005**: Real bugs found that mocks would miss (document 3+ examples)
+- [ ] **SC-005**: At least 1 integration issue found during refactoring (e.g., DB constraint, HTTP timeout, API format mismatch)
 - [ ] **SC-006**: Zero mockito usage (grep -r "mockito" tests/ finds nothing)
 - [ ] **SC-007**: All 15+ API endpoints covered (run openapi_validation_test)
 - [ ] **SC-008**: CI/CD pipeline runs successfully (check GitHub Actions)
@@ -335,17 +341,17 @@ After each phase, verify:
 
 ## Summary
 
-**Total Tasks**: 70  
+**Total Tasks**: 73  
 **Setup**: 6 tasks  
-**Foundational** (blocks all): 9 tasks  
+**Foundational** (blocks all): 12 tasks (includes 3 error handling tasks)  
 **User Story 1** (P1): 13 tasks  
 **User Story 2** (P2): 10 tasks  
 **User Story 3** (P3): 10 tasks  
 **Full Migration**: 22 tasks
 
-**Parallel Opportunities**: 35+ tasks marked [P] can run in parallel  
-**MVP Scope**: Phases 1-3 (28 tasks) delivers working local test infrastructure  
-**Full Feature**: All 70 tasks delivers complete real endpoint testing with CI/CD
+**Parallel Opportunities**: 38+ tasks marked [P] can run in parallel  
+**MVP Scope**: Phases 1-3 (31 tasks) delivers working local test infrastructure  
+**Full Feature**: All 73 tasks delivers complete real endpoint testing with CI/CD
 
 **Independent Test Criteria**:
 

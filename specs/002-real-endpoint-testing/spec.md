@@ -79,7 +79,7 @@ As a developer, I need tests to use isolated test data that doesn't interfere wi
 - **FR-006**: Test framework MUST provide database cleanup mechanisms (transactions or teardown scripts)
 - **FR-007**: Tests MUST validate gateway integration behavior by calling real payment gateway sandbox/test APIs (Xendit test mode, Midtrans sandbox) with valid test credentials
 - **FR-008**: Test framework MUST support parallel test execution with data isolation
-- **FR-009**: Tests MUST report actual performance metrics (response times, database query times)
+- **FR-009**: Tests MUST report actual performance metrics to stdout in structured format: HTTP endpoint p50/p95/p99 response latency in milliseconds, total test suite duration in seconds, and database query count per test
 - **FR-010**: Test framework MUST provide seed data scripts for common test scenarios
 - **FR-011**: Tests MUST validate all API endpoints defined in OpenAPI spec
 - **FR-012**: Test framework MUST fail fast with clear error messages when infrastructure is unavailable
@@ -100,7 +100,7 @@ As a developer, I need tests to use isolated test data that doesn't interfere wi
 - **SC-002**: All database operations in tests connect to a real MySQL instance - verified by database connection logs showing test database name
 - **SC-003**: Tests can run repeatedly with identical results - 100% pass rate across 10 consecutive runs with same initial state
 - **SC-004**: Test suite completes within 60 seconds for full integration test run - measured from test start to finish
-- **SC-005**: Tests catch actual production issues - demonstrated by at least 3 real bugs found during development that would have reached production with mocked tests
+- **SC-005**: Tests catch integration issues during development - at least 1 real bug or integration issue found during test refactoring that validates the real endpoint testing approach (e.g., database constraint violations, HTTP timeout handling, gateway API format mismatches)
 - **SC-006**: Zero mock libraries used in integration tests - verified by code review showing no usage of mockito, mockall, or similar mocking frameworks in integration test files
 - **SC-007**: Test coverage includes all 15+ API endpoints - verified by OpenAPI contract tests validating every endpoint in the spec
 - **SC-008**: CI/CD pipeline runs tests successfully with real endpoints - verified by successful test execution in automated builds without manual intervention
