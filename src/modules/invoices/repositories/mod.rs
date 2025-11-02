@@ -1,2 +1,3 @@
-// Invoice repository implementations will be added here
-// pub mod invoice_repository;
+pub mod invoice_repository;
+
+pub use invoice_repository::{InvoiceRepository, MySqlInvoiceRepository};
