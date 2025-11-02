@@ -1,0 +1,88 @@
+name: Constitution III Compliance Check
+
+on:
+  pull_request:
+    paths:
+      - 'tests/integration/**'
+      - 'tests/contract/**'
+  push:
+    branches:
+      - main
+      - '001-payment-orchestration-api'
+
+jobs:
+  constitution-compliance:
+    name: Verify No Mocks in Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for prohibited mock libraries
+        run: |
+          echo "🔍 Checking for mock library usage in integration tests..."
+          
+          # Check for mockall usage
+          if grep -rn "use mockall" tests/integration/; then
+            echo "❌ ERROR: mockall detected in integration tests"
+            echo "Constitution Principle III prohibits mocks in integration tests"
+            exit 1
+          fi
+          
+          # Check for mockito usage
+          if grep -rn "use mockito" tests/integration/; then
+            echo "❌ ERROR: mockito detected in integration tests"
+            echo "Constitution Principle III prohibits mocks in integration tests"
+            exit 1
+          fi
+          
+          # Check for mock:: usage
+          if grep -rn "mock::" tests/integration/; then
+            echo "❌ ERROR: mock:: usage detected in integration tests"
+            echo "Constitution Principle III prohibits mocks in integration tests"
+            exit 1
+          fi
+          
+          echo "✅ No prohibited mock libraries found in integration tests"
+
+      - name: Verify test database setup exists
+        run: |
+          echo "🔍 Verifying test database setup..."
+          
+          if [ ! -f "tests/integration/database_setup.rs" ]; then
+            echo "❌ ERROR: tests/integration/database_setup.rs not found"
+            echo "Real database setup is required per Constitution Principle III"
+            exit 1
+          fi
+          
+          # Check for real MySQL connection
+          if ! grep -q "MySqlPool" tests/integration/database_setup.rs; then
+            echo "❌ ERROR: Real MySQL connection pool not found in database_setup.rs"
+            exit 1
+          fi
+          
+          echo "✅ Test database setup verified"
+
+      - name: Check Cargo.toml for mock dependencies
+        run: |
+          echo "🔍 Checking Cargo.toml for mock dependencies..."
+          
+          # Allow mockito only in dev-dependencies (for gateway HTTP mocking when unavailable)
+          # But it should not be in main dependencies
+          if grep -A 10 "^\[dependencies\]" Cargo.toml | grep -E "mockall|mockito"; then
+            echo "⚠️  WARNING: Mock library found in main dependencies"
+            echo "Mocks should only be in dev-dependencies and used sparingly"
+          fi
+          
+          echo "✅ Cargo.toml check complete"
+
+      - name: Summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Constitution Principle III Compliance: ✅ PASS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Integration tests use real MySQL database instances"
+          echo "No prohibited mock libraries detected"
+          echo "Test infrastructure follows TDD best practices"

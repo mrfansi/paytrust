@@ -39,57 +39,57 @@
 
 ### Database & Configuration
 
-- [ ] T007 Create database migration framework setup in `migrations/` directory
-- [ ] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
-- [ ] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
-- [ ] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
+- [X] T007 Create database migration framework setup in `migrations/` directory
+- [X] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
+- [X] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
+- [X] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
 
 ### Core Utilities
 
-- [ ] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
-- [ ] T011a [P] Implement timezone utilities in `src/core/timezone.rs` for UTC storage and gateway-specific timezone conversion (Xendit: UTC, Midtrans: Asia/Jakarta UTC+7) per FR-087. All timestamps stored internally as UTC, converted to gateway timezone for API calls, returned as ISO 8601 UTC in API responses
+- [X] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
+- [X] T011a [P] Implement timezone utilities in `src/core/timezone.rs` for UTC storage and gateway-specific timezone conversion (Xendit: UTC, Midtrans: Asia/Jakarta UTC+7) per FR-087. All timestamps stored internally as UTC, converted to gateway timezone for API calls, returned as ISO 8601 UTC in API responses
 - [ ] T011b [P] Unit test for timezone conversion utilities in `tests/unit/timezone_test.rs` (verify UTC ↔ Asia/Jakarta conversion accuracy, verify UTC passthrough for Xendit, verify ISO 8601 formatting)
-- [ ] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
-- [ ] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
-- [ ] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
-- [ ] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
+- [X] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
+- [X] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
+- [X] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
+- [X] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
 
 ### Middleware & Security
 
-- [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
+- [X] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
 - [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository (including all aggregation queries in ReportRepository per G2 finding). Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention including financial report aggregations
-- [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
-- [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
+- [X] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
+- [X] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
 ### Database Migrations
 
-- [ ] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql` with schema: id (BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY per FR-007a), name VARCHAR(50) NOT NULL, supported_currencies JSON NOT NULL (array of currency codes), fee_percentage DECIMAL(5,4) NOT NULL (e.g., 0.0290 for 2.9%), fee_fixed DECIMAL(10,2) NOT NULL, region VARCHAR(50), webhook_url VARCHAR(255), api_key_encrypted TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-- [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP NULL DEFAULT NULL for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
-- [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
-- [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
-- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-073)
-- [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
-- [ ] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-042 Audit Logging section (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
+- [X] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql` with schema: id (BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY per FR-007a), name VARCHAR(50) NOT NULL, supported_currencies JSON NOT NULL (array of currency codes), fee_percentage DECIMAL(5,4) NOT NULL (e.g., 0.0290 for 2.9%), fee_fixed DECIMAL(10,2) NOT NULL, region VARCHAR(50), webhook_url VARCHAR(255), api_key_encrypted TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+- [X] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
+- [X] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP NULL DEFAULT NULL for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
+- [X] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
+- [X] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
+- [X] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-073)
+- [X] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
+- [X] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-042 Audit Logging section (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
 
 ### Gateway Module Foundation
 
-- [ ] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
-- [ ] T027a [P] [FOUNDATION] Create RateLimiter trait definition in `contracts/rate_limiter_trait.rs` with rate_limit() method signature per FR-040. Trait methods: async fn check_rate_limit(&self, api_key: &str) -> Result<(), RateLimitError> and async fn record_request(&self, api_key: &str) -> Result<(), RateLimitError>. This trait enables pluggable rate limiting backends (InMemoryRateLimiter for v1.0, RedisRateLimiter for future multi-instance deployment)
+- [X] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
+- [X] T027a [P] [FOUNDATION] Create RateLimiter trait definition in `contracts/rate_limiter_trait.rs` with rate_limit() method signature per FR-040. Trait methods: async fn check_rate_limit(&self, api_key: &str) -> Result<(), RateLimitError> and async fn record_request(&self, api_key: &str) -> Result<(), RateLimitError>. This trait enables pluggable rate limiting backends (InMemoryRateLimiter for v1.0, RedisRateLimiter for future multi-instance deployment)
 - [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041) - depends on T027a RateLimiter trait definition
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
-- [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
-- [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
+- [X] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
+- [X] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
+- [X] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
-- [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup (min 5 connections, max 20 connections), transaction isolation level READ COMMITTED, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Cleanup strategy: TRUNCATE tables between tests for data isolation, DROP/CREATE database for schema migration tests. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
+- [X] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup (min 5 connections, max 20 connections), transaction isolation level READ COMMITTED, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Cleanup strategy: TRUNCATE tables between tests for data isolation, DROP/CREATE database for schema migration tests. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
 - [ ] T029b **[CONSTITUTION GATE]** Validate Constitution III compliance during code review for each integration test PR. This is a CONTINUOUS validation gate, not a post-implementation audit. For each integration test PR, reviewer MUST verify: (1) Test uses real MySQL connections from T029a database setup, (2) NO mock library imports: grep for `use mockall`, `use mockito`, `mock::` in test file, (3) Test executes actual SQL queries against test database (not in-memory simulations), (4) Webhook tests make real HTTP calls (not mocked HTTP clients), (5) Any exceptions documented with justification. PR merge BLOCKED until all 5 checks pass. This gate enforces TDD: tests written → approved → fail → then implement
-- [ ] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
+- [X] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
 
 ### Application Entry Point
 
-- [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
+- [X] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
 
 **Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. **Constitution III Compliance MUST BE VALIDATED**: Execute T029a (test database setup), T029b (code review gate), and T029c (CI validation) and verify all pass before proceeding. Validation criteria: (1) Real MySQL test database operational with connection pool, (2) CI mock detection active and passing, (3) Test database migrations match production schema. **BLOCK all Phase 3+ work until this checkpoint passes**. User story implementation can begin in parallel only after validation complete.
 

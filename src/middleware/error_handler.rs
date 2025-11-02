@@ -9,12 +9,13 @@ use std::rc::Rc;
 /// Middleware for consistent error response formatting
 pub struct ErrorHandler;
 
-impl<S> Transform<S, ServiceRequest> for ErrorHandler
+impl<S, B> Transform<S, ServiceRequest> for ErrorHandler
 where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
+    B: 'static,
 {
-    type Response = ServiceResponse;
+    type Response = ServiceResponse<B>;
     type Error = Error;
     type InitError = ();
     type Transform = ErrorHandlerMiddleware<S>;
@@ -31,12 +32,13 @@ pub struct ErrorHandlerMiddleware<S> {
     service: Rc<S>,
 }
 
-impl<S> Service<ServiceRequest> for ErrorHandlerMiddleware<S>
+impl<S, B> Service<ServiceRequest> for ErrorHandlerMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
+    B: 'static,
 {
-    type Response = ServiceResponse;
+    type Response = ServiceResponse<B>;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 

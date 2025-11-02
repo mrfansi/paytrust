@@ -1,4 +1,5 @@
 use actix_web::{
+    body::{BoxBody, EitherBody},
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error, HttpResponse,
 };
@@ -79,12 +80,13 @@ impl RateLimitMiddleware {
     }
 }
 
-impl<S> Transform<S, ServiceRequest> for RateLimitMiddleware
+impl<S, B> Transform<S, ServiceRequest> for RateLimitMiddleware
 where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
+    B: 'static,
 {
-    type Response = ServiceResponse;
+    type Response = ServiceResponse<EitherBody<B, BoxBody>>;
     type Error = Error;
     type InitError = ();
     type Transform = RateLimitMiddlewareService<S>;
@@ -103,12 +105,13 @@ pub struct RateLimitMiddlewareService<S> {
     limiter: Arc<dyn RateLimiter>,
 }
 
-impl<S> Service<ServiceRequest> for RateLimitMiddlewareService<S>
+impl<S, B> Service<ServiceRequest> for RateLimitMiddlewareService<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
+    B: 'static,
 {
-    type Response = ServiceResponse;
+    type Response = ServiceResponse<EitherBody<B, BoxBody>>;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -122,7 +125,8 @@ where
             // Skip rate limiting for health check endpoints
             let path = req.path();
             if path == "/health" || path == "/ready" {
-                return service.call(req).await;
+                let res = service.call(req).await?;
+                return Ok(res.map_into_left_body());
             }
 
             // Extract API key from header
@@ -131,18 +135,23 @@ where
                     Ok(key) => key.to_string(),
                     Err(_) => {
                         // If no valid API key, skip rate limiting (will be caught by auth middleware)
-                        return service.call(req).await;
+                        let res = service.call(req).await?;
+                        return Ok(res.map_into_left_body());
                     }
                 },
                 None => {
                     // If no API key, skip rate limiting (will be caught by auth middleware)
-                    return service.call(req).await;
+                    let res = service.call(req).await?;
+                    return Ok(res.map_into_left_body());
                 }
             };
 
             // Check rate limit
             match limiter.check_rate_limit(&api_key) {
-                Ok(_) => service.call(req).await,
+                Ok(_) => {
+                    let res = service.call(req).await?;
+                    Ok(res.map_into_left_body())
+                }
                 Err(retry_after) => {
                     let response = HttpResponse::TooManyRequests()
                         .insert_header(("Retry-After", retry_after.to_string()))
@@ -153,7 +162,7 @@ where
                                 "retry_after": retry_after
                             }
                         }));
-                    Ok(req.into_response(response).map_into_boxed_body())
+                    Ok(req.into_response(response).map_into_right_body())
                 }
             }
         })

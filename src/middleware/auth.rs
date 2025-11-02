@@ -1,5 +1,5 @@
 use actix_web::{
-    body::BoxBody,
+    body::{BoxBody, EitherBody},
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error, HttpMessage, HttpResponse,
 };
@@ -13,12 +13,13 @@ use std::rc::Rc;
 /// Validates X-API-Key header and extracts tenant_id for multi-tenant isolation
 pub struct ApiKeyAuth;
 
-impl<S> Transform<S, ServiceRequest> for ApiKeyAuth
+impl<S, B> Transform<S, ServiceRequest> for ApiKeyAuth
 where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
+    B: 'static,
 {
-    type Response = ServiceResponse;
+    type Response = ServiceResponse<EitherBody<B, BoxBody>>;
     type Error = Error;
     type InitError = ();
     type Transform = ApiKeyAuthMiddleware<S>;
@@ -35,12 +36,13 @@ pub struct ApiKeyAuthMiddleware<S> {
     service: Rc<S>,
 }
 
-impl<S> Service<ServiceRequest> for ApiKeyAuthMiddleware<S>
+impl<S, B> Service<ServiceRequest> for ApiKeyAuthMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
+    B: 'static,
 {
-    type Response = ServiceResponse;
+    type Response = ServiceResponse<EitherBody<B, BoxBody>>;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -53,7 +55,8 @@ where
             // Skip auth for health check and public endpoints
             let path = req.path();
             if path == "/health" || path == "/ready" || path.starts_with("/docs") || path == "/openapi.json" {
-                return service.call(req).await;
+                let res = service.call(req).await?;
+                return Ok(res.map_into_left_body());
             }
 
             // Extract API key from header
@@ -68,7 +71,7 @@ where
                                     "message": "Invalid API key format"
                                 }
                             }));
-                        return Ok(req.into_response(response).map_into_boxed_body());
+                        return Ok(req.into_response(response).map_into_right_body());
                     }
                 },
                 None => {
@@ -79,7 +82,7 @@ where
                                 "message": "Missing X-API-Key header"
                             }
                         }));
-                    return Ok(req.into_response(response).map_into_boxed_body());
+                    return Ok(req.into_response(response).map_into_right_body());
                 }
             };
 
@@ -94,7 +97,7 @@ where
                                 "message": "Database pool not available"
                             }
                         }));
-                    return Ok(req.into_response(response).map_into_boxed_body());
+                    return Ok(req.into_response(response).map_into_right_body());
                 }
             };
 
@@ -111,7 +114,8 @@ where
                         let _ = update_last_used(&pool_clone, &api_key_clone).await;
                     });
 
-                    service.call(req).await
+                    let res = service.call(req).await?;
+                    Ok(res.map_into_left_body())
                 }
                 Err(e) => {
                     let response = HttpResponse::Unauthorized()
@@ -121,7 +125,7 @@ where
                                 "message": format!("Invalid API key: {}", e)
                             }
                         }));
-                    Ok(req.into_response(response).map_into_boxed_body())
+                    Ok(req.into_response(response).map_into_right_body())
                 }
             }
         })
