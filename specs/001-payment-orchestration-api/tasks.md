@@ -196,6 +196,7 @@
 - [ ] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
 - [ ] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
 - [ ] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
+- [ ] T075a [US2] Implement tax_rate validation in InvoiceService per FR-064a: (a) validate tax_rate >= 0 and <= 1.0 (0-100%), (b) validate tax_rate has maximum 4 decimal places (0.0001 precision), (c) reject invalid rates with 400 Bad Request "Invalid tax_rate: must be between 0 and 1.0 with max 4 decimal places", (d) log rates exceeding 0.27 (27%) for audit review as potential data entry errors
 
 **Reports Module**
 
@@ -359,7 +360,7 @@
 
 - [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
-- [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006
+- [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006. Implementation: (a) create static file handler in `src/middleware/openapi.rs` using actix-files crate, (b) read openapi.yaml at startup and cache in memory, (c) serve as application/json with proper CORS headers (Access-Control-Allow-Origin: *), (d) register route in main.rs before auth middleware (public endpoint), (e) add integration test in `tests/integration/openapi_endpoint_test.rs` to verify endpoint returns valid JSON and matches openapi.yaml content
 - [ ] T128b [P] Implement GET /docs endpoint to serve interactive Swagger UI rendering the OpenAPI specification per NFR-006
 - [ ] T128c [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
 - [ ] T128d [P] Document OpenAPI maintenance workflow in `docs/openapi-maintenance.md`: update specification on endpoint changes, validate with contract tests per T033-T035, version with API releases, keep in sync with code
@@ -386,6 +387,10 @@
 - [ ] T140 Add metrics collection for response times, error rates, gateway success rates, webhook processing success rate (99% target per NFR-004) with GET /metrics endpoint and alerting when webhook success rate <99% over 1-hour window
 - [ ] T141 Add health check endpoint GET /health with database connectivity check
 - [ ] T142 Add readiness probe endpoint GET /ready
+
+### Data Retention & Compliance
+
+- [ ] T142a Implement transaction archival background job in `src/modules/transactions/services/archival_service.rs` for 7-year retention per NFR-007 - runs daily using tokio interval timer, queries transactions older than 7 years with status IN ('paid', 'failed', 'expired'), archives to separate archive_transactions table (same schema as payment_transactions), deletes from active table after successful archive, logs archival events. Archive table indexed by archived_at timestamp for compliance queries. Background task spawned in main.rs during server startup
 
 ### Additional Testing (Optional)
 
@@ -527,15 +532,15 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 190  
+**Total Tasks**: 192  
 **Setup**: 6 tasks  
 **Foundational**: 31 tasks (BLOCKING - includes T027a for RateLimiter trait, T029a for test database setup, T029b for Constitution compliance gate, T026a for webhook retry log migration, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, T016d for tenant isolation, excludes API key management moved to US5)  
 **User Story 1 (P1 - MVP)**: 37 tasks (12 tests + 25 implementation - consolidated T033-T035 into single T033, added T038a, T038b, T038c, T044a, T044b, T052a, T054c, T054d, T058a)  
-**User Story 2 (P2)**: 22 tasks (8 tests + 14 implementation - added T059a for tax validation test)  
+**User Story 2 (P2)**: 23 tasks (8 tests + 15 implementation - added T059a for tax validation test, added T075a for tax validation implementation)  
 **User Story 3 (P3)**: 23 tasks (9 tests + 14 implementation - added T087a, supplementary invoices moved to US5, removed T119 duplicate)  
 **User Story 4 (P4)**: 20 tasks (6 tests + 14 implementation - removed T119 moved to US1 as T044a)  
 **User Story 5 (P2)**: 17 tasks (9 tests + 8 implementation - added T111i, T111j, T111k for admin key validation, API key management + supplementary invoices)  
-**Polish**: 30 tasks (removed T146 - moved to T017a in Foundational, added T128d for OpenAPI maintenance docs, added T150a for acceptance tests)
+**Polish**: 31 tasks (removed T146 - moved to T017a in Foundational, added T128d for OpenAPI maintenance docs, added T142a for transaction archival, added T150a for acceptance tests)
 
 **Parallel Opportunities**: ~73 tasks can run in parallel (marked with [P])
 
