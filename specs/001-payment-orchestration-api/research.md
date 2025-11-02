@@ -780,7 +780,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 proptest = "1.5"  # Property-based testing for financial logic
-mockito = "1.5"   # HTTP mocking for gateway tests
+mockito = "1.5"   # HTTP mocking ONLY when gateway test environments unavailable (Constitution Principle III)
 
 [profile.release]
 opt-level = 3

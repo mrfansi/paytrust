@@ -381,6 +381,10 @@ PayTrust follows strict TDD workflow per Constitution Principle III:
 3. **Refactor** (improve code quality)
 4. **Commit** (version control)
 
+**Real Testing Requirement**: Integration and contract tests MUST use real databases and real
+HTTP connections to test environments. Mocks are PROHIBITED for production behavior validation.
+Unit tests may use mocks for isolated business logic only.
+
 Example workflow:
 
 ```bash
@@ -464,9 +468,12 @@ cargo watch -x test
 
 ## Testing
 
+**Real Testing Policy**: Per Constitution Principle III, integration and contract tests MUST use
+real databases and real infrastructure. Mocks are prohibited for production behavior validation.
+
 ### Unit Tests
 
-Test business logic in isolation:
+Test business logic in isolation (mocks permitted here for isolated logic):
 
 ```rust
 #[cfg(test)]
@@ -489,7 +496,7 @@ mod tests {
 
 ### Integration Tests
 
-Test with real database:
+Test with **real database** (REQUIRED - no in-memory DB):
 
 ```bash
 # Set test database URL

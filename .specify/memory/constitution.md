@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report:
-- Version change: 1.1.0 → 1.2.0
-- Added principles: Modular Architecture (new VII)
-- Modified principles: Development Standards (removed markdown summary documentation requirement)
+- Version change: 1.2.0 → 1.3.0
+- Added principles: None
+- Modified principles: Test-First Development (Principle III) - added real testing requirement, prohibited mocks/stubs for production validation
 - Added sections: None
 - Removed sections: None
-- Templates updated: ✅ Updated (constitution aligns with modular design requirements)
+- Templates updated: ✅ Updated (constitution aligns with real testing requirements)
 - Follow-up TODOs: None
-- Rationale: MINOR bump - new principle added for modular architecture, documentation standards refined
+- Rationale: MINOR bump - enhanced testing discipline with real database/integration requirements to prevent production issues
 -->
 
 # PayTrust Constitution
@@ -35,14 +35,23 @@ documented and approved before implementation.
 **Rationale**: Ensures maintainable, testable, and extensible codebase that can evolve with
 business requirements while minimizing technical debt.
 
-### III. Test-First Development (NON-NEGOTIABLE)
+### III. Test-First Development with Real Testing (NON-NEGOTIABLE)
 
 TDD mandatory: Tests written → User approved → Tests fail → Then implement. Red-Green-Refactor
 cycle strictly enforced. Unit tests for all business logic, integration tests for database
 operations, contract tests for API endpoints. No code merges without corresponding test coverage.
 
+**Real Testing Requirement**: Integration and contract tests MUST use real databases, real HTTP
+connections, and real external service integrations (test environments). Mocks and stubs are
+PROHIBITED for validation tests that verify production behavior. Mocking is permitted ONLY for
+unit tests of isolated business logic or when external service test environments are unavailable.
+Database tests MUST connect to actual test database instances, not in-memory simulations.
+
 **Rationale**: Guarantees specification compliance, prevents regressions, enables confident
-refactoring, and serves as executable documentation of system behavior.
+refactoring, and serves as executable documentation of system behavior. Real testing prevents
+production incidents by validating against actual infrastructure behavior, not simulated
+conditions. Mocked tests often pass while production fails due to untested edge cases in real
+systems (database constraints, network timeouts, transaction isolation levels).
 
 ### IV. MySQL Integration Standards
 
@@ -128,4 +137,4 @@ migration plan to eventual compliance.
 Amendment procedure: Proposed changes require documentation of impact, approval from
 technical leadership, and update of all dependent templates and guidance documents.
 
-**Version**: 1.2.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
+**Version**: 1.3.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-02
