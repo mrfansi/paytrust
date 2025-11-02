@@ -78,7 +78,7 @@
 
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
-- [ ] T029a Create test database configuration in `tests/integration/database_setup.rs` with connection pool setup, migration runner, test fixtures, and cleanup utilities per Constitution Principle III requirement for real database integration tests
+- [ ] T029a Create test database configuration in `tests/integration/database_setup.rs` with connection pool setup, migration runner, test fixtures, and cleanup utilities per Constitution Principle III requirement for real database integration tests. MUST use real MySQL test database instances. Mocks/stubs PROHIBITED for production validation tests per NFR-008
 
 ### Application Entry Point
 
@@ -119,6 +119,7 @@
 - [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration with optional expires_at parameter per FR-044a with validation: max 30 days from creation, min 1 hour from creation, reject past dates with 400 "Expiration time cannot be in the past", reject out-of-range with 400 "Expiration must be between 1 hour and 30 days from now", if invoice has installments validate expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date", set payment_initiated_at timestamp on first payment attempt per FR-085)
 - [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
+- [ ] T044a [US1] Validate gateway supports invoice currency in InvoiceService before invoice creation per FR-046 (check gateway_configs.supported_currencies)
 
 **Gateway Module**
 
@@ -136,6 +137,7 @@
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
+- [ ] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
 
 **Integration & Error Handling**
 
@@ -281,8 +283,7 @@
 
 **Gateway Module Updates**
 
-- [ ] T119 [US4] Update GatewayService to validate gateway supports invoice currency (FR-046)
-- [ ] T120 [US4] Update gateway configuration to track supported_currencies per gateway
+- [ ] T120 [US4] Update gateway configuration to track supported_currencies per gateway (validation logic implemented in T044a)
 
 **Reports Module Updates**
 
@@ -314,6 +315,7 @@
 - [ ] T111e [P] [US5] Integration test for supplementary invoice creation in `tests/integration/supplementary_invoice_test.rs` (create parent, start payment, add supplementary, verify inheritance and isolation)
 - [ ] T111f [P] [US5] Integration test for supplementary invoice validation in `tests/integration/supplementary_invoice_test.rs` (reject if parent missing, reject if parent is itself supplementary per FR-082, reject if parent status is expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice")
 - [ ] T111i [P] [US5] Integration test for admin API key authentication in `tests/integration/admin_auth_test.rs` (verify valid admin key in X-Admin-Key header succeeds for POST /api-keys, verify missing admin key returns 401 Unauthorized, verify invalid admin key returns 401, verify admin key loaded from ADMIN_API_KEY env var at startup per FR-084)
+- [ ] T111j [P] [US5] Integration test for API key rotation zero-downtime in `tests/integration/api_key_rotation_test.rs` (verify active requests with old key succeed during rotation window, verify rotation completes within 2 seconds per SC-011)
 
 ### Implementation for User Story 5
 
@@ -346,6 +348,7 @@
 - [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006
 - [ ] T128b [P] Implement GET /docs endpoint to serve interactive Swagger UI rendering the OpenAPI specification per NFR-006
 - [ ] T128c [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
+- [ ] T128d [P] Document OpenAPI maintenance workflow in `docs/openapi-maintenance.md`: update specification on endpoint changes, validate with contract tests per T033-T035, version with API releases, keep in sync with code
 - [ ] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
 ### Code Quality
