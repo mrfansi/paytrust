@@ -69,6 +69,25 @@ futures-util = "0.3"
 [dev-dependencies]
 proptest = "1.5"
 rust_decimal_macros = "1.36"
+chrono-tz = "0.9"
+
+# Unit Tests
+[[test]]
+name = "timezone_test"
+path = "tests/unit/timezone_test.rs"
+
+[[test]]
+name = "line_item_calculation_test"
+path = "tests/unit/line_item_calculation_test.rs"
+
+[[test]]
+name = "invoice_calculation_test"
+path = "tests/unit/invoice_calculation_test.rs"
+
+# Contract Tests
+[[test]]
+name = "invoice_api_test"
+path = "tests/contract/invoice_api_test.rs"
 
 [profile.release]
 opt-level = 3

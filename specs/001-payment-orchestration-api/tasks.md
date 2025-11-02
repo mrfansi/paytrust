@@ -48,7 +48,7 @@
 
 - [X] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
 - [X] T011a [P] Implement timezone utilities in `src/core/timezone.rs` for UTC storage and gateway-specific timezone conversion (Xendit: UTC, Midtrans: Asia/Jakarta UTC+7) per FR-087. All timestamps stored internally as UTC, converted to gateway timezone for API calls, returned as ISO 8601 UTC in API responses
-- [ ] T011b [P] Unit test for timezone conversion utilities in `tests/unit/timezone_test.rs` (verify UTC ↔ Asia/Jakarta conversion accuracy, verify UTC passthrough for Xendit, verify ISO 8601 formatting)
+- [X] T011b [P] Unit test for timezone conversion utilities in `tests/unit/timezone_test.rs` (verify UTC ↔ Asia/Jakarta conversion accuracy, verify UTC passthrough for Xendit, verify ISO 8601 formatting)
 - [X] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
 - [X] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
 - [X] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
@@ -108,13 +108,13 @@
 - [X] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
 - [X] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
 - [X] T033 [P] [US1] Contract tests for invoice API endpoints in `tests/contract/invoice_api_test.rs` validating OpenAPI schema: POST /invoices, GET /invoices/{id}, GET /invoices (7 tests total covering all three endpoints)
-- [ ] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
-- [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
-- [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
-- [ ] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/invoice_expiration_test.rs` - verify all 4 validations from FR-044a: (a) max 30 days from creation, (b) min 1 hour from creation, (c) reject past dates with 400 "Expiration time cannot be in the past", (d) if invoice has installments expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date"
-- [ ] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-051(a))
-- [ ] T038c [P] [US1] Integration test for refund webhook processing in `tests/integration/refund_webhook_test.rs` (verify Xendit invoice.refunded event updates transaction status, verify Midtrans refund notification updates records, verify GET /invoices/{id}/refunds returns refund history per FR-086)
-- [ ] T044b [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_currency_validation_test.rs` (verify gateway supports invoice currency per FR-046, verify 400 Bad Request when gateway does not support currency, test all 3 currencies: IDR/MYR/USD)
+- [X] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
+- [X] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
+- [X] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
+- [X] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/expires_at_validation_test.rs` - verify all 4 validations from FR-044a: (a) max 30 days from creation, (b) min 1 hour from creation, (c) reject past dates with 400 "Expiration time cannot be in the past", (d) if invoice has installments expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date"
+- [X] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-051(a))
+- [X] T038c [P] [US1] Integration test for refund webhook processing in `tests/integration/refund_webhook_test.rs` (verify Xendit invoice.refunded event updates transaction status, verify Midtrans refund notification updates records, verify GET /invoices/{id}/refunds returns refund history per FR-086)
+- [X] T044b [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_currency_validation_test.rs` (verify gateway supports invoice currency per FR-046, verify 400 Bad Request when gateway does not support currency, test all 3 currencies: IDR/MYR/USD)
 
 ### Implementation for User Story 1
 

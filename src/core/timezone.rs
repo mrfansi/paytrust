@@ -27,6 +27,36 @@ impl TimezoneConverter {
     }
 }
 
+/// Convert UTC timestamp to gateway-specific timezone
+/// Returns error for unknown gateway names
+pub fn convert_to_gateway_timezone(
+    utc_time: DateTime<Utc>,
+    gateway: &str,
+) -> Result<DateTime<FixedOffset>, String> {
+    match gateway.to_lowercase().as_str() {
+        "midtrans" => {
+            let jakarta_offset = FixedOffset::east_opt(7 * 3600).expect("Valid offset");
+            Ok(utc_time.with_timezone(&jakarta_offset))
+        }
+        "xendit" => {
+            // Xendit uses UTC, return as FixedOffset with +00:00
+            let utc_offset = FixedOffset::east_opt(0).expect("Valid offset");
+            Ok(utc_time.with_timezone(&utc_offset))
+        }
+        _ => Err(format!("Unknown gateway: {}", gateway)),
+    }
+}
+
+/// Convert timezone-aware timestamp to UTC
+pub fn convert_to_utc<Tz: chrono::TimeZone>(time: DateTime<Tz>) -> DateTime<Utc> {
+    time.with_timezone(&Utc)
+}
+
+/// Format timestamp as ISO 8601 UTC for API responses
+pub fn format_iso8601(utc_time: DateTime<Utc>) -> String {
+    utc_time.to_rfc3339()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
