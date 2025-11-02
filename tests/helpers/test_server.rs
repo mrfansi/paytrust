@@ -6,10 +6,146 @@
 use actix_web::{web, App, HttpResponse, HttpServer};
 use sqlx::MySqlPool;
 use std::net::TcpListener;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::time::{Duration, Instant};
+use serde_json::json;
 
 pub use actix_test::TestServer;
 
 use super::test_database::create_test_pool;
+
+/// Test metrics collector for performance monitoring
+///
+/// Tracks HTTP request latencies, database query counts, and test duration
+/// per FR-009 requirement for test observability.
+#[derive(Clone)]
+pub struct TestMetrics {
+    request_count: Arc<AtomicUsize>,
+    total_latency_micros: Arc<AtomicU64>,
+    min_latency_micros: Arc<AtomicU64>,
+    max_latency_micros: Arc<AtomicU64>,
+    db_query_count: Arc<AtomicUsize>,
+    test_start: Arc<Instant>,
+}
+
+impl TestMetrics {
+    /// Create a new metrics collector
+    pub fn new() -> Self {
+        Self {
+            request_count: Arc::new(AtomicUsize::new(0)),
+            total_latency_micros: Arc::new(AtomicU64::new(0)),
+            min_latency_micros: Arc::new(AtomicU64::new(u64::MAX)),
+            max_latency_micros: Arc::new(AtomicU64::new(0)),
+            db_query_count: Arc::new(AtomicUsize::new(0)),
+            test_start: Arc::new(Instant::now()),
+        }
+    }
+
+    /// Record an HTTP request latency
+    pub fn record_request(&self, latency: Duration) {
+        let micros = latency.as_micros() as u64;
+        
+        self.request_count.fetch_add(1, Ordering::Relaxed);
+        self.total_latency_micros.fetch_add(micros, Ordering::Relaxed);
+        
+        // Update min
+        let mut current_min = self.min_latency_micros.load(Ordering::Relaxed);
+        while micros < current_min {
+            match self.min_latency_micros.compare_exchange(
+                current_min,
+                micros,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(x) => current_min = x,
+            }
+        }
+        
+        // Update max
+        let mut current_max = self.max_latency_micros.load(Ordering::Relaxed);
+        while micros > current_max {
+            match self.max_latency_micros.compare_exchange(
+                current_max,
+                micros,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(x) => current_max = x,
+            }
+        }
+    }
+
+    /// Record a database query execution
+    pub fn record_query(&self) {
+        self.db_query_count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get current metrics snapshot as JSON
+    ///
+    /// Returns metrics in format per FR-009:
+    /// - http_p50_latency_ms: median latency (approximated as mean)
+    /// - http_p95_latency_ms: 95th percentile (approximated as max)
+    /// - http_p99_latency_ms: 99th percentile (approximated as max)
+    /// - test_duration_ms: total test duration
+    /// - db_query_count: number of database queries executed
+    pub fn to_json(&self) -> serde_json::Value {
+        let count = self.request_count.load(Ordering::Relaxed);
+        let total_micros = self.total_latency_micros.load(Ordering::Relaxed);
+        let min_micros = self.min_latency_micros.load(Ordering::Relaxed);
+        let max_micros = self.max_latency_micros.load(Ordering::Relaxed);
+        let query_count = self.db_query_count.load(Ordering::Relaxed);
+        let duration = self.test_start.elapsed();
+
+        let avg_latency_ms = if count > 0 {
+            (total_micros as f64 / count as f64) / 1000.0
+        } else {
+            0.0
+        };
+
+        let min_latency_ms = if min_micros == u64::MAX {
+            0.0
+        } else {
+            min_micros as f64 / 1000.0
+        };
+
+        let max_latency_ms = max_micros as f64 / 1000.0;
+
+        json!({
+            "http_request_count": count,
+            "http_avg_latency_ms": format!("{:.2}", avg_latency_ms),
+            "http_min_latency_ms": format!("{:.2}", min_latency_ms),
+            "http_max_latency_ms": format!("{:.2}", max_latency_ms),
+            "http_p50_latency_ms": format!("{:.2}", avg_latency_ms), // Approximate
+            "http_p95_latency_ms": format!("{:.2}", max_latency_ms * 0.95), // Approximate
+            "http_p99_latency_ms": format!("{:.2}", max_latency_ms), // Approximate
+            "db_query_count": query_count,
+            "test_duration_ms": duration.as_millis(),
+        })
+    }
+
+    /// Print metrics to stdout in JSON format
+    ///
+    /// Use this at the end of tests to report performance metrics.
+    ///
+    /// # Example
+    /// ```no_run
+    /// let metrics = TestMetrics::new();
+    /// // ... run tests ...
+    /// metrics.report();
+    /// ```
+    pub fn report(&self) {
+        println!("\n{}", serde_json::to_string_pretty(&self.to_json()).unwrap());
+    }
+}
+
+impl Default for TestMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Spawn a real HTTP test server with full application configuration
 ///
@@ -66,6 +202,29 @@ fn configure_test_routes(cfg: &mut web::ServiceConfig) {
     // Add more routes as needed for testing
     // For now, health endpoint is sufficient to verify server startup
     ;
+}
+
+/// Spawn test server with metrics collection enabled
+///
+/// Returns both the test server and a metrics collector for performance tracking.
+///
+/// # Example
+/// ```no_run
+/// #[actix_web::test]
+/// async fn test_with_metrics() {
+///     let (srv, metrics) = spawn_test_server_with_metrics().await;
+///     
+///     let start = Instant::now();
+///     let response = srv.get("/api/invoices").send().await.unwrap();
+///     metrics.record_request(start.elapsed());
+///     
+///     metrics.report(); // Print metrics to stdout
+/// }
+/// ```
+pub async fn spawn_test_server_with_metrics() -> (TestServer, TestMetrics) {
+    let metrics = TestMetrics::new();
+    let srv = spawn_test_server().await;
+    (srv, metrics)
 }
 
 /// Spawn test server with custom configuration
