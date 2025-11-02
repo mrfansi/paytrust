@@ -47,6 +47,8 @@
 ### Core Utilities
 
 - [ ] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
+- [ ] T011a [P] Implement timezone utilities in `src/core/timezone.rs` for UTC storage and gateway-specific timezone conversion (Xendit: UTC, Midtrans: Asia/Jakarta UTC+7) per FR-087. All timestamps stored internally as UTC, converted to gateway timezone for API calls, returned as ISO 8601 UTC in API responses
+- [ ] T011b [P] Unit test for timezone conversion utilities in `tests/unit/timezone_test.rs` (verify UTC ↔ Asia/Jakarta conversion accuracy, verify UTC passthrough for Xendit, verify ISO 8601 formatting)
 - [ ] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
 - [ ] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
 - [ ] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
@@ -56,7 +58,7 @@
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
 - [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041)
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040) - depends on T017a passing
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040) - depends on T017a passing. **TODO**: Single-instance in-memory implementation only; multi-instance horizontal scaling requires Redis-backed distributed rate limiting (future enhancement per plan.md:L23)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -67,7 +69,7 @@
 - [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
 - [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
 - [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
-- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
+- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-076)
 - [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
 
 ### Gateway Module Foundation
@@ -78,7 +80,7 @@
 
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
-- [ ] T029a Create test database configuration in `tests/integration/database_setup.rs` with connection pool setup, migration runner, test fixtures, and cleanup utilities per Constitution Principle III requirement for real database integration tests. MUST use real MySQL test database instances. Mocks/stubs PROHIBITED for production validation tests per NFR-008
+- [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup, migration runner (executes same migrations T020-T026 as production for schema parity), test fixtures, and cleanup utilities. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
 
 ### Application Entry Point
 
@@ -133,11 +135,12 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level, expose via GET /webhooks/failed endpoint for manual intervention per FR-042. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
-- [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
+- [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
 - [ ] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
+- [ ] T054d [US1] Implement refund history endpoint in TransactionController for GET /invoices/{id}/refunds returning refund records (refund_id, refund_amount, refund_timestamp, refund_reason) per FR-086
 
 **Integration & Error Handling**
 
@@ -512,10 +515,10 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 176  
+**Total Tasks**: 179  
 **Setup**: 6 tasks  
-**Foundational**: 25 tasks (BLOCKING - includes T029a for test database setup, T017a for rate limiting test, excludes API key management moved to US5)  
-**User Story 1 (P1 - MVP)**: 33 tasks (10 tests + 23 implementation - added T038a, T038b, T044a, T054c)  
+**Foundational**: 27 tasks (BLOCKING - includes T029a for test database setup, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, excludes API key management moved to US5)  
+**User Story 1 (P1 - MVP)**: 34 tasks (10 tests + 24 implementation - added T038a, T038b, T044a, T054c, T054d)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 23 tasks (9 tests + 14 implementation - added T087a, supplementary invoices moved to US5, removed T119 duplicate)  
 **User Story 4 (P4)**: 20 tasks (6 tests + 14 implementation - removed T119 moved to US1 as T044a)  
@@ -524,7 +527,7 @@ Each story can progress independently, then integrate at the end.
 
 **Parallel Opportunities**: ~70 tasks can run in parallel (marked with [P])
 
-**MVP Scope** (User Story 1 only): 62 tasks (Setup + Foundational + US1)
+**MVP Scope** (User Story 1 only): 67 tasks (Setup + Foundational + US1)
 
 **Estimated Effort**:
 
