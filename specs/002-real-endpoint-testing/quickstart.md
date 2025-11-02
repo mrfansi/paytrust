@@ -506,7 +506,145 @@ async fn test_invoice_persisted() {
 
 ---
 
-## 10. Next Steps
+## 10. Parallel Test Execution & Data Isolation
+
+### Running Tests in Parallel
+
+By default, Cargo runs tests in parallel. You can control the level of parallelism:
+
+```bash
+# Use default parallelism (recommended)
+cargo test
+
+# Control number of parallel threads
+cargo test -- --test-threads=4
+
+# Run tests serially (for debugging)
+cargo test -- --test-threads=1
+```
+
+### Data Isolation Best Practices
+
+To ensure tests don't conflict when running in parallel:
+
+#### 1. Use UUID-Based Unique Identifiers
+
+```rust
+use uuid::Uuid;
+
+fn generate_test_id(prefix: &str) -> String {
+    format!("{}_{}", prefix, Uuid::new_v4())
+}
+
+#[actix_web::test]
+async fn test_invoice_creation() {
+    // Generate unique ID for this test run
+    let external_id = generate_test_id("INV");  // "INV_550e8400-e29b..."
+
+    // No conflicts with other parallel tests!
+}
+```
+
+#### 2. Use Transaction-Based Isolation
+
+```rust
+use tests::helpers::test_database::with_transaction;
+
+#[tokio::test]
+async fn test_tax_calculation() {
+    with_transaction(|mut tx| async move {
+        // Insert test data - visible only to this transaction
+        sqlx::query("INSERT INTO tax_rates (id, rate) VALUES (?, ?)")
+            .bind("test-rate")
+            .bind(0.10)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+        // Test logic here...
+
+        // Transaction rolls back automatically - no cleanup!
+    }).await;
+}
+```
+
+#### 3. Seed Isolated Test Data
+
+```rust
+use tests::helpers::test_database::seed_isolated_gateway;
+
+#[actix_web::test]
+async fn test_gateway_payment() {
+    // Create unique gateway for this test
+    let gateway_id = generate_test_id("xendit");
+    seed_isolated_gateway(&gateway_id, "Test Gateway", "xendit").await;
+
+    // Use gateway_id in test...
+}
+```
+
+### Validating Parallel Execution
+
+Run the parallel validation script to ensure tests work correctly in parallel:
+
+```bash
+# Run tests 10 times in parallel and check for conflicts
+./scripts/test_parallel.sh 10
+
+# Use custom thread count
+TEST_THREADS=8 ./scripts/test_parallel.sh 20
+```
+
+**Expected output**:
+
+```
+=== PayTrust Parallel Test Validation ===
+Iterations: 10
+Test Threads: 4
+
+✓ Iteration 1 PASSED
+✓ Iteration 2 PASSED
+...
+✓ Iteration 10 PASSED
+
+=== Test Validation Summary ===
+Total Iterations:  10
+Passed:           10
+Failed:           0
+Pass Rate:        100.0%
+
+Checking for common test data conflicts...
+  ✓ No data conflicts detected
+
+✓✓✓ ALL TESTS PASSED WITH 100% REPEATABILITY ✓✓✓
+Tests are ready for parallel execution in CI/CD
+```
+
+### Common Isolation Issues
+
+**Problem**: `Duplicate entry 'TEST-INV-001' for key 'external_id'`
+
+**Solution**: Replace hardcoded IDs with UUID-based generators:
+
+```rust
+// BAD: Hardcoded ID conflicts in parallel
+let external_id = "TEST-INV-001";
+
+// GOOD: Unique ID for each test run
+let external_id = generate_test_id("INV");
+```
+
+**Problem**: Tests pass individually but fail when run together
+
+**Solution**: Use transaction isolation or unique test data per test.
+
+**Problem**: Database deadlocks during parallel execution
+
+**Solution**: Reduce test threads or use finer-grained transactions.
+
+---
+
+## 11. Next Steps
 
 After tests pass:
 

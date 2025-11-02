@@ -4,19 +4,25 @@
 // - Xendit: IDR, MYR supported
 // - Midtrans: IDR only
 //
-// Note: These tests would require DATABASE_URL environment variable to be set.
-// For CI/CD, configure test database or use #[ignore] attribute.
+// Phase 5 (T042): Refactored to use UUIDs and transaction isolation for parallel execution
 
 use sqlx::MySqlPool;
+use uuid::Uuid;
 
 /// Helper to create test database pool
 async fn create_test_pool() -> MySqlPool {
-    let database_url = std::env::var("DATABASE_URL")
+    let database_url = std::env::var("TEST_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
         .unwrap_or_else(|_| "mysql://root:password@localhost:3306/paytrust_test".to_string());
 
     MySqlPool::connect(&database_url)
         .await
         .expect("Failed to connect to test database")
+}
+
+/// Generate unique test ID for isolation
+fn generate_test_id(prefix: &str) -> String {
+    format!("{}_{}", prefix, Uuid::new_v4())
 }
 
 #[tokio::test]

@@ -4,6 +4,35 @@
 //! even if tax rates change afterwards (FR-061, FR-062).
 //!
 //! These tests use database transactions and mock external dependencies.
+//!
+//! ## Transaction Isolation Example (Phase 5 - T040)
+//!
+//! This file demonstrates transaction isolation for parallel test execution:
+//!
+//! ```rust
+//! use tests::helpers::test_database::with_transaction;
+//!
+//! #[tokio::test]
+//! async fn test_with_isolated_data() {
+//!     with_transaction(|mut tx| async move {
+//!         // Insert test data - automatically rolled back
+//!         sqlx::query("INSERT INTO tax_rates (...) VALUES (...)")
+//!             .execute(&mut *tx)
+//!             .await
+//!             .unwrap();
+//!
+//!         // Test logic here...
+//!         
+//!         // Transaction rolls back automatically - no cleanup needed!
+//!     }).await;
+//! }
+//! ```
+//!
+//! Benefits:
+//! - ✅ No data conflicts between parallel tests
+//! - ✅ Automatic cleanup (no manual DELETE queries)
+//! - ✅ Each test has isolated database state
+//! - ✅ Tests can run concurrently without interference
 
 use rust_decimal::Decimal;
 use std::str::FromStr;

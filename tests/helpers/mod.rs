@@ -117,6 +117,102 @@
 // ### Database:
 // - `create_test_pool()` - Get connection pool to test database
 // - `with_transaction(|tx| {...})` - Run test in auto-rollback transaction
+// - `seed_isolated_gateway(id, name, type)` - Create gateway for single test
+//
+// ## Test Data Isolation for Parallel Execution (Phase 5 - T044)
+//
+// ### Problem: Data Conflicts in Parallel Tests
+//
+// When running tests in parallel, shared test data causes conflicts:
+// ```rust
+// // BAD: Hardcoded IDs conflict when tests run in parallel
+// let invoice_id = "TEST-INV-001";  // Multiple tests use same ID!
+// let gateway_id = "test-gateway";  // Collision!
+// ```
+//
+// ### Solution 1: UUID-Based Unique Identifiers
+//
+// Generate unique IDs for each test run:
+// ```rust
+// use uuid::Uuid;
+//
+// // Generate unique external ID
+// fn generate_test_id(prefix: &str) -> String {
+//     format!("{}_{}", prefix, Uuid::new_v4())
+// }
+//
+// #[actix_web::test]
+// async fn test_invoice_creation() {
+//     let external_id = generate_test_id("INV");  // "INV_550e8400-e29b-41d4-a716-446655440000"
+//     let tx_id = generate_test_id("tx");          // "tx_7c9e6679-7425-40de-944b-e07fc1f90ae7"
+//     
+//     // Each test run has unique IDs - no conflicts!
+// }
+// ```
+//
+// ### Solution 2: Transaction-Based Isolation
+//
+// Use database transactions that auto-rollback:
+// ```rust
+// use tests::helpers::test_database::with_transaction;
+//
+// #[tokio::test]
+// async fn test_with_isolation() {
+//     with_transaction(|mut tx| async move {
+//         // Insert test data - visible only to this transaction
+//         sqlx::query("INSERT INTO tax_rates (id, rate) VALUES (?, ?)")
+//             .bind("test-rate-001")
+//             .bind(0.10)
+//             .execute(&mut *tx)
+//             .await
+//             .unwrap();
+//         
+//         // Query and test
+//         let rate: f64 = sqlx::query_scalar("SELECT rate FROM tax_rates WHERE id = ?")
+//             .bind("test-rate-001")
+//             .fetch_one(&mut *tx)
+//             .await
+//             .unwrap();
+//         
+//         assert_eq!(rate, 0.10);
+//         
+//         // Transaction rolls back automatically - no cleanup needed!
+//         // Other tests won't see this data.
+//     }).await;
+// }
+// ```
+//
+// ### Solution 3: Per-Test Gateway Seeding
+//
+// Seed isolated gateway for each test:
+// ```rust
+// #[actix_web::test]
+// async fn test_gateway_specific() {
+//     // Each test gets its own gateway
+//     let gateway_id = format!("xendit-{}", Uuid::new_v4());
+//     seed_isolated_gateway(&gateway_id, "Test Xendit", "xendit").await;
+//     
+//     // Use gateway in test...
+//     // Other tests won't conflict with this gateway
+// }
+// ```
+//
+// ### Benefits of Isolation:
+//
+// ✅ **No Data Conflicts**: Each test has unique data  
+// ✅ **True Parallel Execution**: Tests run simultaneously without interference  
+// ✅ **No Flaky Tests**: Deterministic behavior every time  
+// ✅ **No Manual Cleanup**: Transactions and UUIDs eliminate cleanup code  
+// ✅ **Faster Test Suite**: Parallel execution reduces total runtime
+//
+// ### Validation:
+//
+// Run parallel test validation script:
+// ```bash
+// ./scripts/test_parallel.sh 10  # Run 10 iterations in parallel
+// ```
+//
+// Expected: 100% pass rate with no data conflicts
 
 pub mod assertions;
 pub mod gateway_sandbox;

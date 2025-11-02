@@ -1,4 +1,6 @@
 // T086: Integration test for sequential installment payment enforcement (FR-068, FR-069, FR-070)
+//
+// Phase 5 (T041): Refactored to use UUIDs and transaction isolation for parallel execution
 
 use paytrust::core::{Currency, Result};
 use paytrust::modules::{
@@ -16,15 +18,22 @@ use paytrust::modules::{
 use rust_decimal::Decimal;
 use sqlx::MySqlPool;
 use std::str::FromStr;
+use uuid::Uuid;
 
 /// Helper to create test database pool
 async fn create_test_pool() -> MySqlPool {
-    let database_url = std::env::var("DATABASE_URL")
+    let database_url = std::env::var("TEST_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
         .unwrap_or_else(|_| "mysql://root:password@localhost:3306/paytrust_test".to_string());
 
     MySqlPool::connect(&database_url)
         .await
         .expect("Failed to connect to test database")
+}
+
+/// Generate unique external ID for test isolation
+fn generate_test_id(prefix: &str) -> String {
+    format!("{}_{}", prefix, Uuid::new_v4())
 }
 
 /// Test that installments must be paid sequentially (FR-068)
@@ -39,7 +48,9 @@ async fn test_sequential_installment_payment_enforcement() -> Result<()> {
     let transaction_repo = TransactionRepository::new(pool.clone());
     let transaction_service = TransactionService::new(transaction_repo, invoice_repo);
 
-    // Create invoice with 3 installments
+    // Create invoice with 3 installments using unique ID for isolation
+    let external_id = generate_test_id("INV-SEQ");
+    
     let line_items = vec![LineItem::new(
         "Test Product".to_string(),
         1,
@@ -54,7 +65,7 @@ async fn test_sequential_installment_payment_enforcement() -> Result<()> {
 
     let invoice = invoice_service
         .create_invoice(
-            "INV-SEQ-001".to_string(),
+            external_id,
             "gateway-xendit".to_string(),
             Currency::USD,
             line_items,
@@ -71,7 +82,7 @@ async fn test_sequential_installment_payment_enforcement() -> Result<()> {
             invoice_id.clone(),
             schedules[1].id.clone(), // Installment #2
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-001".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -86,7 +97,7 @@ async fn test_sequential_installment_payment_enforcement() -> Result<()> {
             invoice_id.clone(),
             schedules[0].id.clone(), // Installment #1
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-002".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -98,7 +109,7 @@ async fn test_sequential_installment_payment_enforcement() -> Result<()> {
             invoice_id.clone(),
             schedules[1].id.clone(), // Installment #2
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-003".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -137,7 +148,7 @@ async fn test_cannot_skip_installments() -> Result<()> {
 
     let invoice = invoice_service
         .create_invoice(
-            "INV-SKIP-001".to_string(),
+            generate_test_id("INV-SKIP"),
             "gateway-xendit".to_string(),
             Currency::USD,
             line_items,
@@ -154,7 +165,7 @@ async fn test_cannot_skip_installments() -> Result<()> {
             invoice_id.clone(),
             schedules[0].id.clone(),
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-004".to_string(),
+            generate_test_id("tx"),
         )
         .await?;
 
@@ -164,7 +175,7 @@ async fn test_cannot_skip_installments() -> Result<()> {
             invoice_id.clone(),
             schedules[2].id.clone(), // Installment #3
             Decimal::from_str("110.00").unwrap(),
-            "gateway-tx-005".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -179,7 +190,7 @@ async fn test_cannot_skip_installments() -> Result<()> {
             invoice_id.clone(),
             schedules[3].id.clone(), // Installment #4
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-006".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -218,7 +229,7 @@ async fn test_partial_payment_allows_next_installment() -> Result<()> {
 
     let invoice = invoice_service
         .create_invoice(
-            "INV-PARTIAL-001".to_string(),
+            generate_test_id("INV-PARTIAL"),
             "gateway-xendit".to_string(),
             Currency::USD,
             line_items,
@@ -236,7 +247,7 @@ async fn test_partial_payment_allows_next_installment() -> Result<()> {
             invoice_id.clone(),
             schedules[0].id.clone(),
             partial_payment,
-            "gateway-tx-007".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -257,7 +268,7 @@ async fn test_partial_payment_allows_next_installment() -> Result<()> {
             invoice_id.clone(),
             schedules[1].id.clone(),
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-008".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -273,7 +284,7 @@ async fn test_partial_payment_allows_next_installment() -> Result<()> {
             invoice_id.clone(),
             schedules[0].id.clone(),
             remaining_payment,
-            "gateway-tx-009".to_string(),
+            generate_test_id("tx"),
         )
         .await?;
 
@@ -283,7 +294,7 @@ async fn test_partial_payment_allows_next_installment() -> Result<()> {
             invoice_id.clone(),
             schedules[1].id.clone(),
             Decimal::from_str("100.00").unwrap(),
-            "gateway-tx-010".to_string(),
+            generate_test_id("tx"),
         )
         .await;
 
@@ -322,7 +333,7 @@ async fn test_complete_sequential_payment_flow() -> Result<()> {
 
     let invoice = invoice_service
         .create_invoice(
-            "INV-COMPLETE-001".to_string(),
+            generate_test_id("INV-COMPLETE"),
             "gateway-xendit".to_string(),
             Currency::USD,
             line_items,
@@ -340,7 +351,7 @@ async fn test_complete_sequential_payment_flow() -> Result<()> {
                 invoice_id.clone(),
                 schedule.id.clone(),
                 schedule.amount,
-                format!("gateway-tx-{}", 100 + i),
+                generate_test_id("tx"),
             )
             .await;
 
