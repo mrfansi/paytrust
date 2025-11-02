@@ -58,7 +58,7 @@
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
 - [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041)
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040) - depends on T017a passing. Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. **CONSTRAINT**: Single-instance in-memory implementation only per NFR-009; multi-instance horizontal scaling requires Redis-backed distributed rate limiting (future enhancement per plan.md:L23)
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs) - depends on T017a passing. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -83,6 +83,7 @@
 
 - [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
 - [ ] T029b **[CONSTITUTION CRITICAL]** Audit all integration test tasks (T036-T038, T063-T065, T086-T087, T109-T110) for Constitution III compliance after implementation - verify all tests use real MySQL connections from T029a, no mocks/stubs present in integration tests. Mark complete only after manual code review confirms compliance. This is a validation checkpoint, not implementation task
+- [ ] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
 
 ### Application Entry Point
 

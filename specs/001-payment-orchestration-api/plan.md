@@ -20,7 +20,7 @@ PayTrust is a payment orchestration platform that unifies multiple payment gatew
 **Performance Goals**: <2s API response time for invoice creation, 100 concurrent requests, 10k invoices/day  
 **Constraints**: <200ms p95 latency, 99.5% uptime, accurate to smallest currency unit (1 IDR, 0.01 MYR/USD)  
 **Scale/Scope**: Multi-tenant API serving developers, support for 2 payment gateways (Xendit/Midtrans), 3 currencies (IDR/MYR/USD), webhook processing within 5 seconds  
-**Rate Limiting Strategy**: In-memory governor crate for single-instance deployment (1000 req/min per API key); Redis-backed rate limiting required for multi-instance horizontal scaling (future enhancement)
+**Rate Limiting Strategy**: Trait-based abstraction (RateLimiter trait in contracts/rate_limiter_trait.rs) with pluggable backends per Constitution Principle II (Open/Closed). v1.0 uses InMemoryRateLimiter with governor crate for single-instance deployment (1000 req/min per API key). Multi-instance horizontal scaling requires RedisRateLimiter implementation (future enhancement). Architecture decision: Single-instance v1.0 is deliberate design choice for MVP simplicity, not technical limitation - system designed for extensibility
 
 ## Constitution Check
 
