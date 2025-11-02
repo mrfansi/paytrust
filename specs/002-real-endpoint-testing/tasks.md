@@ -20,12 +20,12 @@
 
 **Purpose**: Project initialization and dependency configuration
 
-- [ ] T001 Update Cargo.toml - add actix-test = "0.1" to [dev-dependencies]
-- [ ] T002 Update Cargo.toml - remove mockito = "1.5" from [dev-dependencies]
-- [ ] T003 [P] Create config/.env.test.example with test environment variables template
-- [ ] T004 [P] Update config/.env.example - add test configuration section comment
-- [ ] T005 [P] Create scripts/setup_test_db.sh - automated test database creation and migration script
-- [ ] T006 Verify project builds with new dependencies via cargo build
+- [x] T001 Update Cargo.toml - add actix-test = "0.1" to [dev-dependencies]
+- [x] T002 Update Cargo.toml - remove mockito = "1.5" from [dev-dependencies]
+- [x] T003 [P] Create config/.env.test.example with test environment variables template
+- [x] T004 [P] Update config/.env.example - add test configuration section comment
+- [x] T005 [P] Create scripts/setup_test_db.sh - automated test database creation and migration script
+- [x] T006 Verify project builds with new dependencies via cargo build
 
 ---
 
@@ -37,18 +37,18 @@
 
 **TDD Note**: Test refactoring tasks implicitly follow TDD workflow (Constitution Principle III) - each refactor verifies old test behavior fails with new requirements → implements new helper → verifies new test passes. For test infrastructure code (helpers), the refactored integration tests serve as the acceptance tests.
 
-- [ ] T007 Create tests/helpers/mod.rs - public exports for all test helper modules
-- [ ] T008 [P] Implement tests/helpers/test_database.rs - create_test_pool() function per contract
-- [ ] T009 [P] Implement tests/helpers/test_database.rs - with_transaction() function per contract
-- [ ] T010 [P] Implement tests/helpers/test_server.rs - spawn_test_server() function per contract
-- [ ] T011 [P] Implement tests/helpers/test_data.rs - TestDataFactory::random_external_id() per contract
-- [ ] T012 [P] Implement tests/helpers/test_data.rs - TestDataFactory::create_invoice_payload() per contract
-- [ ] T013 [P] Implement tests/helpers/assertions.rs - assert_success(), assert_created(), assert_bad_request() functions
-- [ ] T014 Update src/lib.rs - export test helpers for use in tests (pub mod if needed)
-- [ ] T015 Verify test helpers compile via cargo test --lib --no-run
-- [ ] T015a [P] Add error handling to tests/helpers/test_database.rs - connection failure, timeout, invalid credentials with clear error messages
-- [ ] T015b [P] Add error handling to tests/helpers/test_server.rs - port already in use, bind failure, server startup timeout
-- [ ] T015c [P] Add error handling to tests/helpers/test_client.rs - network timeout, connection refused, invalid response handling
+- [x] T007 Create tests/helpers/mod.rs - public exports for all test helper modules
+- [x] T008 [P] Implement tests/helpers/test_database.rs - create_test_pool() function per contract
+- [x] T009 [P] Implement tests/helpers/test_database.rs - with_transaction() function per contract
+- [x] T010 [P] Implement tests/helpers/test_server.rs - spawn_test_server() function per contract
+- [x] T011 [P] Implement tests/helpers/test_data.rs - TestDataFactory::random_external_id() per contract
+- [x] T012 [P] Implement tests/helpers/test_data.rs - TestDataFactory::create_invoice_payload() per contract
+- [x] T013 [P] Implement tests/helpers/assertions.rs - assert_success(), assert_created(), assert_bad_request() functions
+- [x] T014 Update src/lib.rs - export test helpers for use in tests (pub mod if needed)
+- [x] T015 Verify test helpers compile via cargo test --lib --no-run
+- [x] T015a [P] Add error handling to tests/helpers/test_database.rs - connection failure, timeout, invalid credentials with clear error messages
+- [x] T015b [P] Add error handling to tests/helpers/test_server.rs - port already in use, bind failure, server startup timeout
+- [x] T015c [P] Add error handling to tests/helpers/test_client.rs - network timeout, connection refused, invalid response handling
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
