@@ -20,12 +20,12 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
-- [ ] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
-- [ ] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
-- [ ] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
-- [ ] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
-- [ ] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
+- [X] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
+- [X] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
+- [X] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
+- [X] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
+- [X] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
+- [X] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
 
 **Checkpoint**: ✅ Project structure ready for foundational development
 
