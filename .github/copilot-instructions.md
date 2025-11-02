@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-11-01
 
 ## Active Technologies
+- Rust 1.91.0 with 2021 edition + actix-web 4.9, actix-test (to be added), tokio 1.40, sqlx 0.8, reqwest 0.12 (002-real-endpoint-testing)
+- MySQL 8.0+ test database (paytrust_test) (002-real-endpoint-testing)
 
 - Rust 1.91.0+ (stable Nov 2025) with 2021 edition features (001-payment-orchestration-api)
 - MySQL 8.0+ with InnoDB storage engine (001-payment-orchestration-api)
@@ -83,6 +85,7 @@ cargo build --release
 Rust 1.75+ with 2021 edition features: Follow standard conventions
 
 ## Recent Changes
+- 002-real-endpoint-testing: Added Rust 1.91.0 with 2021 edition + actix-web 4.9, actix-test (to be added), tokio 1.40, sqlx 0.8, reqwest 0.12
 
 - 001-payment-orchestration-api: Added Rust 1.75+ with 2021 edition features
 
