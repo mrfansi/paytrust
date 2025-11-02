@@ -3,13 +3,175 @@
 **Last Updated**: 2025-11-02  
 **Version**: 0.1.0
 
+## Deployment Options
+
+1. **Docker Deployment** (Recommended) - Containerized deployment with Docker Compose
+2. **Manual Deployment** - Traditional systemd service on Linux server
+
 ## Prerequisites
+
+### Docker Deployment
+
+- Docker 20.10+ installed
+- Docker Compose 2.0+ installed
+- 4GB RAM minimum
+- 20GB disk space
+
+### Manual Deployment
 
 - Linux server (Ubuntu 22.04+ or similar)
 - MySQL 8.0+ installed and running
 - Rust 1.91.0+ (for building from source)
 - TLS certificates (Let's Encrypt recommended)
 - Root or sudo access for initial setup
+
+---
+
+## Option 1: Docker Deployment (Recommended)
+
+### Quick Start with Docker Compose
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd paytrust
+
+# Copy and configure environment
+cp .env.docker .env
+nano .env  # Edit with your configuration
+
+# Build and start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f paytrust
+
+# Check health
+curl http://localhost:8080/health
+```
+
+### Docker Environment Configuration
+
+Edit `.env` file with your settings:
+
+```env
+# Database Configuration
+DB_ROOT_PASSWORD=your_strong_root_password
+DB_DATABASE=paytrust
+DB_USER=paytrust
+DB_PASSWORD=your_strong_password
+DB_PORT=3306
+DB_POOL_SIZE=10
+
+# API Configuration
+API_PORT=8080
+RUST_LOG=paytrust=info,actix_web=info
+
+# Security
+API_KEY_SALT=your_random_64_char_string
+
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=1000
+
+# Xendit Gateway (Production)
+XENDIT_API_KEY=xnd_production_your_key_here
+XENDIT_WEBHOOK_SECRET=your_xendit_webhook_secret
+
+# Midtrans Gateway (Production)
+MIDTRANS_SERVER_KEY=your_midtrans_server_key
+MIDTRANS_CLIENT_KEY=your_midtrans_client_key
+MIDTRANS_WEBHOOK_SECRET=your_midtrans_webhook_secret
+```
+
+### Docker Commands
+
+```bash
+# Start services
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f paytrust
+docker-compose logs -f mysql
+
+# Restart services
+docker-compose restart paytrust
+
+# Rebuild after code changes
+docker-compose build paytrust
+docker-compose up -d paytrust
+
+# Run database migrations
+docker-compose exec paytrust ./paytrust migrate
+
+# Access MySQL shell
+docker-compose exec mysql mysql -u paytrust -p paytrust
+
+# Check service health
+docker-compose ps
+curl http://localhost:8080/health
+curl http://localhost:8080/ready
+```
+
+### Docker Production Deployment
+
+For production with Docker:
+
+```bash
+# Use production Docker Compose override
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# With custom environment file
+docker-compose --env-file .env.production up -d
+
+# Scale application (if using orchestrator)
+docker-compose up -d --scale paytrust=3
+```
+
+### Docker Data Persistence
+
+Data is stored in named volumes:
+
+- `mysql_data`: Database files (persistent)
+
+To backup database:
+
+```bash
+# Export database backup
+docker-compose exec mysql mysqldump -u paytrust -p paytrust > backup.sql
+
+# Restore from backup
+docker-compose exec -T mysql mysql -u paytrust -p paytrust < backup.sql
+```
+
+### Docker Security Best Practices
+
+1. **Use secrets for sensitive data**:
+
+```yaml
+# docker-compose.override.yml
+services:
+  paytrust:
+    secrets:
+      - xendit_key
+      - midtrans_key
+secrets:
+  xendit_key:
+    file: ./secrets/xendit_key.txt
+  midtrans_key:
+    file: ./secrets/midtrans_key.txt
+```
+
+2. **Use Docker secrets instead of environment variables**
+3. **Run containers as non-root user** (already configured)
+4. **Keep base images updated**: `docker-compose pull && docker-compose up -d`
+5. **Scan images for vulnerabilities**: `docker scan paytrust:latest`
+
+---
+
+## Option 2: Manual Deployment
 
 ## Production Deployment
 

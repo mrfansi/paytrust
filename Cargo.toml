@@ -157,6 +157,11 @@ path = "tests/performance/invoice_creation_performance_test.rs"
 name = "metrics_collection_test"
 path = "tests/integration/metrics_collection_test.rs"
 
+# Load tests
+[[test]]
+name = "load_test"
+path = "tests/performance/load_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

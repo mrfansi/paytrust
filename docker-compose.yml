@@ -1,0 +1,76 @@
+version: "3.8"
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: paytrust_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      MYSQL_DATABASE: ${DB_DATABASE:-paytrust}
+      MYSQL_USER: ${DB_USER:-paytrust}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-paytrust_secret}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paytrust_network
+
+  # PayTrust API
+  paytrust:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paytrust_api
+    environment:
+      # Server Configuration
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      RUST_LOG: ${RUST_LOG:-paytrust=info,actix_web=info}
+
+      # Database Configuration
+      DATABASE_URL: mysql://${DB_USER:-paytrust}:${DB_PASSWORD:-paytrust_secret}@mysql:3306/${DB_DATABASE:-paytrust}
+      DATABASE_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DATABASE_MAX_LIFETIME: ${DB_MAX_LIFETIME:-1800}
+
+      # Security Configuration
+      API_KEY_SALT: ${API_KEY_SALT:-change_this_in_production}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-1000}
+
+      # Gateway Configuration (Xendit)
+      XENDIT_API_KEY: ${XENDIT_API_KEY}
+      XENDIT_WEBHOOK_SECRET: ${XENDIT_WEBHOOK_SECRET}
+
+      # Gateway Configuration (Midtrans)
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY}
+      MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY}
+      MIDTRANS_WEBHOOK_SECRET: ${MIDTRANS_WEBHOOK_SECRET}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - paytrust_network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  paytrust_network:
+    driver: bridge
