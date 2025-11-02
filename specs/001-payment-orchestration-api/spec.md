@@ -208,27 +208,24 @@ A developer manages API keys for authentication and creates supplementary invoic
 
 - **FR-001**: System MUST create invoices with multiple line items, each containing product name, quantity, unit price, and subtotal
 - **FR-002**: System MUST support three currencies: IDR (Indonesian Rupiah), MYR (Malaysian Ringgit), and USD (US Dollar)
-- **FR-003**: System MUST integrate with Xendit and Midtrans payment gateways for payment processing
+- **FR-003**: System MUST integrate with Xendit and Midtrans gateways for payment processing
 - **FR-004**: System MUST generate unique invoice IDs for tracking and reference
 - **FR-005**: System MUST calculate invoice subtotal by summing all line item totals (quantity × unit price)
 - **FR-006**: System MUST provide RESTful API endpoints for all payment operations
 - **FR-007**: System MUST allow developers to specify preferred payment gateway (Xendit or Midtrans) per invoice at creation time via gateway_id parameter (integer foreign key to gateway_configs table) in POST /invoices request body
 - **FR-046**: System MUST validate that the selected gateway supports the invoice currency before processing
-- **FR-051**: System MUST make invoices immutable (read-only) once payment is initiated - no modifications to line items, amounts, or financial data allowed (exception: unpaid installment amounts can be adjusted per FR-077)
-- **FR-052**: System MUST reject modification requests for invoices with status other than "draft" with 400 Bad Request and appropriate error message (exception: unpaid installment schedule adjustments allowed)
-- **FR-081**: System MUST reject attempts to add or remove line items from invoices after payment is initiated
-- **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle, with validation: supplementary invoice MUST reference valid parent invoice_id, inherit currency and gateway from parent invoice, and maintain separate payment schedule
+- **FR-046a**: System MUST define gateway_configs table primary key as BIGINT UNSIGNED AUTO_INCREMENT for gateway_id references (see data-model.md for complete schema)
+- **FR-051**: System MUST make invoices immutable (read-only) once payment is initiated (when payment_initiated_at timestamp is set per FR-085), enforcing the following restrictions: (a) reject line item additions or removals with 400 Bad Request and error "Cannot modify line items after payment initiated", (b) reject modifications to invoice amounts, currency, or gateway assignment with 400 Bad Request, (c) reject modifications to paid installment amounts with 400 Bad Request, (d) EXCEPTION: unpaid installment amounts can be adjusted per FR-077 while maintaining total remaining balance
+- **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle, with validation: (a) supplementary invoice MUST reference valid parent invoice_id, (b) parent invoice MUST exist and be in status: draft, pending, partially_paid, or paid (reject if parent is expired, cancelled, or failed with 400 Bad Request "Cannot create supplementary invoice for {status} parent invoice"), (c) parent invoice MUST NOT itself be a supplementary invoice (prevent chaining, reject with 400 Bad Request "Cannot create supplementary invoice from another supplementary invoice"), (d) inherit currency and gateway from parent invoice, (e) maintain separate payment schedule and installment configuration
 - **FR-044**: System MUST set default invoice expiration to 24 hours from creation unless explicitly configured otherwise
-- **FR-044a**: System MUST accept optional expires_at parameter (ISO 8601 timestamp) in invoice creation request with validation: maximum 30 days from creation timestamp, minimum 1 hour from creation timestamp, reject requests with expires_at in the past or outside allowed range with 400 Bad Request
+- **FR-044a**: System MUST accept optional expires_at parameter (ISO 8601 timestamp) in invoice creation request with validation: (a) maximum 30 days from creation timestamp, (b) minimum 1 hour from creation timestamp, (c) reject requests with expires_at in the past with 400 Bad Request "Expiration time cannot be in the past", (d) reject requests outside allowed range with 400 Bad Request "Expiration must be between 1 hour and 30 days from now", (e) if invoice has installments, expires_at MUST be >= last installment due_date (reject with 400 Bad Request "Invoice expiration cannot occur before final installment due date" if violated)
 - **FR-045**: System MUST automatically mark invoices as "expired" when expiration time is reached and payment is not completed
 
 #### Additional Charges
 
 - **FR-008**: System MUST allow configuring tax rates as percentages applied to invoice subtotal
-- **FR-009**: System MUST calculate service fees using the formula: (subtotal × percentage) + fixed_amount, where both percentage and fixed amount are gateway-specific
-- **FR-047**: System MUST calculate service fee percentage component before adding fixed amount (industry standard order of operations)
-- **FR-055**: System MUST calculate tax on subtotal only, excluding service fees from tax base
-- **FR-056**: System MUST calculate total amount using formula: Total = Subtotal + (Subtotal × Tax%) + Service Fee
+- **FR-009**: System MUST calculate service fees using the formula: (subtotal × percentage) + fixed_amount, where both percentage and fixed amount are gateway-specific (percentage component calculated before adding fixed amount per industry standard)
+- **FR-056**: System MUST calculate total amount using formula: Total = Subtotal + (Subtotal × Tax%) + Service Fee, where tax is calculated on subtotal only (excluding service fees from tax base)
 - **FR-057**: System MUST support per-line-item tax rates, allowing each line item to have its own tax rate or category
 - **FR-058**: System MUST calculate tax per line item as (line_item_subtotal × line_item_tax_rate), then sum all line item taxes for invoice total tax
 - **FR-010**: System MUST add tax and service fees to subtotal to calculate final payable amount
@@ -249,6 +246,8 @@ A developer manages API keys for authentication and creates supplementary invoic
 - **FR-079**: System MUST validate that sum of unpaid installment adjustments equals remaining balance (total - paid amount)
 - **FR-080**: System MUST recalculate proportional tax and service fee distribution for adjusted unpaid installments
 - **FR-065**: System MUST treat each installment as an independent single payment transaction to the payment gateway, generating separate payment URLs/references for each installment while maintaining internal tracking of installment relationships and schedule independently from gateway (PayTrust-managed installments, not gateway-native)
+- **FR-066**: System MUST generate unique payment URLs for each installment using gateway-specific APIs (Xendit: POST /v2/invoices, Midtrans: POST /v2/charge), with installment number and invoice reference in payment description/metadata
+- **FR-067**: System MUST map each payment_transaction record to its corresponding installment_schedule record via installment_id foreign key, enabling tracking of which gateway transaction paid which installment
 - **FR-068**: System MUST enforce sequential installment payment order (installment N can only be paid after installment N-1 is completed)
 - **FR-069**: System MUST only generate/activate payment URL for the next unpaid installment in sequence
 - **FR-070**: System MUST reject payment attempts for out-of-sequence installments with appropriate error message
@@ -259,7 +258,7 @@ A developer manages API keys for authentication and creates supplementary invoic
 - **FR-073**: System MUST accept overpayment on individual installments (payment amount exceeds installment amount)
 - **FR-074**: System MUST automatically apply excess payment amount sequentially to remaining unpaid installments in order
 - **FR-075**: System MUST mark installments as "paid" when covered by excess payment application
-- **FR-076**: System MUST mark entire invoice as "fully paid" if total payment received equals or exceeds invoice total, regardless of installment distribution
+- **FR-076**: System MUST mark entire invoice as "fully paid" if total payment received equals or exceeds invoice total, regardless of installment distribution. If overpayment exceeds total invoice amount, store excess in payment_transactions.overpayment_amount field (DECIMAL(19,4)) and provide GET /invoices/{id}/overpayment endpoint returning {invoice_id, total_amount, total_paid, overpayment_amount} for refund processing
 - **FR-018**: System MUST track payment status for each installment separately
 - **FR-019**: System MUST update invoice status to "partially paid" after first installment payment
 - **FR-020**: System MUST mark invoice as "fully paid" only after all installments are completed
@@ -276,13 +275,13 @@ A developer manages API keys for authentication and creates supplementary invoic
 
 #### Transaction Management
 
-- **FR-028**: System MUST receive and process webhook notifications from payment gateways, update invoice status based on gateway responses (pending, paid, failed, expired), and store complete transaction history including timestamps, amounts, and gateway responses
+- **FR-028**: System MUST receive and process webhook notifications from gateways, update invoice status based on gateway responses (pending, paid, failed, expired), and store complete transaction history including timestamps, amounts, and gateway responses
 - **FR-031**: System MUST provide API endpoints to query invoice status and payment history
 - **FR-032**: System MUST handle idempotent payment requests to prevent duplicate charges
 - **FR-038**: System MUST return descriptive error responses when payment gateway is unavailable, including gateway name and error type
 - **FR-039**: System MUST NOT automatically retry failed payment gateway requests - developers must explicitly retry with idempotency
-- **FR-042**: System MUST retry failed webhook processing 3 times using fixed intervals at cumulative delays from initial failure: retry 1 at T+1min, retry 2 at T+6min, retry 3 at T+36min (total retry window: 36 minutes)
-- **FR-043**: System MUST log all webhook retry attempts with timestamps and final status (success/failed after retries)
+- **FR-042**: System MUST retry failed webhook processing 3 times using fixed intervals at cumulative delays from initial failure (T=0): retry 1 at T+1 minute (1 minute after initial failure), retry 2 at T+6 minutes (6 minutes after initial failure, 5 minutes after retry 1), retry 3 at T+36 minutes (36 minutes after initial failure, 30 minutes after retry 2). After all 3 retries fail, mark webhook as permanently failed, log error with CRITICAL level, and expose failed webhooks via GET /webhooks/failed endpoint for manual intervention
+- **FR-043**: System MUST log all webhook retry attempts with timestamps, attempt number, and final status (success/failed after retries) to webhook_retry_log table for audit trail
 - **FR-048**: System MUST accept partial payments (underpayment or overpayment) and mark invoice as "partially paid"
 - **FR-049**: System MUST store payment amount received, invoice total, and difference (positive for overpayment, negative for underpayment)
 - **FR-050**: System MUST provide API endpoint for developers to query payment discrepancies and handle reconciliation
@@ -295,19 +294,20 @@ A developer manages API keys for authentication and creates supplementary invoic
 - **FR-036**: System MUST return appropriate HTTP status codes and error messages for all API operations
 - **FR-037**: System MUST reject requests with missing or invalid API keys with 401 Unauthorized status
 - **FR-083**: System MUST provide API endpoints for generating, rotating, and revoking API keys with audit logging (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id}), using argon2 hashing algorithm for secure key storage
-- **FR-084**: System MUST authenticate API key management endpoints (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id}) using master admin API key separate from regular API keys, loaded from ADMIN_API_KEY environment variable, with 401 Unauthorized response for missing or invalid admin key
+- **FR-084**: System MUST authenticate API key management endpoints (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id}) using master admin API key separate from regular API keys, loaded from ADMIN_API_KEY environment variable at startup with validation (reject startup if missing or empty), with 401 Unauthorized response for missing or invalid admin key in request X-Admin-Key header
 - **FR-085**: System MUST set payment_initiated_at timestamp on Invoice entity when first payment attempt is made (payment transaction created or gateway payment URL requested), and use this timestamp to enforce invoice immutability per FR-051 (reject modifications when payment_initiated_at IS NOT NULL)
 - **FR-040**: System MUST enforce rate limiting of 1000 requests per minute per API key
 - **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
 - **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
 - **FR-062**: System MUST use locked tax rates for all payment calculations regardless of external tax rate changes
-- **FR-053**: System MUST implement pessimistic locking for invoice payment processing using MySQL SELECT FOR UPDATE with row-level locks, 5-second lock timeout, and automatic deadlock retry (maximum 3 retry attempts with 100ms exponential backoff)
-- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests when lock cannot be acquired within timeout period
+- **FR-053**: System MUST implement pessimistic locking for invoice payment processing using MySQL SELECT FOR UPDATE with row-level locks and automatic deadlock retry. Lock timeout is 5 seconds per attempt. Retry logic: maximum 3 attempts with 100ms exponential backoff between attempts (attempt 1: 5s timeout, 100ms delay, attempt 2: 5s timeout, 200ms delay, attempt 3: 5s timeout). Total maximum retry window: ~15.3 seconds (3 × 5s + 0.1s + 0.2s)
+- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests when lock cannot be acquired within timeout period after all retry attempts exhausted
 
 ### Non-Functional Requirements
 
 - **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation, measured using k6 load testing tool against test environment with minimum hardware specification: 4 vCPU cores (2.5GHz+ clock speed), 8GB DDR4 RAM, MySQL 8.0 on dedicated database server with SSD storage (minimum 1000 IOPS, 100GB capacity) (this represents minimum production deployment configuration, not recommended specification)
-- **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes, measured using k6 load testing tool with concurrent virtual users maintaining steady request rate (as defined in SC-005)
+- **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes, measured using k6 load testing tool with concurrent virtual users maintaining steady request rate on same minimum hardware specification as NFR-001 (4 vCPU, 8GB RAM, MySQL 8.0 on dedicated SSD server) (as defined in SC-005)
+- **NFR-008**: System MUST provide test database infrastructure with connection pooling, migration runner, test fixtures, and cleanup utilities for integration tests per Constitution Principle III requirement for real database testing (no mocks/stubs for production validation)
 - **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation defined as: sustained error rate >50% measured in 1-minute intervals within any consecutive 5-minute window counts as downtime for that period; error rate ≤50% is considered operational)
 - **NFR-004**: Payment webhook processing MUST complete within 5 seconds at 95th percentile with 99% success rate (as measured in SC-004), with retry logic per FR-042 for failures
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
@@ -327,7 +327,7 @@ A developer manages API keys for authentication and creates supplementary invoic
 
 ### Assumptions
 
-- Payment gateways (Xendit and Midtrans) provide webhook notifications for payment status updates
+- Gateways (Xendit and Midtrans) provide webhook notifications for payment status updates
 - API consumers (developers) handle user-facing payment UI using gateway-provided payment URLs
 - Each API key represents a separate developer/merchant tenant with isolated data access (multi-tenant architecture with tenant_id derived from API key)
 - Exchange rates between currencies are NOT handled by this system - each currency operates independently
@@ -345,13 +345,13 @@ A developer manages API keys for authentication and creates supplementary invoic
 ### Measurable Outcomes
 
 - **SC-001**: Developers can create a complete invoice with line items and process payment in under 3 minutes using API documentation (measured from reading documentation to receiving webhook payment confirmation, including first API call to final webhook receipt)
-- **SC-002**: System successfully processes 95% of payment transactions without errors or failures (user input errors defined as 400-level HTTP responses for validation failures; all 500-level responses and gateway timeout errors count toward failure rate)
+- **SC-002**: System successfully processes 95% of payment transactions without errors or failures. Failure rate calculation: 500-level responses and gateway timeout errors count as failures. Excluded from failure rate: 400 Bad Request (validation errors), 422 Unprocessable Entity (business rule violations), 401 Unauthorized (authentication failures), 403 Forbidden (authorization failures), 404 Not Found (valid responses to invalid resource requests)
 - **SC-003**: Financial reports accurately reflect 100% of service fees and taxes within 1 hour of transaction completion
 - **SC-004**: Payment gateway webhook notifications are processed within 5 seconds with 99% success rate
 - **SC-005**: API response times remain under 2 seconds for 95% of requests under sustained load (100 concurrent requests maintained for 5 minutes)
 - **SC-006**: Zero currency mismatch errors occur due to payment isolation architecture
 - **SC-007**: Installment payment calculations maintain accuracy with zero discrepancy between scheduled total and invoice amount
-- **SC-008**: System handles 10,000 invoices per day across all currencies without performance degradation (distributed throughout business hours with peak of 500 invoices/hour)
+- **SC-008**: System handles 10,000 invoices per day system-wide across all tenants and currencies without performance degradation (distributed throughout business hours with sustained peak of 500 invoices/hour, not burst). Individual tenant limits enforced via rate limiting: 1000 invoices/day per API key, 100 invoices/hour per API key
 - **SC-009**: Developers successfully integrate payment flows with less than 5 API calls per transaction
 - **SC-010**: 90% of payment status updates are reflected in real-time (within 10 seconds of gateway notification)
 - **SC-011**: API key rotation completes within 2 seconds with zero downtime for active requests using old key during rotation window

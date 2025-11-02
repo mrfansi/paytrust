@@ -55,7 +55,8 @@
 ### Middleware & Security
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
+- [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041)
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040) - depends on T017a passing
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -105,6 +106,8 @@
 - [ ] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
 - [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
 - [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
+- [ ] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/invoice_expiration_test.rs` (verify max 30 days, min 1 hour, reject past dates, reject if < last installment due_date per FR-044a)
+- [ ] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-085)
 
 ### Implementation for User Story 1
 
@@ -113,7 +116,7 @@
 - [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
 - [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
 - [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration with optional expires_at parameter per FR-044a with validation: max 30 days, min 1 hour, reject past dates or out-of-range with 400 Bad Request, set payment_initiated_at timestamp on first payment attempt per FR-085)
+- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration with optional expires_at parameter per FR-044a with validation: max 30 days from creation, min 1 hour from creation, reject past dates with 400 "Expiration time cannot be in the past", reject out-of-range with 400 "Expiration must be between 1 hour and 30 days from now", if invoice has installments validate expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date", set payment_initiated_at timestamp on first payment attempt per FR-085)
 - [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
 
@@ -129,7 +132,7 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure: retry 1 at T+1min, retry 2 at T+6min, retry 3 at T+36min (FR-042, FR-043), after 3 retries mark webhook as permanently failed and log error for manual intervention
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level, expose via GET /webhooks/failed endpoint for manual intervention per FR-042. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
@@ -206,6 +209,7 @@
 - [ ] T085 [P] [US3] Contract test for PATCH /invoices/{id}/installments endpoint in `tests/contract/installment_api_test.rs`
 - [ ] T086 [P] [US3] Integration test for sequential installment payment enforcement in `tests/integration/installment_flow_test.rs` (FR-068, FR-069, FR-070)
 - [ ] T087 [P] [US3] Integration test for installment adjustment after first payment in `tests/integration/installment_adjustment_test.rs` (FR-077, FR-078, FR-079, FR-080)
+- [ ] T087a [P] [US3] Integration test for installment status transitions in `tests/integration/installment_status_test.rs` (verify status transitions: draft→pending→partially_paid→fully_paid at each installment payment per FR-019, FR-020)
 
 ### Implementation for User Story 3
 
@@ -225,7 +229,7 @@
 
 **Gateway Integration**
 
-- [ ] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065, FR-066, FR-067)
+- [ ] T096 [US3] Update GatewayService to create separate payment transactions per installment (FR-065) and generate unique payment URLs per installment using gateway-specific APIs with installment number and invoice reference in metadata (FR-066), map each payment_transaction to installment_schedule via installment_id foreign key (FR-067)
 - [ ] T097 [US3] Update Xendit client to generate installment-specific payment URLs
 - [ ] T098 [US3] Update Midtrans client to generate installment-specific payment URLs
 
@@ -308,7 +312,8 @@
 - [ ] T111c [P] [US5] Contract test for DELETE /api-keys/{id} endpoint in `tests/contract/api_key_api_test.rs`
 - [ ] T111d [P] [US5] Integration test for API key authentication flow in `tests/integration/api_key_auth_test.rs` (generate, use, rotate, verify old key rejected)
 - [ ] T111e [P] [US5] Integration test for supplementary invoice creation in `tests/integration/supplementary_invoice_test.rs` (create parent, start payment, add supplementary, verify inheritance and isolation)
-- [ ] T111f [P] [US5] Integration test for supplementary invoice validation in `tests/integration/supplementary_invoice_test.rs` (reject if parent missing, reject if parent is itself supplementary)
+- [ ] T111f [P] [US5] Integration test for supplementary invoice validation in `tests/integration/supplementary_invoice_test.rs` (reject if parent missing, reject if parent is itself supplementary per FR-082, reject if parent status is expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice")
+- [ ] T111i [P] [US5] Integration test for admin API key authentication in `tests/integration/admin_auth_test.rs` (verify valid admin key in X-Admin-Key header succeeds for POST /api-keys, verify missing admin key returns 401 Unauthorized, verify invalid admin key returns 401, verify admin key loaded from ADMIN_API_KEY env var at startup per FR-084)
 
 ### Implementation for User Story 5
 
@@ -323,7 +328,7 @@
 **Supplementary Invoice Support** (moved from Phase 5)
 
 - [ ] T103 [US5] Update Invoice model to support original_invoice_id reference (BIGINT UNSIGNED NULL, foreign key to invoices.id per FR-082)
-- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation: reference valid parent invoice_id, inherit currency/gateway from parent, prevent adding items to in-progress invoices (FR-081, FR-082), validate parent invoice exists and is not itself a supplementary invoice (prevent chaining)
+- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation per FR-082: (a) reference valid parent invoice_id, (b) validate parent exists and status is draft/pending/partially_paid/paid (reject if expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice"), (c) validate parent is not itself supplementary (reject with 400 "Cannot create supplementary invoice from another supplementary invoice"), (d) inherit currency and gateway from parent, (e) maintain separate payment schedule
 - [ ] T105 [US5] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation (parent exists, not already supplementary, inherit currency/gateway) and audit logging per FR-082
 
 **Checkpoint**: ✅ User Story 5 complete - API key management enables production security, supplementary invoices enable flexible order modifications.
@@ -370,7 +375,6 @@
 - [ ] T143 [P] Add unit tests for all business logic services
 - [ ] T144 [P] Add contract tests for all error response scenarios
 - [ ] T145 [P] Add integration tests for concurrent request handling (FR-053, FR-054)
-- [ ] T146 [P] Add integration tests for rate limiting enforcement (FR-040, FR-041)
 
 ### Validation & Deployment Prep
 
@@ -423,7 +427,7 @@
 
 **User Story 1 Tests**:
 
-- T031, T032, T033, T034, T035, T036, T037, T038 can run in parallel (all test files)
+- T031, T032, T033, T034, T035, T036, T037, T038, T038a, T038b can run in parallel (all test files)
 
 **User Story 1 Models**:
 
@@ -437,7 +441,7 @@
 
 **User Story 3 Tests**:
 
-- T080, T081, T082, T083, T084, T085, T086, T087 can run in parallel
+- T080, T081, T082, T083, T084, T085, T086, T087, T087a can run in parallel
 
 **User Story 4 Tests**:
 
@@ -446,18 +450,19 @@
 **Polish Phase**:
 
 - T126, T127, T128, T129 can run in parallel (documentation)
-- T143, T144, T145, T146 can run in parallel (additional tests)
+- T143, T144, T145 can run in parallel (additional tests)
 
 ### Parallel Execution Example: User Story 1
 
 ```bash
-# Phase 3.1: All tests for User Story 1 (T031-T038) in parallel:
+# Phase 3.1: All tests for User Story 1 (T031-T038b) in parallel:
 cargo test --test line_item_calculation_test &
 cargo test --test invoice_calculation_test &
 cargo test --test invoice_api_test &
 cargo test --test invoice_flow_test &
 cargo test --test gateway_validation_test &
 cargo test --test invoice_expiration_test &
+cargo test --test payment_initiation_test &
 wait
 
 # Phase 3.2: All models in parallel (T039, T040, T045, T046, T049):
@@ -504,19 +509,19 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 166  
+**Total Tasks**: 171  
 **Setup**: 6 tasks  
-**Foundational**: 24 tasks (BLOCKING - includes T029a for test database setup, excludes API key management moved to US5)  
-**User Story 1 (P1 - MVP)**: 29 tasks (8 tests + 21 implementation)  
+**Foundational**: 25 tasks (BLOCKING - includes T029a for test database setup, T017a for rate limiting test, excludes API key management moved to US5)  
+**User Story 1 (P1 - MVP)**: 31 tasks (10 tests + 21 implementation - added T038a, T038b)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
-**User Story 3 (P3)**: 23 tasks (8 tests + 15 implementation, supplementary invoices moved to US5)  
+**User Story 3 (P3)**: 24 tasks (9 tests + 15 implementation - added T087a, supplementary invoices moved to US5)  
 **User Story 4 (P4)**: 21 tasks (6 tests + 15 implementation)  
-**User Story 5 (P2)**: 14 tasks (6 tests + 8 implementation - API key management + supplementary invoices)  
-**Polish**: 28 tasks (added T128c, T110b, updated T128b)
+**User Story 5 (P2)**: 15 tasks (7 tests + 8 implementation - added T111i, API key management + supplementary invoices)  
+**Polish**: 28 tasks (removed T146 - moved to T017a in Foundational)
 
-**Parallel Opportunities**: ~65 tasks can run in parallel (marked with [P])
+**Parallel Opportunities**: ~70 tasks can run in parallel (marked with [P])
 
-**MVP Scope** (User Story 1 only): 57 tasks (Setup + Foundational + US1)
+**MVP Scope** (User Story 1 only): 62 tasks (Setup + Foundational + US1)
 
 **Estimated Effort**:
 
