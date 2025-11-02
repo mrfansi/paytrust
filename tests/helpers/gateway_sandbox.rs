@@ -7,6 +7,7 @@ use base64::prelude::*;
 use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use uuid::Uuid;
 
 /// Xendit sandbox API helper
 ///
@@ -149,19 +150,16 @@ impl XenditSandbox {
             .map_err(|e| format!("Failed to parse Xendit response: {}", e))
     }
 
-    /// Simulate payment for testing (note: actual simulation may require Xendit dashboard)
+    /// Simulate payment for Xendit invoice
+    ///
+    /// In real tests, this would trigger actual payment using test card.
+    /// For now, this is a placeholder that returns the invoice data.
     ///
     /// # Parameters
-    /// - `invoice_id`: Xendit invoice ID to mark as paid
+    /// - `invoice_id`: Xendit invoice ID to simulate payment for
     ///
     /// # Returns
-    /// Result indicating success or failure
-    ///
-    /// # Note
-    /// This is a placeholder. Real payment simulation typically requires:
-    /// 1. Using Xendit test cards in the payment UI
-    /// 2. Using Xendit dashboard to simulate payments
-    /// 3. Using webhook simulation endpoints
+    /// Invoice data or error
     pub async fn simulate_payment(&self, invoice_id: &str) -> Result<Value, String> {
         // In real tests, you would:
         // 1. Get the invoice payment URL
@@ -170,6 +168,98 @@ impl XenditSandbox {
         // For now, just return the invoice to indicate simulation intent
         self.get_invoice(invoice_id).await
     }
+
+    /// Simulate a Xendit invoice paid webhook payload
+    ///
+    /// # Parameters
+    /// - `external_id`: External ID from your system
+    /// - `invoice_id`: Xendit invoice ID
+    /// - `amount`: Payment amount
+    /// - `currency`: Currency code (IDR, MYR, PHP)
+    ///
+    /// # Returns
+    /// JSON webhook payload simulating Xendit callback
+    ///
+    /// # Example
+    /// ```
+    /// let webhook = XenditSandbox::simulate_paid_webhook("INV-123", "xnd_invoice_456", 100000, "IDR");
+    /// // Use webhook payload to test webhook endpoint
+    /// ```
+    pub fn simulate_paid_webhook(
+        external_id: &str,
+        invoice_id: &str,
+        amount: i64,
+        currency: &str,
+    ) -> Value {
+        serde_json::json!({
+            "id": invoice_id,
+            "external_id": external_id,
+            "user_id": "test_user_id",
+            "status": "PAID",
+            "merchant_name": "Test Merchant",
+            "merchant_profile_picture_url": "https://example.com/logo.png",
+            "amount": amount,
+            "paid_amount": amount,
+            "bank_code": "BCA",
+            "paid_at": "2025-11-02T10:30:45.123Z",
+            "payer_email": "customer@example.com",
+            "description": "Payment for invoice",
+            "adjusted_received_amount": amount,
+            "fees_paid_amount": 0,
+            "updated": "2025-11-02T10:30:45.123Z",
+            "created": "2025-11-02T09:00:00.123Z",
+            "currency": currency,
+            "payment_method": "BANK_TRANSFER",
+            "payment_channel": "BCA",
+            "payment_id": format!("PAYMENT-{}", uuid::Uuid::new_v4())
+        })
+    }
+
+    /// Simulate a Xendit invoice pending webhook payload
+    pub fn simulate_pending_webhook(
+        external_id: &str,
+        invoice_id: &str,
+        amount: i64,
+        currency: &str,
+    ) -> Value {
+        serde_json::json!({
+            "id": invoice_id,
+            "external_id": external_id,
+            "user_id": "test_user_id",
+            "status": "PENDING",
+            "merchant_name": "Test Merchant",
+            "amount": amount,
+            "description": "Payment for invoice",
+            "updated": "2025-11-02T09:00:00.123Z",
+            "created": "2025-11-02T09:00:00.123Z",
+            "currency": currency,
+            "payment_method": "BANK_TRANSFER",
+            "invoice_url": format!("https://checkout.xendit.co/web/{}", invoice_id)
+        })
+    }
+
+    /// Simulate a Xendit invoice expired webhook payload
+    pub fn simulate_expired_webhook(
+        external_id: &str,
+        invoice_id: &str,
+        amount: i64,
+        currency: &str,
+    ) -> Value {
+        serde_json::json!({
+            "id": invoice_id,
+            "external_id": external_id,
+            "user_id": "test_user_id",
+            "status": "EXPIRED",
+            "merchant_name": "Test Merchant",
+            "amount": amount,
+            "description": "Payment for invoice",
+            "updated": "2025-11-03T09:00:00.123Z",
+            "created": "2025-11-02T09:00:00.123Z",
+            "expired_at": "2025-11-03T09:00:00.123Z",
+            "currency": currency
+        })
+    }
+}
 }
 
 impl Default for XenditSandbox {
@@ -344,6 +434,73 @@ impl MidtransSandbox {
             .json::<Value>()
             .await
             .map_err(|e| format!("Failed to parse Midtrans response: {}", e))
+    }
+
+    /// Simulate a Midtrans payment success webhook payload
+    ///
+    /// # Parameters
+    /// - `order_id`: Order ID
+    /// - `amount`: Transaction amount
+    ///
+    /// # Returns
+    /// JSON webhook payload simulating Midtrans callback
+    ///
+    /// # Example
+    /// ```
+    /// let webhook = MidtransSandbox::simulate_payment_webhook("ORDER-123", "100000");
+    /// // Use webhook payload to test webhook endpoint
+    /// ```
+    pub fn simulate_payment_webhook(order_id: &str, amount: &str) -> Value {
+        serde_json::json!({
+            "transaction_time": "2025-11-02 10:30:45",
+            "transaction_status": "settlement",
+            "transaction_id": format!("TXN-{}", uuid::Uuid::new_v4()),
+            "status_message": "midtrans payment success",
+            "status_code": "200",
+            "signature_key": "test_signature_key_for_webhook",
+            "settlement_time": "2025-11-02 10:30:46",
+            "payment_type": "credit_card",
+            "order_id": order_id,
+            "merchant_id": "M001234",
+            "gross_amount": amount,
+            "fraud_status": "accept",
+            "currency": "IDR"
+        })
+    }
+
+    /// Simulate a Midtrans payment pending webhook payload
+    pub fn simulate_pending_webhook(order_id: &str, amount: &str) -> Value {
+        serde_json::json!({
+            "transaction_time": "2025-11-02 10:30:45",
+            "transaction_status": "pending",
+            "transaction_id": format!("TXN-{}", uuid::Uuid::new_v4()),
+            "status_message": "midtrans payment pending",
+            "status_code": "201",
+            "signature_key": "test_signature_key_for_webhook",
+            "payment_type": "bank_transfer",
+            "order_id": order_id,
+            "merchant_id": "M001234",
+            "gross_amount": amount,
+            "currency": "IDR"
+        })
+    }
+
+    /// Simulate a Midtrans payment failure webhook payload
+    pub fn simulate_failure_webhook(order_id: &str, amount: &str) -> Value {
+        serde_json::json!({
+            "transaction_time": "2025-11-02 10:30:45",
+            "transaction_status": "deny",
+            "transaction_id": format!("TXN-{}", uuid::Uuid::new_v4()),
+            "status_message": "midtrans payment failed",
+            "status_code": "202",
+            "signature_key": "test_signature_key_for_webhook",
+            "payment_type": "credit_card",
+            "order_id": order_id,
+            "merchant_id": "M001234",
+            "gross_amount": amount,
+            "fraud_status": "deny",
+            "currency": "IDR"
+        })
     }
 }
 

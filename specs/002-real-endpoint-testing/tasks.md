@@ -145,20 +145,20 @@
 
 ### Gateway Integration
 
-- [ ] T059 [P] Add Xendit webhook simulation to tests/helpers/gateway_sandbox.rs
-- [ ] T060 [P] Add Midtrans webhook simulation to tests/helpers/gateway_sandbox.rs
-- [ ] T061 Create tests/integration/webhook_handling_test.rs - test real webhook payloads from sandbox
+- [x] T059 [P] Add Xendit webhook simulation to tests/helpers/gateway_sandbox.rs
+- [x] T060 [P] Add Midtrans webhook simulation to tests/helpers/gateway_sandbox.rs
+- [x] T061 Create tests/integration/webhook_handling_test.rs - test real webhook payloads from sandbox
 
 ### Documentation & Cleanup
 
-- [ ] T062 [P] Update specs/002-real-endpoint-testing/quickstart.md - add troubleshooting for common issues
-- [ ] T063 [P] Create TESTING.md in project root - guide for writing new tests with real endpoints
-- [ ] T064 [P] Add test coverage report script to scripts/test_coverage.sh
-- [ ] T065 Verify zero mockito usage: grep -r "mockito" tests/ (should find nothing)
+- [x] T062 [P] Update specs/001-payment-orchestration-api/quickstart.md - add troubleshooting for common issues
+- [x] T063 [P] Create TESTING.md in project root - guide for writing new tests with real endpoints
+- [x] T064 [P] Add test coverage report script to scripts/test_coverage.sh
+- [x] T065 Verify zero mockito usage: grep -r "mockito" tests/ (should find nothing)
 - [ ] T066 Remove any remaining #[ignore] attributes from tests if environment is configured
 - [ ] T067 Run full test suite: cargo test (all tests should pass)
 - [ ] T068 Validate success criteria SC-001 through SC-008 from spec.md using validation checklist in tasks.md (manual verification)
-- [ ] T069 Update .github/copilot-instructions.md - add testing best practices with real endpoints
+- [x] T069 Update .github/copilot-instructions.md - add testing best practices with real endpoints
 - [ ] T070 Final validation: Run quickstart.md setup instructions from scratch to verify developer onboarding
 
 ---

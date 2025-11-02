@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2025-11-01
 
 ## Active Technologies
+
 - Rust 1.91.0 with 2021 edition + actix-web 4.9, actix-test (to be added), tokio 1.40, sqlx 0.8, reqwest 0.12 (002-real-endpoint-testing)
 - MySQL 8.0+ test database (paytrust_test) (002-real-endpoint-testing)
 
@@ -85,6 +86,7 @@ cargo build --release
 Rust 1.75+ with 2021 edition features: Follow standard conventions
 
 ## Recent Changes
+
 - 002-real-endpoint-testing: Added Rust 1.91.0 with 2021 edition + actix-web 4.9, actix-test (to be added), tokio 1.40, sqlx 0.8, reqwest 0.12
 
 - 001-payment-orchestration-api: Added Rust 1.75+ with 2021 edition features
@@ -92,4 +94,149 @@ Rust 1.75+ with 2021 edition features: Follow standard conventions
 <!-- MANUAL ADDITIONS START -->
 
 - Dont write any summary documents in anything format
+
+## Testing Best Practices (Feature 002)
+
+### Integration Tests - Use Real Endpoints
+
+✅ **DO** - Test via HTTP endpoints:
+
+```rust
+use tests::helpers::*;
+
+#[actix_web::test]
+async fn test_create_invoice() {
+    let srv = spawn_test_server().await;
+    let client = TestClient::new(srv.url("").to_string());
+    let external_id = TestDataFactory::random_external_id();
+
+    let mut response = client
+        .post_json("/api/invoices", &TestDataFactory::create_invoice_payload())
+        .await
+        .expect("Failed to create invoice");
+
+    assert_created(&response);
+}
+```
+
+❌ **DON'T** - Direct database manipulation:
+
+```rust
+// Bad: Bypasses HTTP layer
+sqlx::query("INSERT INTO invoices...").execute(&pool).await?;
+```
+
+### Test Data Isolation - Use UUIDs
+
+✅ **DO** - Generate unique IDs:
+
+```rust
+use uuid::Uuid;
+
+fn generate_test_id(prefix: &str) -> String {
+    format!("{}_{}", prefix, Uuid::new_v4())
+}
+
+let invoice_id = generate_test_id("INV");  // "INV_550e8400-..."
+```
+
+❌ **DON'T** - Hardcode test IDs:
+
+```rust
+// Bad: Causes conflicts in parallel tests
+let invoice_id = "TEST-001";
+```
+
+### Gateway Testing - Use Real Sandbox APIs
+
+✅ **DO** - Call real gateway APIs:
+
+```rust
+let xendit = XenditSandbox::new();
+let result = xendit.create_invoice(&external_id, 100000, "IDR").await?;
+```
+
+❌ **DON'T** - Mock gateway responses:
+
+```rust
+// Bad: Violates Constitution Principle III
+// No mockito, no mocks in integration tests
+```
+
+### Webhook Testing - Simulate Real Payloads
+
+✅ **DO** - Use webhook simulation helpers:
+
+```rust
+let webhook = XenditSandbox::simulate_paid_webhook(
+    &external_id, "xnd_invoice_123", 100000, "IDR"
+);
+
+let mut response = client
+    .post_json("/api/webhooks/xendit", &webhook)
+    .await?;
+```
+
+### Test Cleanup - Use Transactions
+
+✅ **DO** - Transaction-based isolation:
+
+```rust
+use tests::helpers::test_database::with_transaction;
+
+with_transaction(|mut tx| async move {
+    // Test data - auto-rollback
+    sqlx::query("INSERT INTO...").execute(&mut *tx).await?;
+}).await;
+```
+
+❌ **DON'T** - Manual cleanup:
+
+```rust
+// Bad: Fragile, can leave test data
+// INSERT test data...
+// ... test ...
+// DELETE test data...
+```
+
+### Test Assertions - Use Helper Functions
+
+✅ **DO** - Use assertion helpers:
+
+```rust
+assert_created(&response);
+assert_json_field_eq(&json, "status", &json!("paid"));
+```
+
+❌ **DON'T** - Raw assertions:
+
+```rust
+// Bad: Verbose and error-prone
+assert_eq!(response.status(), 201);
+assert_eq!(json["status"].as_str().unwrap(), "paid");
+```
+
+### Parallel Execution - Design for Concurrency
+
+✅ **DO** - Enable parallel tests:
+
+```bash
+# Tests run in parallel by default
+cargo test
+
+# Validate with parallel script
+./scripts/test_parallel.sh 10
+```
+
+✅ **DO** - Use isolated test data (UUIDs, transactions, per-test gateways)
+
+❌ **DON'T** - Use `#[serial]` attribute unless absolutely necessary
+
+### Resources
+
+- Complete guide: `TESTING.md`
+- Test helpers: `tests/helpers/mod.rs`
+- Examples: `tests/integration/payment_flow_test.rs`
+- Validation: `./scripts/test_parallel.sh`
+
 <!-- MANUAL ADDITIONS END -->

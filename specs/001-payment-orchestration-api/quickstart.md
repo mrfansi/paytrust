@@ -446,6 +446,15 @@ Error: Connection refused (os error 111)
 
 Solution: Check MySQL is running and DATABASE_URL is correct
 
+```bash
+# Check MySQL status
+brew services list | grep mysql  # macOS
+sudo systemctl status mysql      # Linux
+
+# Test connection manually
+mysql -u root -p -e "SELECT 1;"
+```
+
 **Migration Error**:
 
 ```
@@ -453,6 +462,89 @@ Error: Migration 001 already applied
 ```
 
 Solution: Check migration status with `sqlx migrate info`, revert if needed
+
+```bash
+# Check status
+sqlx migrate info
+
+# Revert last migration if needed
+sqlx migrate revert
+
+# Re-apply
+sqlx migrate run
+```
+
+**Test Database Isolation Issues**:
+
+```
+Error: Duplicate entry 'TEST-001' for key 'invoices.external_id'
+```
+
+Solution: Use UUID-based test data generation
+
+```rust
+// Bad: Hardcoded IDs cause conflicts
+let invoice_id = "TEST-001";
+
+// Good: Generate unique IDs
+use uuid::Uuid;
+let invoice_id = format!("INV_{}", Uuid::new_v4());
+```
+
+**Payment Gateway API Errors**:
+
+```
+Error: 401 Unauthorized from Xendit API
+```
+
+Solution: Verify gateway API keys are correct
+
+```bash
+# Test Xendit API key
+curl https://api.xendit.co/v2/invoices \
+  -u xnd_development_YOUR_KEY: \
+  -X GET
+
+# Test Midtrans API key
+curl https://api.sandbox.midtrans.com/v2/ping \
+  -H "Authorization: Basic $(echo -n SB-Mid-server-YOUR_KEY: | base64)"
+```
+
+**Webhook Signature Validation Failures**:
+
+```
+Error: Invalid webhook signature
+```
+
+Solution: Ensure webhook secrets match gateway configuration
+
+```bash
+# Verify .env has correct secrets
+grep WEBHOOK_SECRET .env
+
+# Test webhook locally with simulation
+cargo test test_xendit_paid_webhook_updates_invoice
+```
+
+**Parallel Test Failures**:
+
+```
+Error: Tests pass individually but fail when run in parallel
+```
+
+Solution: Ensure test data isolation
+
+```rust
+// Each test should use unique data
+let external_id = format!("TEST_{}", Uuid::new_v4());
+
+// Use transactions for database cleanup
+use tests::helpers::test_database::with_transaction;
+
+with_transaction(|mut tx| async move {
+    // Test code - auto-rollback
+}).await;
+```
 
 **Rate Limit Testing**:
 
@@ -462,6 +554,272 @@ for i in {1..1001}; do
   curl -H "X-API-Key: test-key" http://127.0.0.1:8080/v1/invoices &
 done
 ```
+
+**Docker Test Environment Issues**:
+
+```
+Error: Cannot connect to MySQL in Docker
+```
+
+Solution: Use Docker Compose test environment
+
+```bash
+# Start test environment
+./scripts/test_with_docker.sh
+
+# Or manually with Docker Compose
+docker-compose -f docker-compose.test.yml up -d
+cargo test
+docker-compose -f docker-compose.test.yml down
+```
+
+**CI/CD Pipeline Failures**:
+
+```
+Error: Tests fail in GitHub Actions but pass locally
+```
+
+Solution: Check environment differences
+
+```bash
+# Run tests with Docker locally (simulates CI)
+./scripts/test_with_docker.sh
+
+# Check test logs in GitHub Actions
+# Look for database connection or gateway API issues
+```
+
+**Performance Test Failures**:
+
+```
+Error: Test exceeded 200ms threshold
+```
+
+Solution: Check database connection pool and query optimization
+
+```rust
+// Optimize queries with indexes
+CREATE INDEX idx_invoices_external_id ON invoices(external_id);
+
+// Use connection pooling
+DATABASE_POOL_SIZE=10
+DATABASE_MAX_CONNECTIONS=20
+
+// Batch operations instead of N+1 queries
+let invoices = repo.find_with_line_items(ids).await?;
+```
+
+**Missing Test Helper Imports**:
+
+```
+Error: unresolved import `tests::helpers`
+```
+
+Solution: Use correct test helper imports
+
+```rust
+// In integration tests (tests/integration/*.rs)
+use tests::helpers::*;
+
+// Individual helpers
+use tests::helpers::{
+    spawn_test_server,
+    TestClient,
+    TestDataFactory,
+    XenditSandbox,
+    MidtransSandbox
+};
+```
+
+## Troubleshooting Guide
+
+### Test Environment Setup
+
+**Problem**: Tests fail with database connection errors
+
+**Diagnosis**:
+
+```bash
+# Check test database exists
+mysql -u root -p -e "SHOW DATABASES LIKE 'paytrust_test';"
+
+# Check migrations applied
+sqlx migrate info --database-url mysql://root:password@localhost:3306/paytrust_test
+```
+
+**Solution**:
+
+```bash
+# Create test database
+mysql -u root -p -e "CREATE DATABASE paytrust_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Run migrations
+DATABASE_URL=mysql://root:password@localhost:3306/paytrust_test sqlx migrate run
+```
+
+### Gateway Integration
+
+**Problem**: Gateway API calls fail in tests
+
+**Diagnosis**:
+
+```bash
+# Check .env has sandbox keys
+grep -E "XENDIT_API_KEY|MIDTRANS_SERVER_KEY" .env
+
+# Test API connectivity
+curl -I https://api.xendit.co
+curl -I https://api.sandbox.midtrans.com
+```
+
+**Solution**:
+
+```bash
+# Get sandbox API keys from:
+# Xendit: https://dashboard.xendit.co/settings/developers
+# Midtrans: https://dashboard.sandbox.midtrans.com/settings/config_info
+
+# Update .env
+XENDIT_API_KEY=xnd_development_YOUR_KEY_HERE
+MIDTRANS_SERVER_KEY=SB-Mid-server-YOUR_KEY_HERE
+```
+
+### Webhook Testing
+
+**Problem**: Webhook simulation doesn't update invoice status
+
+**Diagnosis**:
+
+```bash
+# Check webhook endpoints exist
+cargo test test_xendit_paid_webhook_updates_invoice -- --nocapture
+
+# Look for errors in test output
+```
+
+**Solution**:
+
+```rust
+// Verify webhook payload matches expected format
+let webhook = XenditSandbox::simulate_paid_webhook(
+    &external_id,
+    "xnd_invoice_123",
+    100000,
+    "IDR"
+);
+
+// Check webhook endpoint implementation
+// src/modules/transactions/controllers/webhook_controller.rs
+```
+
+### Parallel Test Execution
+
+**Problem**: Tests fail randomly when run in parallel
+
+**Diagnosis**:
+
+```bash
+# Run parallel validation script
+./scripts/test_parallel.sh 10
+
+# Check for UUID usage in test data
+grep -r "TEST-" tests/integration/
+```
+
+**Solution**:
+
+```rust
+// Replace hardcoded test IDs with UUIDs
+use uuid::Uuid;
+
+fn random_external_id() -> String {
+    format!("INV_{}", Uuid::new_v4())
+}
+
+// Use transaction isolation
+use tests::helpers::test_database::with_transaction;
+```
+
+### CI/CD Debugging
+
+**Problem**: GitHub Actions tests fail but local tests pass
+
+**Diagnosis**:
+
+1. Check GitHub Actions logs for specific errors
+2. Look for environment variable differences
+3. Check database initialization steps
+
+**Solution**:
+
+```bash
+# Simulate CI environment locally
+./scripts/test_with_docker.sh
+
+# This uses docker-compose.test.yml
+# Same as GitHub Actions workflow
+```
+
+### Performance Issues
+
+**Problem**: Tests are slow or time out
+
+**Diagnosis**:
+
+```bash
+# Run specific test with timing
+cargo test test_name -- --nocapture --show-output
+
+# Check database connection pool settings
+grep DATABASE .env
+```
+
+**Solution**:
+
+```env
+# Increase connection pool for tests
+DATABASE_POOL_SIZE=20
+DATABASE_MAX_CONNECTIONS=50
+
+# Use faster test database
+# Consider in-memory or tmpfs for test DB
+```
+
+**Problem**: Integration tests take too long
+
+**Solution**:
+
+```bash
+# Run only specific test suites
+cargo test --test payment_flow_test
+
+# Use test filtering
+cargo test invoice
+
+# Parallel execution (default)
+cargo test -- --test-threads=4
+```
+
+### Common Error Messages
+
+| Error                                    | Cause                     | Solution                                                    |
+| ---------------------------------------- | ------------------------- | ----------------------------------------------------------- |
+| `Connection refused (os error 111)`      | MySQL not running         | `brew services start mysql` or `sudo systemctl start mysql` |
+| `Database 'paytrust_test' doesn't exist` | Test DB not created       | `mysql -e "CREATE DATABASE paytrust_test"`                  |
+| `Duplicate entry for key 'external_id'`  | Test data collision       | Use UUID-based test data                                    |
+| `401 Unauthorized` from gateway          | Invalid API key           | Check `.env` gateway keys                                   |
+| `Invalid webhook signature`              | Wrong webhook secret      | Verify `WEBHOOK_SECRET` in `.env`                           |
+| `No such table: invoices`                | Migrations not run        | `sqlx migrate run`                                          |
+| `Too many connections`                   | Connection pool exhausted | Increase `DATABASE_MAX_CONNECTIONS`                         |
+| `Test timed out`                         | Slow query or deadlock    | Check logs, optimize queries                                |
+
+### Getting Help
+
+1. **Check Test Logs**: Run with `-- --nocapture` to see detailed output
+2. **Review TESTING.md**: Comprehensive testing guide with examples
+3. **Check OpenAPI Spec**: Verify API contract expectations
+4. **Examine Helper Code**: Review `tests/helpers/mod.rs` for documentation
+5. **Run Validation Scripts**: Use `./scripts/test_parallel.sh` to diagnose isolation issues
 
 ## Performance Optimization
 
