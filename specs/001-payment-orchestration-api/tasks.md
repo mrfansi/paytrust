@@ -105,9 +105,9 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
-- [ ] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
-- [ ] T033 [P] [US1] Contract tests for invoice API endpoints in `tests/contract/invoice_api_test.rs` validating OpenAPI schema: POST /invoices, GET /invoices/{id}, GET /invoices (7 tests total covering all three endpoints)
+- [X] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
+- [X] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
+- [X] T033 [P] [US1] Contract tests for invoice API endpoints in `tests/contract/invoice_api_test.rs` validating OpenAPI schema: POST /invoices, GET /invoices/{id}, GET /invoices (7 tests total covering all three endpoints)
 - [ ] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
 - [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
 - [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
