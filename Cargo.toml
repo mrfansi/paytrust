@@ -91,6 +91,11 @@ path = "tests/unit/invoice_calculation_test.rs"
 name = "invoice_api_test"
 path = "tests/contract/invoice_api_test.rs"
 
+# Integration Tests
+[[test]]
+name = "rate_limit_test"
+path = "tests/integration/rate_limit_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

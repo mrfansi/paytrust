@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rust_decimal::Decimal;
-use tracing::{debug, error, info, warn};
+use tracing::info;
 
 use crate::core::error::AppError;
 use crate::modules::invoices::models::InvoiceStatus;
@@ -39,7 +39,7 @@ impl TransactionService {
             invoice_id = transaction.invoice_id,
             amount = %transaction.amount,
             status = ?transaction.status,
-            gateway_tx_ref = %transaction.gateway_transaction_ref,
+            gateway_tx_ref = %transaction.gateway_reference,
             "Recording payment transaction"
         );
 
@@ -142,7 +142,7 @@ impl TransactionService {
         webhook_data: &serde_json::Value,
     ) -> Result<(), AppError> {
         // Parse webhook data based on gateway type
-        let (invoice_id, transaction_status, amount, gateway_tx_ref) = 
+        let (invoice_id, transaction_status, amount, _gateway_tx_ref) = 
             self.parse_webhook_data(gateway, webhook_data)?;
 
         // TODO: Implement actual webhook processing logic

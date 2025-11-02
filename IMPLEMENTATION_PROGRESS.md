@@ -9,7 +9,7 @@
 | Phase | Status | Progress | Tasks Complete |
 |-------|--------|----------|----------------|
 | **Phase 1: Setup** | ✅ Complete | 100% | 6/6 |
-| **Phase 2: Foundational** | ✅ Complete | 100% | 31/31 |
+| **Phase 2: Foundational** | ✅ Complete | 100% | 32/32 |
 | **Phase 3: User Story 1 (MVP)** | ✅ Complete | 100% | 37/37 |
 | **Phase 4: User Story 2** | ⏳ Pending | 0% | 0/23 |
 | **Phase 5: User Story 3** | ⏳ Pending | 0% | 0/23 |
@@ -17,11 +17,19 @@
 | **Phase 6.5: User Story 5** | ⏳ Pending | 0% | 0/17 |
 | **Phase 7: Polish** | ⏳ Pending | 0% | 0/31 |
 
-**Total Progress**: 74/192 tasks (39%)
+**Total Progress**: 75/193 tasks (39%)
 
 ## Recent Accomplishments (Session 2025-11-03)
 
 ### ✅ Completed Tasks (Latest Session)
+
+11. **T017a**: Rate Limiting Integration Test
+    - Created comprehensive integration test suite in `tests/integration/rate_limit_test.rs`
+    - 5 test cases covering FR-040 and FR-041 requirements
+    - Tests verify 1000 req/min limit, 429 response with Retry-After header
+    - Tests verify health endpoint bypass and missing API key handling
+    - All tests passing ✅
+    - Phase 2 (Foundational) now 100% complete (32/32 tasks)
 
 7. **T055**: Pessimistic Locking Implementation
    - SELECT FOR UPDATE in invoice repository for concurrent payment processing

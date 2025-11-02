@@ -27,8 +27,8 @@ pub async fn list_transactions(
 /// GET /invoices/{id}/discrepancies (FR-050)
 /// Returns discrepancies between expected and actual payment amounts
 pub async fn get_payment_discrepancies(
-    service: web::Data<Arc<TransactionService>>,
-    tenant_id: TenantId,
+    _service: web::Data<Arc<TransactionService>>,
+    _tenant_id: TenantId,
     path: web::Path<i64>,
 ) -> Result<HttpResponse, AppError> {
     let invoice_id = path.into_inner();
@@ -48,8 +48,8 @@ pub async fn get_payment_discrepancies(
 /// GET /invoices/{id}/overpayment (FR-076)
 /// Returns overpayment details if payment exceeds invoice total
 pub async fn get_overpayment(
-    service: web::Data<Arc<TransactionService>>,
-    tenant_id: TenantId,
+    _service: web::Data<Arc<TransactionService>>,
+    _tenant_id: TenantId,
     path: web::Path<i64>,
 ) -> Result<HttpResponse, AppError> {
     let invoice_id = path.into_inner();
@@ -71,8 +71,8 @@ pub async fn get_overpayment(
 /// GET /invoices/{id}/refunds (FR-086)
 /// Returns list of refunds processed for this invoice
 pub async fn get_refund_history(
-    service: web::Data<Arc<TransactionService>>,
-    tenant_id: TenantId,
+    _service: web::Data<Arc<TransactionService>>,
+    _tenant_id: TenantId,
     path: web::Path<i64>,
 ) -> Result<HttpResponse, AppError> {
     let invoice_id = path.into_inner();

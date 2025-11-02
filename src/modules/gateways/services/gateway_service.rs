@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 
 use crate::core::error::{AppError, AppResult};
 use super::gateway_trait::{PaymentGateway, PaymentRequest, PaymentResponse};
-use super::{XenditGateway, MidtransGateway};
 
 /// Service for managing and routing to payment gateways
 pub struct GatewayService {
@@ -15,7 +14,7 @@ pub struct GatewayService {
 impl GatewayService {
     /// Create a new GatewayService with configured gateways
     pub fn new() -> Self {
-        let mut gateways: HashMap<String, Arc<dyn PaymentGateway>> = HashMap::new();
+        let gateways: HashMap<String, Arc<dyn PaymentGateway>> = HashMap::new();
         
         // Note: In production, these should be loaded from configuration/environment
         // For now, we'll initialize with empty keys - they should be injected
@@ -56,7 +55,7 @@ impl GatewayService {
             Ok(response) => {
                 info!(
                     gateway = %gateway_name,
-                    payment_id = %response.payment_id,
+                    gateway_reference = %response.gateway_reference,
                     "Payment created successfully"
                 );
                 Ok(response)

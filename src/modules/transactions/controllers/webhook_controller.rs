@@ -1,7 +1,7 @@
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::info;
 
 use crate::core::error::AppError;
 use crate::modules::transactions::services::transaction_service::TransactionService;
@@ -60,7 +60,7 @@ impl WebhookController {
         self.webhook_handler
             .process_webhook_with_retry(&webhook_id, move || {
                 let service = transaction_service.clone();
-                let data = webhook_data_clone.clone();
+                let data = webhook_data_clone.data.clone();
                 let gw = gateway_clone.clone();
                 async move {
                     service.process_webhook_event(&gw, &data).await
@@ -92,7 +92,7 @@ impl WebhookController {
         // Filter by status = 'permanently_failed'
         // Support pagination and date filtering
 
-        let failed_webhooks = vec![]; // Placeholder
+        let failed_webhooks: Vec<serde_json::Value> = vec![]; // Placeholder
 
         Ok(HttpResponse::Ok().json(serde_json::json!({
             "failed_webhooks": failed_webhooks,
@@ -121,7 +121,7 @@ impl WebhookController {
     async fn verify_webhook_signature(
         &self,
         gateway: &str,
-        payload: &[u8],
+        _payload: &[u8],
         signature: &str,
     ) -> Result<(), AppError> {
         // TODO: Implement actual signature verification
