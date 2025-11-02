@@ -99,7 +99,7 @@ and allows selective scaling of system components based on load characteristics.
 
 ## Technology Stack Constraints
 
-**Language**: Rust 1.75+ with 2021 edition features
+**Language**: Rust 1.91+ with 2021 edition features
 **Database**: MySQL 8.0+ with InnoDB storage engine  
 **Environment**: dotenv pattern for configuration management
 **Testing**: Built-in cargo test with custom test harnesses for integration tests

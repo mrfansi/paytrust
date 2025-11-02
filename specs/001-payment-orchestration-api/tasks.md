@@ -57,7 +57,7 @@
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
 - [ ] T016a [P] Create ApiKeyController in `src/modules/auth/controllers/api_key_controller.rs` with endpoints: POST /api-keys (generate new key with argon2 hash), PUT /api-keys/{id}/rotate (invalidate old, generate new), DELETE /api-keys/{id} (revoke key), all with audit logging to database per FR-083
 - [ ] T016b [P] Create api_key_audit_log table migration in `migrations/008_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used)
-- [ ] T016c [P] Implement master admin key authentication for API key management endpoints (separate from regular API keys) - load from .env as ADMIN_API_KEY
+- [ ] T016c [P] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from .env as ADMIN_API_KEY, return 401 for missing/invalid admin key
 - [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
@@ -112,7 +112,7 @@
 - [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
 - [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
 - [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration with optional expires_at parameter per FR-044a with validation: max 30 days, min 1 hour)
+- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration with optional expires_at parameter per FR-044a with validation: max 30 days, min 1 hour, reject past dates or out-of-range with 400 Bad Request, set payment_initiated_at timestamp on first payment attempt per FR-085)
 - [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
 
@@ -128,7 +128,7 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with fixed interval retries: 1min, 5min, 30min (FR-042, FR-043)
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with fixed interval retries: 1min, 5min, 30min (FR-042, FR-043), after 3 retries (~36 minutes total) mark webhook as permanently failed and log error for manual intervention
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
@@ -237,9 +237,9 @@
 
 **Supplementary Invoice Support**
 
-- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082)
-- [ ] T104 [US3] Update InvoiceService to create supplementary invoices with validation: reference valid parent invoice_id, inherit currency/gateway from parent, prevent adding items to in-progress invoices (FR-081, FR-082)
-- [ ] T105 [US3] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation and audit logging
+- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (BIGINT UNSIGNED NULL, foreign key to invoices.id per FR-082)
+- [ ] T104 [US3] Update InvoiceService to create supplementary invoices with validation: reference valid parent invoice_id, inherit currency/gateway from parent, prevent adding items to in-progress invoices (FR-081, FR-082), validate parent invoice exists and is not itself a supplementary invoice (prevent chaining)
+- [ ] T105 [US3] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation (parent exists, not already supplementary, inherit currency/gateway) and audit logging per FR-082
 
 **Checkpoint**: ✅ All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, sequential enforcement, and supplementary invoice support.
 
@@ -258,7 +258,8 @@
 - [ ] T108 [P] [US4] Contract test for multi-currency invoice creation in `tests/contract/currency_api_test.rs` - Deferred
 - [ ] T109 [P] [US4] Integration test for currency mismatch rejection in `tests/integration/currency_validation_test.rs` (FR-024) - Deferred
 - [ ] T110 [P] [US4] Integration test for multi-currency financial reports in `tests/integration/multi_currency_report_test.rs` (FR-025) - Deferred
-- [ ] T110a [P] [US4] Integration test for currency non-conversion in reports in `tests/integration/multi_currency_report_test.rs` - verify reports return separate currency totals without conversion (FR-063, FR-025)
+- [ ] T110a [P] [US4] Integration test for currency non-conversion in reports in `tests/integration/multi_currency_report_test.rs` - verify reports return separate currency totals without conversion, validate no conversion calculations performed (FR-063, FR-025)
+- [ ] T110b [P] [US4] Unit test for currency conversion prohibition in `tests/unit/currency_isolation_test.rs` - verify ReportService never performs currency conversion calculations
 
 ### Implementation for User Story 4
 
@@ -307,8 +308,9 @@
 
 - [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
-- [ ] T128 [P] Generate OpenAPI documentation from code annotations or serve existing `contracts/openapi.yaml` via actix-web endpoint
-- [ ] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
+- [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006
+- [ ] T128b [P] Implement GET /docs endpoint to serve interactive Swagger UI rendering the OpenAPI specification per NFR-006
+- [ ] T128c [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
 - [ ] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
 ### Code Quality
@@ -470,14 +472,14 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 154  
+**Total Tasks**: 157  
 **Setup**: 6 tasks  
 **Foundational**: 26 tasks (BLOCKING - includes T016a, T016b, T016c for API key management)  
 **User Story 1 (P1 - MVP)**: 29 tasks (8 tests + 21 implementation)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 26 tasks (8 tests + 18 implementation)  
-**User Story 4 (P4)**: 20 tasks (5 tests + 15 implementation)  
-**Polish**: 26 tasks
+**User Story 4 (P4)**: 21 tasks (6 tests + 15 implementation)  
+**Polish**: 28 tasks (added T128c, T110b, updated T128b)
 
 **Parallel Opportunities**: ~60 tasks can run in parallel (marked with [P])
 

@@ -201,7 +201,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-081**: System MUST reject attempts to add or remove line items from invoices after payment is initiated
 - **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle, with validation: supplementary invoice MUST reference valid parent invoice_id, inherit currency and gateway from parent invoice, and maintain separate payment schedule
 - **FR-044**: System MUST set default invoice expiration to 24 hours from creation unless explicitly configured otherwise
-- **FR-044a**: System MUST accept optional expires_at parameter (ISO 8601 timestamp) in invoice creation request with validation (maximum 30 days from creation, minimum 1 hour)
+- **FR-044a**: System MUST accept optional expires_at parameter (ISO 8601 timestamp) in invoice creation request with validation: maximum 30 days from creation timestamp, minimum 1 hour from creation timestamp, reject requests with expires_at in the past or outside allowed range with 400 Bad Request
 - **FR-045**: System MUST automatically mark invoices as "expired" when expiration time is reached and payment is not completed
 
 #### Additional Charges
@@ -277,6 +277,8 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-036**: System MUST return appropriate HTTP status codes and error messages for all API operations
 - **FR-037**: System MUST reject requests with missing or invalid API keys with 401 Unauthorized status
 - **FR-083**: System MUST provide API endpoints for generating, rotating, and revoking API keys with audit logging (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id})
+- **FR-084**: System MUST authenticate API key management endpoints (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id}) using master admin API key separate from regular API keys, loaded from ADMIN_API_KEY environment variable, with 401 Unauthorized response for missing or invalid admin key
+- **FR-085**: System MUST set payment_initiated_at timestamp on Invoice entity when first payment attempt is made (payment transaction created or gateway payment URL requested), and use this timestamp to enforce invoice immutability per FR-051 (reject modifications when payment_initiated_at IS NOT NULL)
 - **FR-040**: System MUST enforce rate limiting of 1000 requests per minute per API key
 - **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
 - **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
@@ -286,17 +288,17 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Non-Functional Requirements
 
-- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation, measured using k6 load testing tool against test environment with 4 CPU cores, 8GB RAM, MySQL 8.0 (as measured in SC-005)
+- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation, measured using k6 load testing tool against test environment with minimum hardware specification: 4 CPU cores, 8GB RAM, MySQL 8.0 on dedicated database server with SSD storage (this represents minimum production deployment configuration, not recommended specification)
 - **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes, measured using k6 load testing tool with concurrent virtual users maintaining steady request rate (as defined in SC-005)
-- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation with >50% error rate counts as downtime)
+- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation defined as: sustained error rate >50% for any consecutive 5-minute window counts as downtime for that period; error rate 50% or below is considered operational)
 - **NFR-004**: Payment webhook processing MUST complete within 5 seconds at 95th percentile with 99% success rate (as measured in SC-004), with retry logic per FR-042 for failures
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
-- **NFR-006**: API documentation MUST be provided in OpenAPI 3.0 format and served via GET /openapi.json endpoint with interactive Swagger UI available at GET /docs
+- **NFR-006**: API documentation MUST be provided in OpenAPI 3.0 format as manually-maintained specification file in specs/001-payment-orchestration-api/contracts/openapi.yaml, served via GET /openapi.json endpoint (reading from contracts/ directory), with interactive Swagger UI available at GET /docs rendering the specification
 - **NFR-007**: System MUST store all transaction data for at least 7 years for audit compliance (configurable per jurisdiction requirements)
 
 ### Key Entities
 
-- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, payment_initiated_at timestamp (when set, invoice becomes read-only per FR-051), optional original_invoice_id field (foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps
+- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment (gateway_id foreign key), payment_initiated_at timestamp (TIMESTAMP NULL, set on first payment attempt per FR-085, when NOT NULL invoice becomes read-only per FR-051), expires_at timestamp (TIMESTAMP, defaults to created_at + 24 hours per FR-044, configurable via optional parameter per FR-044a), optional original_invoice_id field (BIGINT UNSIGNED NULL, foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps (created_at, updated_at)
 - **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, tax rate (percentage), tax category (optional identifier), and calculated tax amount
 - **Payment Transaction**: Represents actual payment attempt/completion with transaction ID, gateway transaction reference, amount paid, payment method, timestamp, status, and gateway response data
 - **Installment Schedule**: Represents payment plan with installment number, due date, amount, proportionally-calculated tax amount, proportionally-calculated service fee amount, payment status, and associated transaction reference when paid
