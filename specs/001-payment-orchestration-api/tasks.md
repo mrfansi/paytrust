@@ -61,7 +61,7 @@
 
 ### Database Migrations
 
-- [ ] T020 Create migration 001: payment_gateways table in `migrations/001_create_payment_gateways_table.sql`
+- [ ] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql`
 - [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
 - [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql`
 - [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
@@ -77,7 +77,7 @@
 
 ### Application Entry Point
 
-- [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting, server startup using actix-web and tokio
+- [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
 
 **Checkpoint**: ✅ Foundation ready - all core utilities, database schema, and middleware are functional. User story implementation can now begin in parallel.
 
@@ -109,7 +109,7 @@
 - [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
 - [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
 - [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway, set expiration)
+- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration)
 - [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
 
@@ -125,13 +125,14 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with exponential backoff (FR-042, FR-043)
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with fixed interval retries: 1min, 5min, 30min (FR-042, FR-043)
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
+- [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
 
 **Integration & Error Handling**
 
-- [ ] T055 [US1] Implement pessimistic locking for concurrent payment requests (FR-053, FR-054)
+- [ ] T055 [US1] Implement pessimistic locking for concurrent payment requests using MySQL SELECT FOR UPDATE (FR-053, FR-054)
 - [ ] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
 - [ ] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
 - [ ] T058 [US1] Add logging for all invoice and payment operations using tracing
@@ -309,34 +310,22 @@
 ### Code Quality
 
 - [ ] T130 Run cargo fmt across all source files
-- [ ] T131 Run cargo clippy and fix all warnings (fixed .clippy.toml configuration, 53 warnings remain - mostly unused imports)
+- [ ] T131 Run cargo clippy and fix all warnings
 - [ ] T132 Add comprehensive inline documentation (/// doc comments) for all public APIs
 - [ ] T133 Review and refactor duplicate code across modules
 
 ### Security & Performance
 
-- [ ] T134 Security audit: validate all input sanitization and SQL injection prevention (sqlx compile-time checks) - 3 vulnerabilities found and fixed: API key hashing, error disclosure, webhook secret exposure
-- [ ] T135 Performance optimization: add database indexes per data-model.md (already in migration 007) - 27 indexes verified across 4 tables, all data-model.md requirements satisfied
-- [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001) - Performance test suite created with 6 test scenarios, requires test data setup to run
+- [ ] T134 Security audit: validate all input sanitization and SQL injection prevention using sqlx compile-time checks
+- [ ] T135 Performance optimization: add database indexes per data-model.md (migration 007)
+- [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001)
 - [ ] T137 Load testing: verify 100 concurrent requests handling (NFR-002)
-  - Implemented 4 load test scenarios (tests/performance/load_test.rs)
-  - Test 1: 100 concurrent requests (9.3ms total, 93µs avg)
-  - Test 2: 100 concurrent lookups (7.5ms total, 75µs avg)
-  - Test 3: 200 requests with 10-connection pool (381ms, 20x oversubscription)
-  - Test 4: Mixed workload 50 reads + 50 writes (15.7ms, 157µs avg)
-  - All tests passing, system handles 100+ concurrent requests successfully
 - [ ] T138 Implement graceful shutdown handling in main.rs
 
 ### Monitoring & Observability
 
 - [ ] T139 Add structured logging for all API endpoints with request IDs
-- [ ] T140 Add metrics collection for response times, error rates, gateway success rates
-  - Implemented MetricsCollector with thread-safe in-memory storage
-  - Implemented MetricsMiddleware for automatic collection
-  - Added GET /metrics endpoint (docs/METRICS-COLLECTION-2025-11.md)
-  - Tracks: total_requests, success/error rates, response times (avg/min/max)
-  - Endpoint-level metrics with per-path counters
-  - 6 unit tests + 3 integration tests passing
+- [ ] T140 Add metrics collection for response times, error rates, gateway success rates with GET /metrics endpoint
 - [ ] T141 Add health check endpoint GET /health with database connectivity check
 - [ ] T142 Add readiness probe endpoint GET /ready
 
@@ -350,17 +339,9 @@
 ### Validation & Deployment Prep
 
 - [ ] T147 Run full quickstart.md validation from specs/001-payment-orchestration-api/quickstart.md
-- [ ] T148 Run all tests: `cargo test` (unit + integration + contract) - Unit tests: 114 passed
-- [ ] T149 Build production binary: `cargo build --release` - Successfully built
-- [ ] T150 Create Docker configuration if needed for deployment
-  - Created Dockerfile with multi-stage build (builder + slim runtime)
-  - Created .dockerignore for optimized build context
-  - Created docker-compose.yml with MySQL and API services
-  - Created .env.docker template for configuration
-  - Updated docs/deployment.md with Docker deployment instructions
-  - Non-root user (paytrust:1001) for security
-  - Health checks configured for both services
-  - Volume persistence for MySQL data
+- [ ] T148 Run all tests: `cargo test` (unit + integration + contract)
+- [ ] T149 Build production binary: `cargo build --release`
+- [ ] T150 Create Docker configuration if needed for deployment (Dockerfile, docker-compose.yml, .dockerignore)
 
 ---
 
@@ -485,10 +466,10 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 151  
+**Total Tasks**: 152  
 **Setup**: 6 tasks  
 **Foundational**: 24 tasks (BLOCKING)  
-**User Story 1 (P1 - MVP)**: 28 tasks (8 tests + 20 implementation)  
+**User Story 1 (P1 - MVP)**: 29 tasks (8 tests + 21 implementation)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 26 tasks (8 tests + 18 implementation)  
 **User Story 4 (P4)**: 20 tasks (5 tests + 15 implementation)  
@@ -496,7 +477,7 @@ Each story can progress independently, then integrate at the end.
 
 **Parallel Opportunities**: ~60 tasks can run in parallel (marked with [P])
 
-**MVP Scope** (User Story 1 only): 58 tasks (Setup + Foundational + US1)
+**MVP Scope** (User Story 1 only): 59 tasks (Setup + Foundational + US1)
 
 **Estimated Effort**:
 

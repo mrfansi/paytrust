@@ -73,7 +73,7 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 - Q: Which authentication mechanism should the API use for developer authentication? → A: API Key in Header - Static key passed in request header (e.g., X-API-Key), simple and standard
 - Q: How should the system handle payment gateway failures when processing invoices? → A: Immediate Fail with Error Response - Return error immediately, let developer retry manually with idempotency
 - Q: What rate limiting should be applied to prevent API abuse? → A: 1000 requests per minute per API key - Balanced limit for production use
-- Q: How should the system handle failed webhook deliveries from payment gateways? → A: Exponential Backoff - 3 retries with increasing delays (1min, 5min, 30min)
+- Q: How should the system handle failed webhook deliveries from payment gateways? → A: Fixed Interval Retries - 3 retries with increasing delays (1min, 5min, 30min after initial failure)
 - Q: What should be the default invoice expiration timeframe before payment must be completed? → A: 24 hours - Standard expiration, balances customer convenience and system efficiency
 - Q: Which payment gateway should handle MYR and USD currency transactions? → A: Developer chooses gateway per invoice - Maximum flexibility, more complex routing
 - Q: In what order should service fees be calculated when both percentage and fixed amount are present? → A: (Subtotal × %) + Fixed - Standard industry practice, apply percentage first then add fixed
@@ -194,7 +194,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-004**: System MUST generate unique invoice IDs for tracking and reference
 - **FR-005**: System MUST calculate invoice subtotal by summing all line item totals (quantity × unit price)
 - **FR-006**: System MUST provide RESTful API endpoints for all payment operations
-- **FR-007**: System MUST allow developers to specify preferred payment gateway (Xendit or Midtrans) per invoice at creation time
+- **FR-007**: System MUST allow developers to specify preferred payment gateway (Xendit or Midtrans) per invoice at creation time via gateway_id parameter in POST /invoices request body
 - **FR-046**: System MUST validate that the selected gateway supports the invoice currency before processing
 - **FR-051**: System MUST make invoices immutable (read-only) once payment is initiated - no modifications to line items, amounts, or financial data allowed (exception: unpaid installment amounts can be adjusted per FR-077)
 - **FR-052**: System MUST reject modification requests for invoices with status other than "draft" with 400 Bad Request and appropriate error message (exception: unpaid installment schedule adjustments allowed)
@@ -266,7 +266,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-032**: System MUST handle idempotent payment requests to prevent duplicate charges
 - **FR-038**: System MUST return descriptive error responses when payment gateway is unavailable, including gateway name and error type
 - **FR-039**: System MUST NOT automatically retry failed payment gateway requests - developers must explicitly retry with idempotency
-- **FR-042**: System MUST retry failed webhook processing 3 times using exponential backoff (1 minute, 5 minutes, 30 minutes)
+- **FR-042**: System MUST retry failed webhook processing 3 times using fixed intervals (1 minute, 5 minutes, 30 minutes after initial failure)
 - **FR-043**: System MUST log all webhook retry attempts with timestamps and final status (success/failed after retries)
 - **FR-048**: System MUST accept partial payments (underpayment or overpayment) and mark invoice as "partially paid"
 - **FR-049**: System MUST store payment amount received, invoice total, and difference (positive for overpayment, negative for underpayment)
@@ -283,18 +283,18 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
 - **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
 - **FR-062**: System MUST use locked tax rates for all payment calculations regardless of external tax rate changes
-- **FR-053**: System MUST implement pessimistic locking for invoice payment processing
-- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests
+- **FR-053**: System MUST implement pessimistic locking for invoice payment processing using MySQL SELECT FOR UPDATE with row-level locks
+- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests when lock cannot be acquired
 
 ### Non-Functional Requirements
 
 - **NFR-001**: API response time MUST be under 2 seconds for invoice creation
-- **NFR-002**: System MUST handle at least 100 concurrent API requests
+- **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes (as defined in SC-005)
 - **NFR-003**: System MUST maintain 99.5% uptime for API availability
 - **NFR-004**: Payment webhook processing MUST complete within 5 seconds
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
 - **NFR-006**: API documentation MUST be provided in OpenAPI/Swagger format
-- **NFR-007**: System MUST store all transaction data for at least 7 years for audit compliance
+- **NFR-007**: System MUST store all transaction data for at least 7 years for audit compliance (configurable per jurisdiction requirements)
 
 ### Key Entities
 
