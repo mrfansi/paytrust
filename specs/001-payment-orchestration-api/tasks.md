@@ -58,8 +58,8 @@
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
 - [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository. Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention
-- [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041)
-- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs) - depends on T017a passing. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
+- [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041) - depends on T027a RateLimiter trait definition
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
@@ -67,23 +67,24 @@
 
 - [ ] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql` with schema: id (BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY per FR-007a), name VARCHAR(50) NOT NULL, supported_currencies JSON NOT NULL (array of currency codes), fee_percentage DECIMAL(5,4) NOT NULL (e.g., 0.0290 for 2.9%), fee_fixed DECIMAL(10,2) NOT NULL, region VARCHAR(50), webhook_url VARCHAR(255), api_key_encrypted TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 - [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
+- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP NULL DEFAULT NULL for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
 - [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
 - [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
-- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-076)
+- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-073)
 - [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
 - [ ] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-043 (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
 
 ### Gateway Module Foundation
 
 - [ ] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
+- [ ] T027a [P] [FOUNDATION] Create RateLimiter trait definition in `contracts/rate_limiter_trait.rs` with rate_limit() method signature per FR-040. Trait methods: async fn check_rate_limit(&self, api_key: &str) -> Result<(), RateLimitError> and async fn record_request(&self, api_key: &str) -> Result<(), RateLimitError>. This trait enables pluggable rate limiting backends (InMemoryRateLimiter for v1.0, RedisRateLimiter for future multi-instance deployment)
 - [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
 - [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
 - [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup (min 5 connections, max 20 connections), transaction isolation level READ COMMITTED, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Cleanup strategy: TRUNCATE tables between tests for data isolation, DROP/CREATE database for schema migration tests. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
-- [ ] T029b **[CONSTITUTION CRITICAL]** Audit all integration test tasks (T036-T038, T063-T065, T086-T087, T109-T110) for Constitution III compliance after implementation. Validation checklist: (1) Verify all integration tests use real MySQL connections from T029a database setup, (2) Verify NO mock library imports: grep for `use mockall`, `use mockito`, `mock::` in tests/integration/ directory, (3) Verify tests execute actual SQL queries against test database (not in-memory simulations), (4) Verify webhook tests make real HTTP calls (not mocked HTTP clients), (5) Document any exceptions with justification. Mark complete only after manual code review confirms all 5 checks pass. This is a validation checkpoint, not implementation task
+- [ ] T029b **[CONSTITUTION GATE]** Validate Constitution III compliance during code review for each integration test PR. This is a CONTINUOUS validation gate, not a post-implementation audit. For each integration test PR, reviewer MUST verify: (1) Test uses real MySQL connections from T029a database setup, (2) NO mock library imports: grep for `use mockall`, `use mockito`, `mock::` in test file, (3) Test executes actual SQL queries against test database (not in-memory simulations), (4) Webhook tests make real HTTP calls (not mocked HTTP clients), (5) Any exceptions documented with justification. PR merge BLOCKED until all 5 checks pass. This gate enforces TDD: tests written → approved → fail → then implement
 - [ ] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
 
 ### Application Entry Point
@@ -142,7 +143,7 @@
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
 - [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-043
-- [ ] T052a [P] [US1] Performance test for webhook retry queue capacity in `tests/integration/webhook_queue_capacity_test.rs` (verify queue handles 10,000 pending retries per NFR-010, verify <100ms queue operation latency at 10k queue depth, test enqueue/dequeue operations under load)
+- [ ] T052a [US1] Performance test for webhook retry queue capacity in `tests/integration/webhook_queue_capacity_test.rs` - depends on T052 webhook handler implementation (verify queue handles 10,000 pending retries per NFR-010, verify <100ms queue operation latency at 10k queue depth, test enqueue/dequeue operations under load)
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
@@ -170,6 +171,7 @@
 ### Tests for User Story 2 (TDD Required)
 
 - [ ] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
+- [ ] T059a [P] [US2] Unit test for tax_rate validation in `tests/unit/tax_validation_test.rs` per FR-064a (verify tax_rate >= 0 and <= 1.0, verify max 4 decimal places, verify 400 Bad Request for invalid rates, test edge cases: 0.0, 1.0, 0.0001, 0.27, 1.0001 rejection)
 - [ ] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
 - [ ] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
 - [ ] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
@@ -397,6 +399,7 @@
 - [ ] T148 Run all tests: `cargo test` (unit + integration + contract)
 - [ ] T149 Build production binary: `cargo build --release`
 - [ ] T150 Create Docker configuration if needed for deployment (Dockerfile, docker-compose.yml, .dockerignore)
+- [ ] T150a [P] Create acceptance test suite in `tests/acceptance/` validating all Success Criteria SC-001 through SC-012 from spec.md. Tests must measure: SC-001 (3min invoice creation), SC-002 (95% success rate), SC-003 (financial report accuracy), SC-004 (5s webhook processing), SC-005 (2s response under load), SC-006 (zero currency mismatch), SC-007 (installment accuracy), SC-008 (10k invoices/day), SC-009 (<5 API calls/transaction), SC-010 (90% real-time updates), SC-011 (2s key rotation), SC-012 (100% supplementary integrity)
 
 ---
 
@@ -524,19 +527,19 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 187  
+**Total Tasks**: 190  
 **Setup**: 6 tasks  
-**Foundational**: 30 tasks (BLOCKING - includes T029a for test database setup, T029b for Constitution compliance audit, T026a for webhook retry log migration, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, T016d for tenant isolation, excludes API key management moved to US5)  
+**Foundational**: 31 tasks (BLOCKING - includes T027a for RateLimiter trait, T029a for test database setup, T029b for Constitution compliance gate, T026a for webhook retry log migration, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, T016d for tenant isolation, excludes API key management moved to US5)  
 **User Story 1 (P1 - MVP)**: 37 tasks (12 tests + 25 implementation - consolidated T033-T035 into single T033, added T038a, T038b, T038c, T044a, T044b, T052a, T054c, T054d, T058a)  
-**User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
+**User Story 2 (P2)**: 22 tasks (8 tests + 14 implementation - added T059a for tax validation test)  
 **User Story 3 (P3)**: 23 tasks (9 tests + 14 implementation - added T087a, supplementary invoices moved to US5, removed T119 duplicate)  
 **User Story 4 (P4)**: 20 tasks (6 tests + 14 implementation - removed T119 moved to US1 as T044a)  
 **User Story 5 (P2)**: 17 tasks (9 tests + 8 implementation - added T111i, T111j, T111k for admin key validation, API key management + supplementary invoices)  
-**Polish**: 29 tasks (removed T146 - moved to T017a in Foundational, added T128d for OpenAPI maintenance docs)
+**Polish**: 30 tasks (removed T146 - moved to T017a in Foundational, added T128d for OpenAPI maintenance docs, added T150a for acceptance tests)
 
-**Parallel Opportunities**: ~72 tasks can run in parallel (marked with [P])
+**Parallel Opportunities**: ~73 tasks can run in parallel (marked with [P])
 
-**MVP Scope** (User Story 1 only): 73 tasks (Setup + Foundational + US1)
+**MVP Scope** (User Story 1 only): 74 tasks (Setup + Foundational + US1)
 
 **Estimated Effort**:
 
