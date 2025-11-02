@@ -2,9 +2,14 @@
 //
 // Provides HTTP client helpers for making requests to test server.
 
-use awc::{Client, ClientResponse};
+use awc::Client;
+use actix_web::dev::Decompress;
+use actix_web::dev::Payload;
 use serde::Serialize;
 use serde_json::Value;
+
+// Type alias for the response body stream used by awc
+type ResponseBody = Decompress<Payload>;
 
 /// HTTP client wrapper for test requests
 ///
@@ -104,8 +109,8 @@ impl TestClient {
     ///     assert_eq!(response.status(), 200);
     /// }
     /// ```
-    pub async fn get_request(&self, path: &str) -> awc::ClientResponse {
-        self.get(path).send().await.expect("Failed to send GET request")
+    pub async fn get_request(&self, path: &str) -> Result<awc::ClientResponse<ResponseBody>, awc::error::SendRequestError> {
+        self.get(path).send().await
     }
 
     /// Make POST request with JSON body
@@ -132,8 +137,8 @@ impl TestClient {
         &self,
         path: &str,
         body: &T,
-    ) -> awc::ClientResponse {
-        self.post(path).send_json(body).await.expect("Failed to send POST request")
+    ) -> Result<awc::ClientResponse<ResponseBody>, awc::error::SendRequestError> {
+        self.post(path).send_json(body).await
     }
 
     /// Make PUT request with JSON body
@@ -148,8 +153,8 @@ impl TestClient {
         &self,
         path: &str,
         body: &T,
-    ) -> awc::ClientResponse {
-        self.put(path).send_json(body).await.expect("Failed to send PUT request")
+    ) -> Result<awc::ClientResponse<ResponseBody>, awc::error::SendRequestError> {
+        self.put(path).send_json(body).await
     }
 
     /// Make PATCH request with JSON body
@@ -164,8 +169,8 @@ impl TestClient {
         &self,
         path: &str,
         body: &T,
-    ) -> awc::ClientResponse {
-        self.patch(path).send_json(body).await.expect("Failed to send PATCH request")
+    ) -> Result<awc::ClientResponse<ResponseBody>, awc::error::SendRequestError> {
+        self.patch(path).send_json(body).await
     }
 
     /// Make DELETE request
@@ -175,8 +180,8 @@ impl TestClient {
     ///
     /// # Returns
     /// HTTP response
-    pub async fn delete_request(&self, path: &str) -> awc::ClientResponse {
-        self.delete(path).send().await.expect("Failed to send DELETE request")
+    pub async fn delete_request(&self, path: &str) -> Result<awc::ClientResponse<ResponseBody>, awc::error::SendRequestError> {
+        self.delete(path).send().await
     }
 }
 

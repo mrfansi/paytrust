@@ -3,6 +3,7 @@
 // Provides helpers for interacting with payment gateway sandbox APIs.
 // Uses REAL API calls to sandbox environments (no mocks).
 
+use base64::prelude::*;
 use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -254,7 +255,7 @@ impl MidtransSandbox {
             }
         });
 
-        let auth = base64::encode(format!("{}:", self.server_key));
+        let auth = base64::prelude::BASE64_STANDARD.encode(format!("{}:", self.server_key));
 
         let response = self
             .client
@@ -293,7 +294,7 @@ impl MidtransSandbox {
     pub async fn get_status(&self, order_id: &str) -> Result<Value, String> {
         let url = format!("{}/v2/{}/status", self.base_url, order_id);
 
-        let auth = base64::encode(format!("{}:", self.server_key));
+        let auth = base64::prelude::BASE64_STANDARD.encode(format!("{}:", self.server_key));
 
         let response = self
             .client
@@ -324,7 +325,7 @@ impl MidtransSandbox {
     pub async fn cancel_transaction(&self, order_id: &str) -> Result<Value, String> {
         let url = format!("{}/v2/{}/cancel", self.base_url, order_id);
 
-        let auth = base64::encode(format!("{}:", self.server_key));
+        let auth = base64::prelude::BASE64_STANDARD.encode(format!("{}:", self.server_key));
 
         let response = self
             .client

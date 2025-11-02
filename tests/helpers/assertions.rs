@@ -22,7 +22,7 @@ use serde_json::Value;
 ///     assert_success(&response);
 /// }
 /// ```
-pub fn assert_success(response: &ClientResponse) {
+pub fn assert_success<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert!(
         status.is_success(),
@@ -49,7 +49,7 @@ pub fn assert_success(response: &ClientResponse) {
 ///     assert_created(&response);
 /// }
 /// ```
-pub fn assert_created(response: &ClientResponse) {
+pub fn assert_created<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -64,7 +64,7 @@ pub fn assert_created(response: &ClientResponse) {
 ///
 /// # Panics
 /// If status code is not 200
-pub fn assert_ok(response: &ClientResponse) {
+pub fn assert_ok<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -94,7 +94,7 @@ pub fn assert_ok(response: &ClientResponse) {
 ///     assert_bad_request(&response);
 /// }
 /// ```
-pub fn assert_bad_request(response: &ClientResponse) {
+pub fn assert_bad_request<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -109,7 +109,7 @@ pub fn assert_bad_request(response: &ClientResponse) {
 ///
 /// # Panics
 /// If status code is not 404
-pub fn assert_not_found(response: &ClientResponse) {
+pub fn assert_not_found<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -124,7 +124,7 @@ pub fn assert_not_found(response: &ClientResponse) {
 ///
 /// # Panics
 /// If status code is not 401
-pub fn assert_unauthorized(response: &ClientResponse) {
+pub fn assert_unauthorized<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -139,7 +139,7 @@ pub fn assert_unauthorized(response: &ClientResponse) {
 ///
 /// # Panics
 /// If status code is not 403
-pub fn assert_forbidden(response: &ClientResponse) {
+pub fn assert_forbidden<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -154,7 +154,7 @@ pub fn assert_forbidden(response: &ClientResponse) {
 ///
 /// # Panics
 /// If status code is not 422
-pub fn assert_unprocessable_entity(response: &ClientResponse) {
+pub fn assert_unprocessable_entity<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
@@ -169,7 +169,7 @@ pub fn assert_unprocessable_entity(response: &ClientResponse) {
 ///
 /// # Panics
 /// If status code is not 500
-pub fn assert_server_error(response: &ClientResponse) {
+pub fn assert_server_error<S>(response: &ClientResponse<S>) {
     let status = response.status();
     assert_eq!(
         status,
