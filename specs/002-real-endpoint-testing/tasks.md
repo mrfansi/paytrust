@@ -65,8 +65,8 @@
 - [x] T016 [P] [US1] Implement tests/helpers/test_client.rs - HTTP client helper functions per contract
 - [x] T017 [P] [US1] Implement tests/helpers/gateway_sandbox.rs - XenditSandbox struct with new() and create_invoice() per contract
 - [x] T018 [P] [US1] Implement tests/helpers/gateway_sandbox.rs - MidtransSandbox struct with new() and charge() per contract
-- [ ] T019 [P] [US1] Add TestFixtures constants to tests/helpers/test_data.rs (gateway IDs, API keys, test cards)
-- [ ] T020 [US1] Refactor tests/integration/payment_flow_test.rs - replace direct DB queries with spawn_test_server() and HTTP requests
+- [x] T019 [P] [US1] Add TestFixtures constants to tests/helpers/test_data.rs (gateway IDs, API keys, test cards)
+- [ ] T020 [WIP] [US1] Refactor tests/integration/payment_flow_test.rs - replace direct DB queries with spawn_test_server() and HTTP requests (IN PROGRESS - compilation errors with awc types)
 - [ ] T021 [US1] Update payment_flow_test.rs - use TestDataFactory for unique test data generation
 - [ ] T022 [US1] Update payment_flow_test.rs - replace mockito gateway calls with XenditSandbox real API calls
 - [ ] T023 [US1] Remove #[ignore] attribute from payment_flow_test.rs if environment configured

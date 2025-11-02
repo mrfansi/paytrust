@@ -5,10 +5,9 @@ use paytrust::modules::{
     installments::{
         models::{InstallmentConfig, InstallmentStatus},
         repositories::InstallmentRepository,
-        services::InstallmentService,
     },
     invoices::{
-        models::{Invoice, InvoiceStatus, LineItem},
+        models::{InvoiceStatus, LineItem},
         repositories::InvoiceRepository,
         services::InvoiceService,
     },

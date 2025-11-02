@@ -1,4 +1,4 @@
-use super::super::models::{PaymentTransaction, TransactionStatus};
+use super::super::models::PaymentTransaction;
 use super::super::services::{PaymentStats, TransactionService};
 use crate::core::Result;
 use actix_web::{get, web, HttpResponse};

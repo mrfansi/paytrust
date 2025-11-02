@@ -3,9 +3,9 @@ use super::gateway_trait::{
 };
 use crate::core::{AppError, Currency, Result};
 use async_trait::async_trait;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use std::str::FromStr;
 

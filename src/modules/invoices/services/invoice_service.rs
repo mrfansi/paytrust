@@ -8,9 +8,8 @@
 // - Status transition enforcement (FR-051, FR-052)
 // - Total calculation
 
-use chrono::Utc;
 use sqlx::MySqlPool;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 use crate::core::{AppError, Currency, Result};
 use crate::modules::gateways::repositories::GatewayRepository;
@@ -19,7 +18,6 @@ use crate::modules::invoices::{
     models::{Invoice, InvoiceStatus, LineItem},
     repositories::InvoiceRepository,
 };
-use crate::modules::taxes::services::TaxCalculator;
 use rust_decimal::Decimal;
 
 /// Service for invoice business logic

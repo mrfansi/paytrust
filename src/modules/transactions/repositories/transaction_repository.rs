@@ -1,6 +1,6 @@
 use super::super::models::{PaymentTransaction, TransactionStatus};
 use crate::core::{AppError, Result};
-use sqlx::{MySql, MySqlPool, Transaction};
+use sqlx::{MySql, MySqlPool};
 
 /// Repository for payment transaction persistence
 ///

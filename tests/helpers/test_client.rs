@@ -104,8 +104,8 @@ impl TestClient {
     ///     assert_eq!(response.status(), 200);
     /// }
     /// ```
-    pub async fn get_request(&self, path: &str) -> Result<ClientResponse, awc::error::SendRequestError> {
-        self.get(path).send().await
+    pub async fn get_request(&self, path: &str) -> awc::ClientResponse {
+        self.get(path).send().await.expect("Failed to send GET request")
     }
 
     /// Make POST request with JSON body
@@ -132,8 +132,8 @@ impl TestClient {
         &self,
         path: &str,
         body: &T,
-    ) -> Result<ClientResponse, awc::error::SendRequestError> {
-        self.post(path).send_json(body).await
+    ) -> awc::ClientResponse {
+        self.post(path).send_json(body).await.expect("Failed to send POST request")
     }
 
     /// Make PUT request with JSON body
@@ -148,8 +148,8 @@ impl TestClient {
         &self,
         path: &str,
         body: &T,
-    ) -> Result<ClientResponse, awc::error::SendRequestError> {
-        self.put(path).send_json(body).await
+    ) -> awc::ClientResponse {
+        self.put(path).send_json(body).await.expect("Failed to send PUT request")
     }
 
     /// Make PATCH request with JSON body
@@ -164,8 +164,8 @@ impl TestClient {
         &self,
         path: &str,
         body: &T,
-    ) -> Result<ClientResponse, awc::error::SendRequestError> {
-        self.patch(path).send_json(body).await
+    ) -> awc::ClientResponse {
+        self.patch(path).send_json(body).await.expect("Failed to send PATCH request")
     }
 
     /// Make DELETE request
@@ -175,8 +175,8 @@ impl TestClient {
     ///
     /// # Returns
     /// HTTP response
-    pub async fn delete_request(&self, path: &str) -> Result<ClientResponse, awc::error::SendRequestError> {
-        self.delete(path).send().await
+    pub async fn delete_request(&self, path: &str) -> awc::ClientResponse {
+        self.delete(path).send().await.expect("Failed to send DELETE request")
     }
 }
 

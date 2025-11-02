@@ -10,7 +10,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 
-use crate::core::{AppError, Currency, Result};
+use crate::core::{Currency, Result};
 use crate::modules::installments::models::InstallmentConfig;
 use crate::modules::invoices::{
     models::{Invoice, LineItem},

@@ -1,6 +1,5 @@
 use actix_web::{web, HttpResponse};
 use chrono::NaiveDate;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 use tracing::error;

@@ -1,5 +1,4 @@
 use actix_web::{error::ResponseError, http::StatusCode, HttpResponse};
-use std::fmt;
 
 /// Application-wide Result type
 pub type Result<T> = std::result::Result<T, AppError>;

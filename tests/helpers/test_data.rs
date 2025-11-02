@@ -142,34 +142,154 @@ impl TestDataFactory {
 pub struct TestFixtures;
 
 impl TestFixtures {
-    // Gateway IDs
+    // ========================================
+    // Payment Gateway IDs (match seeded data)
+    // ========================================
+    
+    /// Xendit gateway for IDR currency (primary test gateway)
     pub const XENDIT_TEST_GATEWAY_ID: &'static str = "test-gateway-001";
+    
+    /// Midtrans gateway for IDR currency (secondary test gateway)
     pub const MIDTRANS_TEST_GATEWAY_ID: &'static str = "test-gateway-002";
+    
+    /// Xendit gateway for MYR currency (multi-currency testing)
+    pub const TEST_GATEWAY_XENDIT_MYR: &'static str = "gateway-xendit-myr";
+    
+    /// Midtrans gateway for IDR (alternative identifier)
+    pub const TEST_GATEWAY_MIDTRANS_IDR: &'static str = "gateway-midtrans-idr";
 
-    // API Keys
+    // ========================================
+    // API Keys (for authentication testing)
+    // ========================================
+    
+    /// Test API key for authentication (unhashed)
     pub const TEST_API_KEY: &'static str = "test_api_key_001";
+    
+    /// Secondary test API key
+    pub const TEST_API_KEY_SECONDARY: &'static str = "test_api_key_002";
+    
+    /// Invalid API key for negative testing
+    pub const TEST_API_KEY_INVALID: &'static str = "invalid_key_12345";
 
-    // Test Cards (Xendit/Midtrans sandbox)
+    // ========================================
+    // Test Credit Cards - Xendit Sandbox
+    // ========================================
+    // Source: https://developers.xendit.co/api-reference/#test-cards
+    
+    /// Xendit test card - successful payment
     pub const XENDIT_TEST_CARD_SUCCESS: &'static str = "4000000000000002";
+    
+    /// Xendit test card - payment failure
     pub const XENDIT_TEST_CARD_FAILURE: &'static str = "4000000000000010";
+    
+    /// Xendit test card - insufficient funds
+    pub const XENDIT_TEST_CARD_INSUFFICIENT_FUNDS: &'static str = "4000000000000119";
+    
+    /// Xendit test card - expired card
+    pub const XENDIT_TEST_CARD_EXPIRED: &'static str = "4000000000000069";
 
+    // ========================================
+    // Test Credit Cards - Midtrans Sandbox
+    // ========================================
+    // Source: https://docs.midtrans.com/docs/testing-payment-flow
+    
+    /// Midtrans test card - successful payment
     pub const MIDTRANS_TEST_CARD_SUCCESS: &'static str = "4811111111111114";
-    pub const MIDTRANS_TEST_CARD_FAILURE: &'static str = "4911111111111113";
+    
+    /// Midtrans test card - 3D Secure challenge flow
+    pub const MIDTRANS_TEST_CARD_3DS: &'static str = "4911111111111113";
+    
+    /// Midtrans test card - payment failure
+    pub const MIDTRANS_TEST_CARD_FAILURE: &'static str = "4011111111111112";
+    
+    /// Midtrans test card - fraud detection
+    pub const MIDTRANS_TEST_CARD_FRAUD: &'static str = "4911111111111113";
 
-    // Test amounts
-    pub const DEFAULT_AMOUNT_IDR: i64 = 100_000; // 100,000 IDR
-    pub const DEFAULT_AMOUNT_MYR: i64 = 50_00; // 50.00 MYR
+    // ========================================
+    // Test Bank Accounts (for bank transfer)
+    // ========================================
+    
+    /// Test BCA virtual account number
+    pub const TEST_VA_BCA: &'static str = "12345678901";
+    
+    /// Test BNI virtual account number
+    pub const TEST_VA_BNI: &'static str = "98765432109";
+    
+    /// Test Mandiri virtual account number
+    pub const TEST_VA_MANDIRI: &'static str = "11223344556";
 
-    /// Get test gateway environment variable
+    // ========================================
+    // Test Amounts (in minor units)
+    // ========================================
+    
+    /// Default test amount for IDR (100,000 IDR = 1,000.00 IDR)
+    pub const DEFAULT_AMOUNT_IDR: i64 = 100_000;
+    
+    /// Default test amount for MYR (5,000 MYR cents = 50.00 MYR)
+    pub const DEFAULT_AMOUNT_MYR: i64 = 50_00;
+    
+    /// Minimum invoice amount for IDR (10,000 IDR)
+    pub const MIN_AMOUNT_IDR: i64 = 10_000;
+    
+    /// Maximum test amount for sandbox testing (10,000,000 IDR)
+    pub const MAX_AMOUNT_IDR: i64 = 10_000_000;
+
+    // ========================================
+    // Test Currencies
+    // ========================================
+    
+    /// Indonesian Rupiah
+    pub const CURRENCY_IDR: &'static str = "IDR";
+    
+    /// Malaysian Ringgit
+    pub const CURRENCY_MYR: &'static str = "MYR";
+    
+    /// Philippine Peso
+    pub const CURRENCY_PHP: &'static str = "PHP";
+
+    // ========================================
+    // Test Tax Rates (as percentages)
+    // ========================================
+    
+    /// Indonesian VAT (PPN) rate - 11%
+    pub const TAX_RATE_IDR_VAT: f64 = 11.0;
+    
+    /// Service tax rate - 2%
+    pub const TAX_RATE_SERVICE: f64 = 2.0;
+    
+    /// Luxury goods tax rate - 20%
+    pub const TAX_RATE_LUXURY: f64 = 20.0;
+
+    // ========================================
+    // Helper Methods (Environment Access)
+    // ========================================
+
+    /// Get Xendit test API key from environment
+    ///
+    /// # Returns
+    /// API key from XENDIT_TEST_API_KEY or default test key
     pub fn xendit_test_api_key() -> String {
         std::env::var("XENDIT_TEST_API_KEY")
             .unwrap_or_else(|_| "xnd_development_test_key".to_string())
     }
 
-    /// Get Midtrans sandbox key
+    /// Get Midtrans sandbox server key from environment
+    ///
+    /// # Returns
+    /// Server key from MIDTRANS_SERVER_KEY or default test key
     pub fn midtrans_test_server_key() -> String {
         std::env::var("MIDTRANS_SERVER_KEY")
             .unwrap_or_else(|_| "SB-Mid-server-test_key".to_string())
+    }
+
+    /// Get test database URL from environment
+    ///
+    /// # Returns
+    /// Database URL from TEST_DATABASE_URL or default
+    pub fn test_database_url() -> String {
+        std::env::var("TEST_DATABASE_URL").unwrap_or_else(|_| {
+            "mysql://root:password@localhost:3306/paytrust_test".to_string()
+        })
     }
 }
 

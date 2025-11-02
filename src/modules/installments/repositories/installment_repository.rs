@@ -11,7 +11,6 @@
 // - Update installment amounts for adjustment (FR-077)
 
 use sqlx::{MySql, MySqlPool, Transaction};
-use uuid::Uuid;
 
 use crate::core::{AppError, Result};
 use crate::modules::installments::models::{InstallmentSchedule, InstallmentStatus};

@@ -4,7 +4,7 @@
 use paytrust::config::database::DatabaseConfig;
 use paytrust::core::Currency;
 use paytrust::modules::invoices::{
-    models::{Invoice, LineItem},
+    models::LineItem,
     services::InvoiceService,
 };
 use rust_decimal::Decimal;

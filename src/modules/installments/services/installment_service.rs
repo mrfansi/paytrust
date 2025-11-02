@@ -8,7 +8,7 @@
 // - Status transition enforcement
 // - Overdue detection
 
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::MySqlPool;
 use tracing::{info, warn};

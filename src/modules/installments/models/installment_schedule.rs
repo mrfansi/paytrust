@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::core::{AppError, Currency, Result};
+use crate::core::{AppError, Result};
 
 /// Installment payment schedule entry for an invoice
 /// Implements FR-014 to FR-020, FR-059, FR-060, FR-068 to FR-072

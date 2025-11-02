@@ -74,6 +74,7 @@ proptest = "1.5"
 actix-test = "0.1"
 rust_decimal_macros = "1.36"
 base64 = "0.22"
+awc = "3.5"
 
 # Unit Tests (Property-based)
 [[test]]
