@@ -1,1 +1,3 @@
-// Transaction controller implementations will be added here
+pub mod transaction_controller;
+
+pub use transaction_controller::configure;

@@ -1,1 +1,3 @@
-// Transaction service implementations will be added here
+pub mod transaction_service;
+
+pub use transaction_service::TransactionService;

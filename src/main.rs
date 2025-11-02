@@ -10,6 +10,8 @@ use modules::gateways::repositories::gateway_repository::MySqlGatewayRepository;
 use modules::gateways::services::gateway_service::GatewayService;
 use modules::invoices::repositories::invoice_repository::MySqlInvoiceRepository;
 use modules::invoices::services::invoice_service::InvoiceService;
+use modules::transactions::repositories::transaction_repository::MySqlTransactionRepository;
+use modules::transactions::services::transaction_service::TransactionService;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -76,6 +78,7 @@ async fn main() -> std::io::Result<()> {
     // Initialize repositories
     let gateway_repo = Arc::new(MySqlGatewayRepository::new(pool.clone()));
     let invoice_repo = Arc::new(MySqlInvoiceRepository::new(pool.clone()));
+    let transaction_repo = Arc::new(MySqlTransactionRepository::new(pool.clone()));
 
     // Initialize gateway service
     let gateway_service = Arc::new(GatewayService::new());
@@ -88,9 +91,15 @@ async fn main() -> std::io::Result<()> {
         gateway_repo.clone(),
     ));
 
+    let transaction_service = Arc::new(TransactionService::new(
+        transaction_repo.clone(),
+        invoice_repo.clone(),
+    ));
+
     tracing::info!("Payment gateways loaded: xendit, midtrans");
     tracing::info!("Gateway service initialized");
     tracing::info!("Invoice service initialized");
+    tracing::info!("Transaction service initialized");
 
     // Start HTTP server
     HttpServer::new(move || {
@@ -100,6 +109,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(invoice_service.clone()))
             .app_data(web::Data::new(gateway_service.clone()))
+            .app_data(web::Data::new(transaction_service.clone()))
             // Middleware stack (order matters!)
             .wrap(configure_cors())
             .wrap(ErrorHandler)
@@ -115,6 +125,7 @@ async fn main() -> std::io::Result<()> {
                     // API routes
                     .configure(modules::invoices::controllers::configure)
                     .configure(modules::gateways::controllers::configure)
+                    .configure(modules::transactions::controllers::configure)
             )
     })
     .workers(server_config.workers)
