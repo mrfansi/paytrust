@@ -56,7 +56,8 @@
 
 ### Middleware & Security
 
-- [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
+- [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
+- [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository. Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention
 - [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041)
 - [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs) - depends on T017a passing. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
@@ -82,7 +83,7 @@
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
 - [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
-- [ ] T029b **[CONSTITUTION CRITICAL]** Audit all integration test tasks (T036-T038, T063-T065, T086-T087, T109-T110) for Constitution III compliance after implementation - verify all tests use real MySQL connections from T029a, no mocks/stubs present in integration tests. Mark complete only after manual code review confirms compliance. This is a validation checkpoint, not implementation task
+- [ ] T029b **[CONSTITUTION CRITICAL]** Audit all integration test tasks (T036-T038, T063-T065, T086-T087, T109-T110) for Constitution III compliance after implementation. Validation checklist: (1) Verify all integration tests use real MySQL connections from T029a database setup, (2) Verify NO mock library imports: grep for `use mockall`, `use mockito`, `mock::` in tests/integration/ directory, (3) Verify tests execute actual SQL queries against test database (not in-memory simulations), (4) Verify webhook tests make real HTTP calls (not mocked HTTP clients), (5) Document any exceptions with justification. Mark complete only after manual code review confirms all 5 checks pass. This is a validation checkpoint, not implementation task
 - [ ] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
 
 ### Application Entry Point
@@ -110,7 +111,8 @@
 - [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
 - [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
 - [ ] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/invoice_expiration_test.rs` - verify all 4 validations from FR-044a: (a) max 30 days from creation, (b) min 1 hour from creation, (c) reject past dates with 400 "Expiration time cannot be in the past", (d) if invoice has installments expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date"
-- [ ] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-085)
+- [ ] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-051(a))
+- [ ] T038c [P] [US1] Integration test for refund webhook processing in `tests/integration/refund_webhook_test.rs` (verify Xendit invoice.refunded event updates transaction status, verify Midtrans refund notification updates records, verify GET /invoices/{id}/refunds returns refund history per FR-086)
 
 ### Implementation for User Story 1
 
@@ -121,7 +123,7 @@
 - [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
 - [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007)
 - [ ] T042a [US1] Implement expires_at validation logic in InvoiceService per FR-044a: (a) parse ISO 8601 timestamp from request, (b) validate not in past (reject 400 "Expiration time cannot be in the past"), (c) validate >= created_at + 1 hour (reject 400 "Expiration must be at least 1 hour from now"), (d) validate <= created_at + 30 days (reject 400 "Expiration must be within 30 days from now"), (e) if invoice has installments: validate expires_at >= last_installment.due_date (reject 400 "Invoice expiration cannot occur before final installment due date {due_date}"). Default to created_at + 24 hours if expires_at not provided per FR-044
-- [ ] T042b [US1] Implement payment_initiated_at timestamp logic in InvoiceService per FR-085: Set payment_initiated_at (TIMESTAMP NULL) on Invoice entity when first payment attempt occurs, defined as: (a) gateway payment URL generation (when calling gateway API to create payment), OR (b) payment_transaction record creation (when recording payment attempt), whichever occurs first. Once payment_initiated_at IS NOT NULL, enforce invoice immutability per FR-051 by rejecting modification requests with 400 Bad Request. Timestamp is write-once (never updated after initial set). Use UTC timezone per FR-087
+- [ ] T042b [US1] Implement payment_initiated_at timestamp logic in InvoiceService per FR-051(a): Set payment_initiated_at (TIMESTAMP NULL) on Invoice entity when first payment attempt occurs, defined as: (a) gateway payment URL generation (when calling gateway API to create payment), OR (b) payment_transaction record creation (when recording payment attempt), whichever occurs first. Once payment_initiated_at IS NOT NULL, enforce invoice immutability per FR-051 by rejecting modification requests with 400 Bad Request. Timestamp is write-once (never updated after initial set). Use UTC timezone per FR-087
 - [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
 - [ ] T044a [US1] Validate gateway supports invoice currency in InvoiceService before invoice creation per FR-046 (check gateway_configs.supported_currencies)
@@ -151,6 +153,7 @@
 - [ ] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
 - [ ] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
 - [ ] T058 [US1] Add logging for all invoice and payment operations using tracing
+- [ ] T058a [US1] Implement invoice expiration background job in `src/modules/invoices/services/expiration_checker.rs` per FR-045 - runs every 5 minutes using tokio interval timer, queries invoices with expires_at < current_time AND status IN ('draft', 'pending', 'partially_paid'), updates status to 'expired', logs expiration events. Background task spawned in main.rs during server startup
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - developers can create invoices, process payments, receive webhooks, and query status. This is MVP ready.
 
@@ -337,7 +340,7 @@
 **Supplementary Invoice Support** (moved from Phase 5)
 
 - [ ] T103 [US5] Update Invoice model to support original_invoice_id reference (BIGINT UNSIGNED NULL, foreign key to invoices.id per FR-082)
-- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation per FR-082: (a) reference valid parent invoice_id, (b) validate parent exists and status is pending/partially_paid/paid (reject if draft/expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice"), (c) draft status explicitly rejected because supplementary invoices only for orders with active payment flows (draft = no payment initiated per FR-085), (d) validate parent is not itself supplementary (reject with 400 "Cannot create supplementary invoice from another supplementary invoice"), (e) inherit currency and gateway from parent, (f) maintain separate payment schedule
+- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation per FR-082: (a) reference valid parent invoice_id, (b) validate parent exists and status is pending/partially_paid/paid (reject if draft/expired/cancelled/failed with 400 "Cannot create supplementary invoice for {status} parent invoice"), (c) draft status explicitly rejected because supplementary invoices only for orders with active payment flows (draft = no payment initiated per FR-051(a)), (d) validate parent is not itself supplementary (reject with 400 "Cannot create supplementary invoice from another supplementary invoice"), (e) inherit currency and gateway from parent, (f) maintain separate payment schedule
 - [ ] T105 [US5] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation (parent exists, not already supplementary, inherit currency/gateway) and audit logging per FR-082
 
 **Checkpoint**: ✅ User Story 5 complete - API key management enables production security, supplementary invoices enable flexible order modifications.
@@ -519,10 +522,10 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 182  
+**Total Tasks**: 185  
 **Setup**: 6 tasks  
-**Foundational**: 29 tasks (BLOCKING - includes T029a for test database setup, T029b for Constitution compliance audit, T026a for webhook retry log migration, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, excludes API key management moved to US5)  
-**User Story 1 (P1 - MVP)**: 33 tasks (9 tests + 24 implementation - consolidated T033-T035 into single T033, added T038a, T038b, T044a, T054c, T054d)  
+**Foundational**: 30 tasks (BLOCKING - includes T029a for test database setup, T029b for Constitution compliance audit, T026a for webhook retry log migration, T017a for rate limiting test, T011a for timezone utilities, T011b for timezone test, T016d for tenant isolation, excludes API key management moved to US5)  
+**User Story 1 (P1 - MVP)**: 35 tasks (10 tests + 25 implementation - consolidated T033-T035 into single T033, added T038a, T038b, T038c, T044a, T054c, T054d, T058a)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 23 tasks (9 tests + 14 implementation - added T087a, supplementary invoices moved to US5, removed T119 duplicate)  
 **User Story 4 (P4)**: 20 tasks (6 tests + 14 implementation - removed T119 moved to US1 as T044a)  
@@ -531,7 +534,7 @@ Each story can progress independently, then integrate at the end.
 
 **Parallel Opportunities**: ~70 tasks can run in parallel (marked with [P])
 
-**MVP Scope** (User Story 1 only): 67 tasks (Setup + Foundational + US1)
+**MVP Scope** (User Story 1 only): 71 tasks (Setup + Foundational + US1)
 
 **Estimated Effort**:
 
