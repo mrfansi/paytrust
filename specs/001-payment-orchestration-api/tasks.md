@@ -63,7 +63,7 @@
 
 - [ ] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql`
 - [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql`
+- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP for immutability tracking per FR-051)
 - [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
 - [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
 - [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
@@ -255,6 +255,7 @@
 - [ ] T108 [P] [US4] Contract test for multi-currency invoice creation in `tests/contract/currency_api_test.rs` - Deferred
 - [ ] T109 [P] [US4] Integration test for currency mismatch rejection in `tests/integration/currency_validation_test.rs` (FR-024) - Deferred
 - [ ] T110 [P] [US4] Integration test for multi-currency financial reports in `tests/integration/multi_currency_report_test.rs` (FR-025) - Deferred
+- [ ] T110a [P] [US4] Integration test for currency non-conversion in reports in `tests/integration/multi_currency_report_test.rs` - verify reports return separate currency totals without conversion (FR-063, FR-025)
 
 ### Implementation for User Story 4
 

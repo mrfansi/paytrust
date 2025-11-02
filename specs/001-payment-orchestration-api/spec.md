@@ -288,10 +288,10 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Non-Functional Requirements
 
-- **NFR-001**: API response time MUST be under 2 seconds for invoice creation
+- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation (as measured in SC-005)
 - **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes (as defined in SC-005)
-- **NFR-003**: System MUST maintain 99.5% uptime for API availability
-- **NFR-004**: Payment webhook processing MUST complete within 5 seconds
+- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours downtime per month)
+- **NFR-004**: Payment webhook processing MUST complete within 5 seconds at 95th percentile with 99% success rate (as measured in SC-004), with retry logic per FR-042 for failures
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
 - **NFR-006**: API documentation MUST be provided in OpenAPI/Swagger format
 - **NFR-007**: System MUST store all transaction data for at least 7 years for audit compliance (configurable per jurisdiction requirements)
