@@ -7,6 +7,7 @@ use actix_web::{web, App, HttpServer};
 use config::Config;
 use middleware::{configure_cors, ApiKeyAuth, ErrorHandler, InMemoryRateLimiter, RateLimitMiddleware};
 use modules::gateways::repositories::gateway_repository::MySqlGatewayRepository;
+use modules::gateways::services::gateway_service::GatewayService;
 use modules::invoices::repositories::invoice_repository::MySqlInvoiceRepository;
 use modules::invoices::services::invoice_service::InvoiceService;
 use std::sync::Arc;
@@ -76,6 +77,11 @@ async fn main() -> std::io::Result<()> {
     let gateway_repo = Arc::new(MySqlGatewayRepository::new(pool.clone()));
     let invoice_repo = Arc::new(MySqlInvoiceRepository::new(pool.clone()));
 
+    // Initialize gateway service
+    let gateway_service = Arc::new(GatewayService::new());
+    // Note: Gateway instances (Xendit, Midtrans) should be registered here
+    // with API keys from configuration. For now, service is initialized empty.
+
     // Initialize services
     let invoice_service = Arc::new(InvoiceService::new(
         invoice_repo.clone(),
@@ -83,6 +89,7 @@ async fn main() -> std::io::Result<()> {
     ));
 
     tracing::info!("Payment gateways loaded: xendit, midtrans");
+    tracing::info!("Gateway service initialized");
     tracing::info!("Invoice service initialized");
 
     // Start HTTP server
@@ -92,6 +99,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(invoice_service.clone()))
+            .app_data(web::Data::new(gateway_service.clone()))
             // Middleware stack (order matters!)
             .wrap(configure_cors())
             .wrap(ErrorHandler)
@@ -106,6 +114,7 @@ async fn main() -> std::io::Result<()> {
                     .wrap(RateLimitMiddleware::new(rate_limiter.clone()))
                     // API routes
                     .configure(modules::invoices::controllers::configure)
+                    .configure(modules::gateways::controllers::configure)
             )
     })
     .workers(server_config.workers)

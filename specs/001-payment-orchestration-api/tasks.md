@@ -134,8 +134,8 @@
 
 - [X] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
 - [X] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
-- [ ] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
-- [ ] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
+- [X] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
+- [X] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
 
 **Transaction Module**
 
