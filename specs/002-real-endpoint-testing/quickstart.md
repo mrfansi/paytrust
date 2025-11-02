@@ -329,53 +329,104 @@ async fn test_my_feature() {
 
 ## 7. CI/CD Integration
 
-### GitHub Actions Example
+### GitHub Actions Workflow
+
+PayTrust includes automated testing via GitHub Actions. Tests run automatically on every push and pull request.
+
+**Workflow file**: `.github/workflows/test.yml`
+
+#### Features
+
+- ✅ Automated test execution on push/PR
+- ✅ MySQL 8.0 service container with health checks
+- ✅ Rust 1.91.0 toolchain with caching
+- ✅ Database migrations via sqlx-cli
+- ✅ Test data seeding
+- ✅ Unit, integration, and contract tests
+- ✅ Code formatting and linting checks
+- ✅ Payment gateway API key secrets
+
+#### Setup GitHub Secrets
+
+To enable gateway tests in CI:
+
+1. Go to your repository on GitHub
+2. Click **Settings** → **Secrets and variables** → **Actions**
+3. Add the following secrets:
+   - `XENDIT_TEST_API_KEY`: Your Xendit sandbox API key
+   - `MIDTRANS_SERVER_KEY`: Your Midtrans sandbox server key
+
+#### Local CI Simulation with Docker
+
+Test your changes locally using Docker Compose before pushing:
+
+```bash
+# Start MySQL test container and run all tests
+./scripts/test_with_docker.sh all
+
+# Run specific test types
+./scripts/test_with_docker.sh unit         # Unit tests only
+./scripts/test_with_docker.sh integration  # Integration tests only
+./scripts/test_with_docker.sh contract     # Contract tests only
+```
+
+**Docker Compose file**: `docker-compose.test.yml`
+
+This spins up a MySQL 8.0 container on port 3307 (to avoid conflicts with local MySQL), runs migrations, seeds test data, and executes the test suite.
+
+#### Environment Variables in CI
+
+The following environment variables are automatically configured in GitHub Actions:
 
 ```yaml
-# .github/workflows/test.yml
-name: Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: paytrust_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.91.0
-          override: true
-
-      - name: Run migrations
-        run: |
-          cargo install sqlx-cli --no-default-features --features mysql
-          sqlx migrate run --database-url mysql://root:password@localhost:3306/paytrust_test
-
-      - name: Run tests
-        env:
-          TEST_DATABASE_URL: mysql://root:password@localhost:3306/paytrust_test
-          XENDIT_TEST_API_KEY: ${{ secrets.XENDIT_TEST_API_KEY }}
-          MIDTRANS_SANDBOX_SERVER_KEY: ${{ secrets.MIDTRANS_SANDBOX_SERVER_KEY }}
-        run: cargo test
+TEST_DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/paytrust_test
+DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/paytrust_test
+SERVER_HOST: 127.0.0.1
+SERVER_PORT: 8080
+RUST_LOG: info
+XENDIT_TEST_API_KEY: ${{ secrets.XENDIT_TEST_API_KEY }}
+MIDTRANS_SERVER_KEY: ${{ secrets.MIDTRANS_SERVER_KEY }}
+TEST_CLEANUP_ENABLED: true
 ```
+
+#### Workflow Stages
+
+1. **Setup**: Checkout code, install Rust 1.91.0, setup caching
+2. **Database**: Start MySQL service with health checks
+3. **Migrations**: Install sqlx-cli and run migrations
+4. **Seed Data**: Insert test payment gateways
+5. **Test**: Run unit tests, integration tests, contract tests
+6. **Quality**: Check code formatting and run clippy linter
+
+#### Viewing Test Results
+
+- Go to the **Actions** tab in your GitHub repository
+- Click on the workflow run to see detailed logs
+- Failed tests will show error messages and stack traces
+
+#### Troubleshooting CI Failures
+
+**MySQL connection fails**:
+
+- Check service health check configuration
+- Verify DATABASE_URL matches service credentials
+
+**Migration fails**:
+
+- Ensure all migration files are committed
+- Check migration SQL syntax
+
+**Tests fail locally but pass in CI (or vice versa)**:
+
+- Environment variable differences
+- Different MySQL versions
+- Test data conflicts (use UUIDs for unique test data)
+
+**Secrets not working**:
+
+- Verify secrets are set in repository settings
+- Check secret names match workflow file exactly
+- Secrets are only available in GitHub Actions, not in local runs
 
 ---
 

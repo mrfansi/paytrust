@@ -1,80 +1,133 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Seed test data for PayTrust integration tests
+# Supports both manual seeding and environment variable configuration
 
-# Seed test data for PayTrust development
-# This script adds a test payment gateway and API key to the database
+set -euo pipefail
 
-echo "🌱 Seeding PayTrust test data..."
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Database connection from .env
-DB_URL="${DATABASE_URL:-mysql://root:password@localhost:3306/paytrust_dev}"
+# Configuration from environment or defaults
+TEST_DB_NAME="${TEST_DB_NAME:-paytrust_test}"
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-3306}"
+DB_USER="${DB_USER:-root}"
+DB_PASS="${DB_PASS:-password}"
 
-# Extract database name from URL
-DB_NAME=$(echo $DB_URL | sed -n 's|.*//.*/.*/\([^?]*\).*|\1|p')
-if [ -z "$DB_NAME" ]; then
-    DB_NAME="paytrust_dev"
-fi
+# Gateway configuration from environment or defaults
+XENDIT_GATEWAY_ID="${XENDIT_GATEWAY_ID:-xendit-test-001}"
+MIDTRANS_GATEWAY_ID="${MIDTRANS_GATEWAY_ID:-midtrans-test-001}"
+XENDIT_API_KEY="${XENDIT_TEST_API_KEY:-xnd_development_test_key}"
+MIDTRANS_SERVER_KEY="${MIDTRANS_SERVER_KEY:-SB-Mid-server-test_key}"
 
-# Extract host, user, password
-DB_HOST=$(echo $DB_URL | sed -n 's|.*//.*@\([^:]*\):.*|\1|p')
-DB_PORT=$(echo $DB_URL | sed -n 's|.*://.*@.*:\([0-9]*\)/.*|\1|p')
-DB_USER=$(echo $DB_URL | sed -n 's|.*://\([^:]*\):.*|\1|p')
-DB_PASS=$(echo $DB_URL | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
+echo -e "${GREEN}PayTrust Test Data Seeding${NC}"
+echo "============================"
+echo ""
 
-if [ -z "$DB_HOST" ]; then
-    DB_HOST="localhost"
-fi
-if [ -z "$DB_PORT" ]; then
-    DB_PORT="3306"
-fi
-if [ -z "$DB_USER" ]; then
-    DB_USER="root"
-fi
-if [ -z "$DB_PASS" ]; then
-    DB_PASS="password"
-fi
-
-echo "📊 Database: $DB_NAME on $DB_HOST:$DB_PORT"
-
-# Create SQL for test data
-SQL="
--- Insert test payment gateways
-INSERT INTO payment_gateways (id, name, supported_currencies, fee_percentage, fee_fixed, api_key_encrypted, webhook_secret, webhook_url, is_active, environment, created_at, updated_at)
-VALUES 
-  ('gateway-xendit-idr', 'Xendit IDR', '[\"IDR\"]', 0.0290, 2000.0000, X'746573745f656e637279707465645f6b6579', 'xendit_test_webhook_secret', 'https://api.xendit.co/callback', true, 'sandbox', NOW(), NOW()),
-  ('gateway-xendit-myr', 'Xendit MYR', '[\"MYR\"]', 0.0290, 1.5000, X'746573745f656e637279707465645f6b6579', 'xendit_test_webhook_secret', 'https://api.xendit.co/callback', true, 'sandbox', NOW(), NOW()),
-  ('gateway-midtrans-idr', 'Midtrans IDR', '[\"IDR\"]', 0.0280, 1500.0000, X'746573745f656e637279707465645f6b6579', 'midtrans_test_webhook_secret', 'https://api.sandbox.midtrans.com/callback', true, 'sandbox', NOW(), NOW())
-ON DUPLICATE KEY UPDATE 
-  updated_at = NOW();
-
--- Insert test API key (hashed version of 'test_api_key_12345')
--- In production, this should be properly hashed with argon2
-INSERT INTO api_keys (id, merchant_id, api_key_hash, rate_limit, is_active, created_at, updated_at)
-VALUES 
-  ('apikey-test-001', 'merchant-test-001', 'test_hash_placeholder_for_development', 1000, true, NOW(), NOW())
-ON DUPLICATE KEY UPDATE 
-  updated_at = NOW();
-
-SELECT 'Seed data inserted successfully!' AS status;
-"
-
-# Execute SQL
-echo "$SQL" | mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" 2>&1
-
-if [ $? -eq 0 ]; then
-    echo "✅ Test data seeded successfully!"
-    echo ""
-    echo "📝 Test Payment Gateways:"
-    echo "  - gateway-xendit-idr (IDR, 2.9% + Rp2000)"
-    echo "  - gateway-xendit-myr (MYR, 2.9% + RM1.50)"
-    echo "  - gateway-midtrans-idr (IDR, 2.8% + Rp1500)"
-    echo ""
-    echo "🔑 Test API Key:"
-    echo "  - Merchant ID: merchant-test-001"
-    echo "  - API Key ID: apikey-test-001"
-    echo ""
-    echo "⚠️  Note: For actual API requests, you need to bypass auth middleware"
-    echo "    or implement proper API key hashing in production"
-else
-    echo "❌ Failed to seed test data"
+# Check if MySQL is running
+echo -n "Checking MySQL connection... "
+if ! mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASS}" -e "SELECT 1" > /dev/null 2>&1; then
+    echo -e "${RED}FAILED${NC}"
+    echo -e "${RED}Error: Cannot connect to MySQL at ${DB_HOST}:${DB_PORT}${NC}"
+    echo "Please ensure MySQL is running and credentials are correct"
     exit 1
 fi
+echo -e "${GREEN}OK${NC}"
+
+# Check if database exists
+echo -n "Checking database ${TEST_DB_NAME}... "
+if ! mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASS}" -e "USE ${TEST_DB_NAME}" 2>/dev/null; then
+    echo -e "${RED}NOT FOUND${NC}"
+    echo -e "${RED}Error: Database ${TEST_DB_NAME} does not exist${NC}"
+    echo "Run scripts/setup_test_db.sh first to create the database"
+    exit 1
+fi
+echo -e "${GREEN}OK${NC}"
+
+# Seed test gateway data
+echo ""
+echo -n "Seeding test gateway data... "
+mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASS}" "${TEST_DB_NAME}" << EOF
+-- Insert test payment gateways
+INSERT INTO payment_gateways (id, name, provider, base_url, is_active, created_at, updated_at)
+VALUES 
+    ('${XENDIT_GATEWAY_ID}', 'Xendit Test', 'xendit', 'https://api.xendit.co', 1, NOW(), NOW()),
+    ('${MIDTRANS_GATEWAY_ID}', 'Midtrans Test', 'midtrans', 'https://api.sandbox.midtrans.com', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE 
+    name = VALUES(name),
+    provider = VALUES(provider),
+    base_url = VALUES(base_url),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
+
+-- Insert test API keys if api_keys table exists
+INSERT IGNORE INTO api_keys (id, name, key_hash, gateway_id, is_active, created_at, updated_at)
+SELECT 
+    'test-api-key-xendit', 
+    'Xendit Test API Key', 
+    '\$argon2id\$v=19\$m=19456,t=2,p=1\$test_salt\$test_hash',
+    '${XENDIT_GATEWAY_ID}',
+    1,
+    NOW(),
+    NOW()
+FROM DUAL
+WHERE EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = '${TEST_DB_NAME}' 
+    AND table_name = 'api_keys'
+);
+
+INSERT IGNORE INTO api_keys (id, name, key_hash, gateway_id, is_active, created_at, updated_at)
+SELECT 
+    'test-api-key-midtrans',
+    'Midtrans Test API Key',
+    '\$argon2id\$v=19\$m=19456,t=2,p=1\$test_salt\$test_hash',
+    '${MIDTRANS_GATEWAY_ID}',
+    1,
+    NOW(),
+    NOW()
+FROM DUAL
+WHERE EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = '${TEST_DB_NAME}' 
+    AND table_name = 'api_keys'
+);
+EOF
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}✓ Test data seeding complete!${NC}"
+echo ""
+echo "Seeded gateways:"
+echo "  - ${XENDIT_GATEWAY_ID} (Xendit)"
+echo "  - ${MIDTRANS_GATEWAY_ID} (Midtrans)"
+echo ""
+echo "Environment variables used:"
+echo "  DB_HOST: ${DB_HOST}"
+echo "  DB_PORT: ${DB_PORT}"
+echo "  DB_USER: ${DB_USER}"
+echo "  TEST_DB_NAME: ${TEST_DB_NAME}"
+echo ""
+
+if [ -n "${XENDIT_TEST_API_KEY:-}" ]; then
+    echo -e "${GREEN}✓ XENDIT_TEST_API_KEY is set${NC}"
+else
+    echo -e "${YELLOW}⚠ XENDIT_TEST_API_KEY not set (gateway tests may fail)${NC}"
+fi
+
+if [ -n "${MIDTRANS_SERVER_KEY:-}" ]; then
+    echo -e "${GREEN}✓ MIDTRANS_SERVER_KEY is set${NC}"
+else
+    echo -e "${YELLOW}⚠ MIDTRANS_SERVER_KEY not set (gateway tests may fail)${NC}"
+fi
+
+echo ""
