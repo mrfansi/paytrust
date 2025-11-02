@@ -194,12 +194,12 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-004**: System MUST generate unique invoice IDs for tracking and reference
 - **FR-005**: System MUST calculate invoice subtotal by summing all line item totals (quantity × unit price)
 - **FR-006**: System MUST provide RESTful API endpoints for all payment operations
-- **FR-007**: System MUST allow developers to specify preferred payment gateway (Xendit or Midtrans) per invoice at creation time via gateway_id parameter in POST /invoices request body
+- **FR-007**: System MUST allow developers to specify preferred payment gateway (Xendit or Midtrans) per invoice at creation time via gateway_id parameter (integer foreign key to gateway_configs table) in POST /invoices request body
 - **FR-046**: System MUST validate that the selected gateway supports the invoice currency before processing
 - **FR-051**: System MUST make invoices immutable (read-only) once payment is initiated - no modifications to line items, amounts, or financial data allowed (exception: unpaid installment amounts can be adjusted per FR-077)
 - **FR-052**: System MUST reject modification requests for invoices with status other than "draft" with 400 Bad Request and appropriate error message (exception: unpaid installment schedule adjustments allowed)
 - **FR-081**: System MUST reject attempts to add or remove line items from invoices after payment is initiated
-- **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle
+- **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle, with validation: supplementary invoice MUST reference valid parent invoice_id, inherit currency and gateway from parent invoice, and maintain separate payment schedule
 - **FR-044**: System MUST set default invoice expiration to 24 hours from creation unless explicitly configured otherwise
 - **FR-044a**: System MUST accept optional expires_at parameter (ISO 8601 timestamp) in invoice creation request with validation (maximum 30 days from creation, minimum 1 hour)
 - **FR-045**: System MUST automatically mark invoices as "expired" when expiration time is reached and payment is not completed
@@ -230,9 +230,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-078**: System MUST prevent modification of already-paid installments
 - **FR-079**: System MUST validate that sum of unpaid installment adjustments equals remaining balance (total - paid amount)
 - **FR-080**: System MUST recalculate proportional tax and service fee distribution for adjusted unpaid installments
-- **FR-065**: System MUST treat each installment as an independent single payment transaction to the payment gateway
-- **FR-066**: System MUST generate separate payment URLs/references for each installment from the payment gateway
-- **FR-067**: System MUST maintain internal tracking of installment relationships and schedule independently from gateway
+- **FR-065**: System MUST treat each installment as an independent single payment transaction to the payment gateway, generating separate payment URLs/references for each installment while maintaining internal tracking of installment relationships and schedule independently from gateway (PayTrust-managed installments, not gateway-native)
 - **FR-068**: System MUST enforce sequential installment payment order (installment N can only be paid after installment N-1 is completed)
 - **FR-069**: System MUST only generate/activate payment URL for the next unpaid installment in sequence
 - **FR-070**: System MUST reject payment attempts for out-of-sequence installments with appropriate error message
@@ -293,12 +291,12 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation with >50% error rate counts as downtime)
 - **NFR-004**: Payment webhook processing MUST complete within 5 seconds at 95th percentile with 99% success rate (as measured in SC-004), with retry logic per FR-042 for failures
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
-- **NFR-006**: API documentation MUST be provided in OpenAPI/Swagger format
+- **NFR-006**: API documentation MUST be provided in OpenAPI 3.0 format and served via GET /openapi.json endpoint with interactive Swagger UI available at GET /docs
 - **NFR-007**: System MUST store all transaction data for at least 7 years for audit compliance (configurable per jurisdiction requirements)
 
 ### Key Entities
 
-- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, immutability flag (becomes read-only after payment initiation), optional original_invoice_id field (foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps
+- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, payment_initiated_at timestamp (when set, invoice becomes read-only per FR-051), optional original_invoice_id field (foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps
 - **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, tax rate (percentage), tax category (optional identifier), and calculated tax amount
 - **Payment Transaction**: Represents actual payment attempt/completion with transaction ID, gateway transaction reference, amount paid, payment method, timestamp, status, and gateway response data
 - **Installment Schedule**: Represents payment plan with installment number, due date, amount, proportionally-calculated tax amount, proportionally-calculated service fee amount, payment status, and associated transaction reference when paid

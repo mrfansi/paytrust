@@ -55,7 +55,9 @@
 ### Middleware & Security
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
-- [ ] T016a [P] Implement API key management endpoints in `src/middleware/auth.rs` or new controller: POST /api-keys (generate), PUT /api-keys/{id}/rotate, DELETE /api-keys/{id} with audit logging per FR-083
+- [ ] T016a [P] Create ApiKeyController in `src/modules/auth/controllers/api_key_controller.rs` with endpoints: POST /api-keys (generate new key with argon2 hash), PUT /api-keys/{id}/rotate (invalidate old, generate new), DELETE /api-keys/{id} (revoke key), all with audit logging to database per FR-083
+- [ ] T016b [P] Create api_key_audit_log table migration in `migrations/008_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used)
+- [ ] T016c [P] Implement master admin key authentication for API key management endpoints (separate from regular API keys) - load from .env as ADMIN_API_KEY
 - [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
@@ -236,8 +238,8 @@
 **Supplementary Invoice Support**
 
 - [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (FR-082)
-- [ ] T104 [US3] Update InvoiceService to create supplementary invoices (FR-081, FR-082)
-- [ ] T105 [US3] Update InvoiceController to provide supplementary invoice creation endpoint
+- [ ] T104 [US3] Update InvoiceService to create supplementary invoices with validation: reference valid parent invoice_id, inherit currency/gateway from parent, prevent adding items to in-progress invoices (FR-081, FR-082)
+- [ ] T105 [US3] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation and audit logging
 
 **Checkpoint**: ✅ All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, sequential enforcement, and supplementary invoice support.
 
@@ -468,9 +470,9 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 152  
+**Total Tasks**: 154  
 **Setup**: 6 tasks  
-**Foundational**: 24 tasks (BLOCKING)  
+**Foundational**: 26 tasks (BLOCKING - includes T016a, T016b, T016c for API key management)  
 **User Story 1 (P1 - MVP)**: 29 tasks (8 tests + 21 implementation)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
 **User Story 3 (P3)**: 26 tasks (8 tests + 18 implementation)  

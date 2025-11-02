@@ -30,6 +30,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 - HTTP server, MySQL driver, JSON serialization require external crates (no std library equivalents)
 - **Action**: Research minimal dependency set with justification in Phase 0
+- **Status**: ✅ Complete - All 11 external dependencies justified in research.md (lines 692-706): actix-web, tokio, sqlx, serde/serde_json, dotenvy, thiserror, tracing, reqwest, rust_decimal, governor, argon2
 
 ### II. SOLID Architecture (NON-NEGOTIABLE) ✅
 
