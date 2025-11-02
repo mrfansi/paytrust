@@ -55,9 +55,6 @@
 ### Middleware & Security
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
-- [ ] T016a [P] Create ApiKeyController in `src/modules/auth/controllers/api_key_controller.rs` with endpoints: POST /api-keys (generate new key with argon2 hash), PUT /api-keys/{id}/rotate (invalidate old, generate new), DELETE /api-keys/{id} (revoke key), all with audit logging to database per FR-083
-- [ ] T016b [P] Create api_key_audit_log table migration in `migrations/008_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used)
-- [ ] T016c [P] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from .env as ADMIN_API_KEY, return 401 for missing/invalid admin key
 - [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
@@ -78,11 +75,15 @@
 - [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
 - [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
+### Test Infrastructure (Constitution Principle III - Real Testing)
+
+- [ ] T029a Create test database configuration in `tests/integration/database_setup.rs` with connection pool setup, migration runner, test fixtures, and cleanup utilities per Constitution Principle III requirement for real database integration tests
+
 ### Application Entry Point
 
 - [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
 
-**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, and middleware are functional. User story implementation can now begin in parallel.
+**Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. User story implementation can now begin in parallel.
 
 ---
 
@@ -128,7 +129,7 @@
 - [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
 - [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
 - [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with fixed interval retries: 1min, 5min, 30min (FR-042, FR-043), after 3 retries (~36 minutes total) mark webhook as permanently failed and log error for manual intervention
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure: retry 1 at T+1min, retry 2 at T+6min, retry 3 at T+36min (FR-042, FR-043), after 3 retries mark webhook as permanently failed and log error for manual intervention
 - [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034)
 - [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
 - [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
@@ -235,13 +236,7 @@
 - [ ] T101 [US3] Update WebhookController to update installment status and apply excess payment
 - [ ] T102 [US3] Update TransactionRepository to link transactions to specific installments
 
-**Supplementary Invoice Support**
-
-- [ ] T103 [US3] Update Invoice model to support original_invoice_id reference (BIGINT UNSIGNED NULL, foreign key to invoices.id per FR-082)
-- [ ] T104 [US3] Update InvoiceService to create supplementary invoices with validation: reference valid parent invoice_id, inherit currency/gateway from parent, prevent adding items to in-progress invoices (FR-081, FR-082), validate parent invoice exists and is not itself a supplementary invoice (prevent chaining)
-- [ ] T105 [US3] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation (parent exists, not already supplementary, inherit currency/gateway) and audit logging per FR-082
-
-**Checkpoint**: ✅ All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, sequential enforcement, and supplementary invoice support.
+**Checkpoint**: ✅ All user stories 1, 2, and 3 work independently - installment payments function with flexible schedules, proportional distribution, and sequential enforcement.
 
 ---
 
@@ -297,6 +292,41 @@
 - [ ] T125 [US4] Update InstallmentCalculator to handle last installment absorption with currency precision
 
 **Checkpoint**: All 4 user stories work independently - multi-currency support is complete with strict isolation, no mixing, and accurate currency-specific calculations.
+
+---
+
+## Phase 6.5: User Story 5 - API Key Management and Invoice Extensions (Priority: P2)
+
+**Goal**: Enable secure API key lifecycle management (generation, rotation, revocation) and support supplementary invoices for adding items to orders with active payments
+
+**Independent Test**: Generate API keys, rotate them, revoke them, verify authentication. Create invoice with active payment, add supplementary invoice with new items, verify separate payment schedules.
+
+### Tests for User Story 5 (TDD Required)
+
+- [ ] T111a [P] [US5] Contract test for POST /api-keys endpoint in `tests/contract/api_key_api_test.rs` validating admin authentication and response schema
+- [ ] T111b [P] [US5] Contract test for PUT /api-keys/{id}/rotate endpoint in `tests/contract/api_key_api_test.rs`
+- [ ] T111c [P] [US5] Contract test for DELETE /api-keys/{id} endpoint in `tests/contract/api_key_api_test.rs`
+- [ ] T111d [P] [US5] Integration test for API key authentication flow in `tests/integration/api_key_auth_test.rs` (generate, use, rotate, verify old key rejected)
+- [ ] T111e [P] [US5] Integration test for supplementary invoice creation in `tests/integration/supplementary_invoice_test.rs` (create parent, start payment, add supplementary, verify inheritance and isolation)
+- [ ] T111f [P] [US5] Integration test for supplementary invoice validation in `tests/integration/supplementary_invoice_test.rs` (reject if parent missing, reject if parent is itself supplementary)
+
+### Implementation for User Story 5
+
+**API Key Management Module**
+
+- [ ] T016a [P] [US5] Create ApiKeyController in `src/modules/auth/controllers/api_key_controller.rs` with endpoints: POST /api-keys (generate new key with argon2 hash), PUT /api-keys/{id}/rotate (invalidate old, generate new), DELETE /api-keys/{id} (revoke key), all with audit logging to database per FR-083
+- [ ] T016b [P] [US5] Create api_key_audit_log table migration in `migrations/008_create_api_key_audit_log.sql` for tracking key lifecycle events (created, rotated, revoked, used)
+- [ ] T016c [P] [US5] Implement master admin key authentication for API key management endpoints per FR-084 (separate from regular API keys) - load from .env as ADMIN_API_KEY, return 401 for missing/invalid admin key
+- [ ] T111g [US5] Create ApiKeyService in `src/modules/auth/services/api_key_service.rs` for key generation, hashing, validation, rotation logic
+- [ ] T111h [US5] Create ApiKeyRepository in `src/modules/auth/repositories/api_key_repository.rs` for database operations and audit logging
+
+**Supplementary Invoice Support** (moved from Phase 5)
+
+- [ ] T103 [US5] Update Invoice model to support original_invoice_id reference (BIGINT UNSIGNED NULL, foreign key to invoices.id per FR-082)
+- [ ] T104 [US5] Update InvoiceService to create supplementary invoices with validation: reference valid parent invoice_id, inherit currency/gateway from parent, prevent adding items to in-progress invoices (FR-081, FR-082), validate parent invoice exists and is not itself a supplementary invoice (prevent chaining)
+- [ ] T105 [US5] Implement supplementary invoice creation endpoint POST /invoices/{id}/supplementary in InvoiceController with validation (parent exists, not already supplementary, inherit currency/gateway) and audit logging per FR-082
+
+**Checkpoint**: ✅ User Story 5 complete - API key management enables production security, supplementary invoices enable flexible order modifications.
 
 ---
 
@@ -361,12 +391,14 @@
 - **User Story 2 (Phase 4)**: Depends on Foundational completion - Extends US1 but independently testable
 - **User Story 3 (Phase 5)**: Depends on Foundational completion - Extends US1/US2 but independently testable
 - **User Story 4 (Phase 6)**: Depends on Foundational completion - Enhances all stories with currency isolation
+- **User Story 5 (Phase 6.5)**: Depends on Foundational completion - Extends US1 with API key management and supplementary invoices
 - **Polish (Phase 7)**: Depends on all desired user stories being complete
 
 ### User Story Priority Execution
 
 - **P1 (User Story 1)**: MVP - Must complete first, independently functional
 - **P2 (User Story 2)**: Can start after Foundational, adds financial reporting
+- **P2 (User Story 5)**: Can start after Foundational, adds API key management and supplementary invoices
 - **P3 (User Story 3)**: Can start after Foundational, adds installment flexibility
 - **P4 (User Story 4)**: Can start after Foundational, adds multi-currency support
 
@@ -472,18 +504,19 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 157  
+**Total Tasks**: 166  
 **Setup**: 6 tasks  
-**Foundational**: 26 tasks (BLOCKING - includes T016a, T016b, T016c for API key management)  
+**Foundational**: 24 tasks (BLOCKING - includes T029a for test database setup, excludes API key management moved to US5)  
 **User Story 1 (P1 - MVP)**: 29 tasks (8 tests + 21 implementation)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
-**User Story 3 (P3)**: 26 tasks (8 tests + 18 implementation)  
+**User Story 3 (P3)**: 23 tasks (8 tests + 15 implementation, supplementary invoices moved to US5)  
 **User Story 4 (P4)**: 21 tasks (6 tests + 15 implementation)  
+**User Story 5 (P2)**: 14 tasks (6 tests + 8 implementation - API key management + supplementary invoices)  
 **Polish**: 28 tasks (added T128c, T110b, updated T128b)
 
-**Parallel Opportunities**: ~60 tasks can run in parallel (marked with [P])
+**Parallel Opportunities**: ~65 tasks can run in parallel (marked with [P])
 
-**MVP Scope** (User Story 1 only): 59 tasks (Setup + Foundational + US1)
+**MVP Scope** (User Story 1 only): 57 tasks (Setup + Foundational + US1)
 
 **Estimated Effort**:
 

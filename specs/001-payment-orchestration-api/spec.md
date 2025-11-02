@@ -54,7 +54,7 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 - **Framework**: actix-web 4.9+ with async/await
 - **Database**: MySQL 8.0+ with InnoDB
 - **Architecture**: Modular, domain-driven design with repository pattern
-- **Testing**: Real database integration tests (no mocks per Constitution)
+- **Testing**: Real database integration tests per Constitution (mocks permitted only for isolated business logic unit tests)
 
 ### Key Design Principles
 
@@ -70,7 +70,7 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 
 ### Session 2025-11-01
 
-- Q: Which authentication mechanism should the API use for developer authentication? → A: API Key in Header - Static key passed in request header (e.g., X-API-Key), simple and standard
+- Q: Which authentication mechanism should the API use for developer authentication? → A: API Key in Header - Static key passed in request header (e.g., X-API-Key), simple and standard. Each API key represents a separate developer/merchant tenant with isolated data access.
 - Q: How should the system handle payment gateway failures when processing invoices? → A: Immediate Fail with Error Response - Return error immediately, let developer retry manually with idempotency
 - Q: What rate limiting should be applied to prevent API abuse? → A: 1000 requests per minute per API key - Balanced limit for production use
 - Q: How should the system handle failed webhook deliveries from payment gateways? → A: Fixed Interval Retries - 3 retries with increasing delays (1min, 5min, 30min after initial failure)
@@ -160,6 +160,24 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 2. **Given** a financial report request, **When** developer queries totals, **Then** system returns separate totals for each currency (no mixing or conversion)
 3. **Given** an invoice in MYR, **When** developer attempts to add IDR payment, **Then** system rejects the payment with currency mismatch error
 4. **Given** service fees calculated in different currencies, **When** system generates report, **Then** fees are grouped by currency without automatic conversion
+
+---
+
+### User Story 5 - API Key Management and Invoice Extensions (Priority: P2)
+
+A developer manages API keys for authentication and creates supplementary invoices when customers request additional items after payment has started on the original invoice.
+
+**Why this priority**: API key management is essential for production security (key rotation, revocation) and supplementary invoices enable flexible order modifications without disrupting active payment flows. Both are production-ready features but not required for MVP.
+
+**Independent Test**: Can be tested by generating API keys, rotating them, revoking them, and verifying authentication works correctly. Supplementary invoice testing involves creating an invoice with active payment, then creating a supplementary invoice for additional items with separate payment schedule.
+
+**Acceptance Scenarios**:
+
+1. **Given** an admin has master API key credentials, **When** they request new API key generation via POST /api-keys, **Then** system generates unique API key, stores argon2 hash, returns key once, and logs creation event
+2. **Given** an existing API key, **When** admin requests key rotation via PUT /api-keys/{id}/rotate, **Then** system invalidates old key, generates new key, returns new key once, and logs rotation event
+3. **Given** an API key is compromised, **When** admin revokes it via DELETE /api-keys/{id}, **Then** system marks key as revoked, rejects future requests with that key, and logs revocation event
+4. **Given** an invoice with payment in progress, **When** developer creates supplementary invoice via POST /invoices/{id}/supplementary with new line items, **Then** system creates new invoice referencing parent, inherits currency and gateway, maintains separate payment schedule
+5. **Given** a supplementary invoice request, **When** parent invoice does not exist or is itself supplementary, **Then** system rejects request with 400 Bad Request and appropriate error message
 
 ---
 
@@ -263,7 +281,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-032**: System MUST handle idempotent payment requests to prevent duplicate charges
 - **FR-038**: System MUST return descriptive error responses when payment gateway is unavailable, including gateway name and error type
 - **FR-039**: System MUST NOT automatically retry failed payment gateway requests - developers must explicitly retry with idempotency
-- **FR-042**: System MUST retry failed webhook processing 3 times using fixed intervals (1 minute, 5 minutes, 30 minutes after initial failure)
+- **FR-042**: System MUST retry failed webhook processing 3 times using fixed intervals at cumulative delays from initial failure: retry 1 at T+1min, retry 2 at T+6min, retry 3 at T+36min (total retry window: 36 minutes)
 - **FR-043**: System MUST log all webhook retry attempts with timestamps and final status (success/failed after retries)
 - **FR-048**: System MUST accept partial payments (underpayment or overpayment) and mark invoice as "partially paid"
 - **FR-049**: System MUST store payment amount received, invoice total, and difference (positive for overpayment, negative for underpayment)
@@ -276,21 +294,21 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-035**: System MUST log all API requests and responses for audit trail
 - **FR-036**: System MUST return appropriate HTTP status codes and error messages for all API operations
 - **FR-037**: System MUST reject requests with missing or invalid API keys with 401 Unauthorized status
-- **FR-083**: System MUST provide API endpoints for generating, rotating, and revoking API keys with audit logging (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id})
+- **FR-083**: System MUST provide API endpoints for generating, rotating, and revoking API keys with audit logging (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id}), using argon2 hashing algorithm for secure key storage
 - **FR-084**: System MUST authenticate API key management endpoints (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id}) using master admin API key separate from regular API keys, loaded from ADMIN_API_KEY environment variable, with 401 Unauthorized response for missing or invalid admin key
 - **FR-085**: System MUST set payment_initiated_at timestamp on Invoice entity when first payment attempt is made (payment transaction created or gateway payment URL requested), and use this timestamp to enforce invoice immutability per FR-051 (reject modifications when payment_initiated_at IS NOT NULL)
 - **FR-040**: System MUST enforce rate limiting of 1000 requests per minute per API key
 - **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
 - **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
 - **FR-062**: System MUST use locked tax rates for all payment calculations regardless of external tax rate changes
-- **FR-053**: System MUST implement pessimistic locking for invoice payment processing using MySQL SELECT FOR UPDATE with row-level locks
-- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests when lock cannot be acquired
+- **FR-053**: System MUST implement pessimistic locking for invoice payment processing using MySQL SELECT FOR UPDATE with row-level locks, 5-second lock timeout, and automatic deadlock retry (maximum 3 retry attempts with 100ms exponential backoff)
+- **FR-054**: System MUST return 409 Conflict status with "payment already in progress" message for concurrent payment requests when lock cannot be acquired within timeout period
 
 ### Non-Functional Requirements
 
-- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation, measured using k6 load testing tool against test environment with minimum hardware specification: 4 CPU cores, 8GB RAM, MySQL 8.0 on dedicated database server with SSD storage (this represents minimum production deployment configuration, not recommended specification)
+- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation, measured using k6 load testing tool against test environment with minimum hardware specification: 4 vCPU cores (2.5GHz+ clock speed), 8GB DDR4 RAM, MySQL 8.0 on dedicated database server with SSD storage (minimum 1000 IOPS, 100GB capacity) (this represents minimum production deployment configuration, not recommended specification)
 - **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes, measured using k6 load testing tool with concurrent virtual users maintaining steady request rate (as defined in SC-005)
-- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation defined as: sustained error rate >50% for any consecutive 5-minute window counts as downtime for that period; error rate 50% or below is considered operational)
+- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation defined as: sustained error rate >50% measured in 1-minute intervals within any consecutive 5-minute window counts as downtime for that period; error rate ≤50% is considered operational)
 - **NFR-004**: Payment webhook processing MUST complete within 5 seconds at 95th percentile with 99% success rate (as measured in SC-004), with retry logic per FR-042 for failures
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
 - **NFR-006**: API documentation MUST be provided in OpenAPI 3.0 format as manually-maintained specification file in specs/001-payment-orchestration-api/contracts/openapi.yaml, served via GET /openapi.json endpoint (reading from contracts/ directory), with interactive Swagger UI available at GET /docs rendering the specification
@@ -298,7 +316,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Key Entities
 
-- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment (gateway_id foreign key), payment_initiated_at timestamp (TIMESTAMP NULL, set on first payment attempt per FR-085, when NOT NULL invoice becomes read-only per FR-051), expires_at timestamp (TIMESTAMP, defaults to created_at + 24 hours per FR-044, configurable via optional parameter per FR-044a), optional original_invoice_id field (BIGINT UNSIGNED NULL, foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps (created_at, updated_at)
+- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment (gateway_id foreign key), payment_initiated_at timestamp (TIMESTAMP NULL DEFAULT NULL, set on first payment attempt per FR-085, when NOT NULL invoice becomes read-only per FR-051, no automatic updates), expires_at timestamp (TIMESTAMP, defaults to created_at + 24 hours per FR-044, configurable via optional parameter per FR-044a), optional original_invoice_id field (BIGINT UNSIGNED NULL, foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps (created_at, updated_at)
 - **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, tax rate (percentage), tax category (optional identifier), and calculated tax amount
 - **Payment Transaction**: Represents actual payment attempt/completion with transaction ID, gateway transaction reference, amount paid, payment method, timestamp, status, and gateway response data
 - **Installment Schedule**: Represents payment plan with installment number, due date, amount, proportionally-calculated tax amount, proportionally-calculated service fee amount, payment status, and associated transaction reference when paid
@@ -311,6 +329,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 - Payment gateways (Xendit and Midtrans) provide webhook notifications for payment status updates
 - API consumers (developers) handle user-facing payment UI using gateway-provided payment URLs
+- Each API key represents a separate developer/merchant tenant with isolated data access (multi-tenant architecture with tenant_id derived from API key)
 - Exchange rates between currencies are NOT handled by this system - each currency operates independently
 - Payment gateway credentials are configured per environment (development, staging, production)
 - Installment payment scheduling and reminder notifications are handled outside this system
@@ -335,3 +354,5 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **SC-008**: System handles 10,000 invoices per day across all currencies without performance degradation (distributed throughout business hours with peak of 500 invoices/hour)
 - **SC-009**: Developers successfully integrate payment flows with less than 5 API calls per transaction
 - **SC-010**: 90% of payment status updates are reflected in real-time (within 10 seconds of gateway notification)
+- **SC-011**: API key rotation completes within 2 seconds with zero downtime for active requests using old key during rotation window
+- **SC-012**: Supplementary invoices are created and linked to parent invoices with 100% referential integrity (no orphaned supplementary invoices)
