@@ -19,7 +19,8 @@ PayTrust is a payment orchestration platform that unifies multiple payment gatew
 **Project Type**: Single backend API project with modular domain structure  
 **Performance Goals**: <2s API response time for invoice creation, 100 concurrent requests, 10k invoices/day  
 **Constraints**: <200ms p95 latency, 99.5% uptime, accurate to smallest currency unit (1 IDR, 0.01 MYR/USD)  
-**Scale/Scope**: Multi-tenant API serving developers, support for 2 payment gateways (Xendit/Midtrans), 3 currencies (IDR/MYR/USD), webhook processing within 5 seconds
+**Scale/Scope**: Multi-tenant API serving developers, support for 2 payment gateways (Xendit/Midtrans), 3 currencies (IDR/MYR/USD), webhook processing within 5 seconds  
+**Rate Limiting Strategy**: In-memory governor crate for single-instance deployment (1000 req/min per API key); Redis-backed rate limiting required for multi-instance horizontal scaling (future enhancement)
 
 ## Constitution Check
 
@@ -106,7 +107,7 @@ src/
 │   │   ├── mod.rs                   # Public interface exports
 │   │   ├── models/
 │   │   │   ├── mod.rs
-│   │   │   ├── invoice.rs           # Invoice entity with line items
+│   │   │   ├── invoice.rs           # Invoice entity with line items, original_invoice_id for supplementary invoices
 │   │   │   └── line_item.rs         # Line item entity
 │   │   ├── repositories/
 │   │   │   ├── mod.rs

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-payment-orchestration-api`  
 **Created**: 2025-11-01  
-**Status**: Implemented  
+**Status**: Draft  
 **Version**: 0.1.0
 
 ## What is PayTrust?
@@ -201,6 +201,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-081**: System MUST reject attempts to add or remove line items from invoices after payment is initiated
 - **FR-082**: System MUST provide API to create supplementary invoices that reference the original invoice for additional items requested mid-payment-cycle
 - **FR-044**: System MUST set default invoice expiration to 24 hours from creation unless explicitly configured otherwise
+- **FR-044a**: System MUST accept optional expires_at parameter (ISO 8601 timestamp) in invoice creation request with validation (maximum 30 days from creation, minimum 1 hour)
 - **FR-045**: System MUST automatically mark invoices as "expired" when expiration time is reached and payment is not completed
 
 #### Additional Charges
@@ -259,9 +260,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 #### Transaction Management
 
-- **FR-028**: System MUST receive and process webhook notifications from payment gateways
-- **FR-029**: System MUST update invoice status based on payment gateway responses (pending, paid, failed, expired)
-- **FR-030**: System MUST store complete transaction history including timestamps, amounts, and gateway responses
+- **FR-028**: System MUST receive and process webhook notifications from payment gateways, update invoice status based on gateway responses (pending, paid, failed, expired), and store complete transaction history including timestamps, amounts, and gateway responses
 - **FR-031**: System MUST provide API endpoints to query invoice status and payment history
 - **FR-032**: System MUST handle idempotent payment requests to prevent duplicate charges
 - **FR-038**: System MUST return descriptive error responses when payment gateway is unavailable, including gateway name and error type
@@ -279,6 +278,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 - **FR-035**: System MUST log all API requests and responses for audit trail
 - **FR-036**: System MUST return appropriate HTTP status codes and error messages for all API operations
 - **FR-037**: System MUST reject requests with missing or invalid API keys with 401 Unauthorized status
+- **FR-083**: System MUST provide API endpoints for generating, rotating, and revoking API keys with audit logging (POST /api-keys, PUT /api-keys/{id}/rotate, DELETE /api-keys/{id})
 - **FR-040**: System MUST enforce rate limiting of 1000 requests per minute per API key
 - **FR-041**: System MUST return 429 Too Many Requests status when rate limit is exceeded with retry-after header
 - **FR-061**: System MUST lock all tax rates at invoice creation time, making them immutable throughout invoice lifecycle
@@ -288,9 +288,9 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Non-Functional Requirements
 
-- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation (as measured in SC-005)
-- **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes (as defined in SC-005)
-- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours downtime per month)
+- **NFR-001**: API response time MUST be under 2 seconds at 95th percentile for invoice creation, measured using k6 load testing tool against test environment with 4 CPU cores, 8GB RAM, MySQL 8.0 (as measured in SC-005)
+- **NFR-002**: System MUST handle at least 100 concurrent API requests sustained for 5 minutes, measured using k6 load testing tool with concurrent virtual users maintaining steady request rate (as defined in SC-005)
+- **NFR-003**: System MUST maintain 99.5% uptime for API availability measured monthly (allows ~3.6 hours unplanned downtime per month; excludes scheduled maintenance windows announced 48 hours in advance; partial degradation with >50% error rate counts as downtime)
 - **NFR-004**: Payment webhook processing MUST complete within 5 seconds at 95th percentile with 99% success rate (as measured in SC-004), with retry logic per FR-042 for failures
 - **NFR-005**: Financial calculations MUST be accurate to the smallest currency unit (1 IDR, 0.01 MYR/USD)
 - **NFR-006**: API documentation MUST be provided in OpenAPI/Swagger format
@@ -298,7 +298,7 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Key Entities
 
-- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, immutability flag (becomes read-only after payment initiation), optional reference to original invoice (for supplementary invoices), and creation/update timestamps
+- **Invoice**: Represents a payment request with line items, currency, amounts (subtotal, tax, service fee, total), status (draft, pending, partially paid, paid, failed, expired), payment gateway assignment, immutability flag (becomes read-only after payment initiation), optional original_invoice_id field (foreign key reference to parent invoice for supplementary invoices created when adding items mid-payment per FR-082), and creation/update timestamps
 - **Line Item**: Represents individual product/service in an invoice with product name, quantity, unit price, subtotal, tax rate (percentage), tax category (optional identifier), and calculated tax amount
 - **Payment Transaction**: Represents actual payment attempt/completion with transaction ID, gateway transaction reference, amount paid, payment method, timestamp, status, and gateway response data
 - **Installment Schedule**: Represents payment plan with installment number, due date, amount, proportionally-calculated tax amount, proportionally-calculated service fee amount, payment status, and associated transaction reference when paid
@@ -325,8 +325,8 @@ A developer processes transactions in multiple currencies (IDR, MYR, USD) with p
 
 ### Measurable Outcomes
 
-- **SC-001**: Developers can create a complete invoice with line items and process payment in under 3 minutes using API documentation
-- **SC-002**: System successfully processes 95% of payment transactions without errors or failures (includes gateway failures, network timeouts, and validation errors; excludes user input errors)
+- **SC-001**: Developers can create a complete invoice with line items and process payment in under 3 minutes using API documentation (measured from reading documentation to receiving webhook payment confirmation, including first API call to final webhook receipt)
+- **SC-002**: System successfully processes 95% of payment transactions without errors or failures (user input errors defined as 400-level HTTP responses for validation failures; all 500-level responses and gateway timeout errors count toward failure rate)
 - **SC-003**: Financial reports accurately reflect 100% of service fees and taxes within 1 hour of transaction completion
 - **SC-004**: Payment gateway webhook notifications are processed within 5 seconds with 99% success rate
 - **SC-005**: API response times remain under 2 seconds for 95% of requests under sustained load (100 concurrent requests maintained for 5 minutes)

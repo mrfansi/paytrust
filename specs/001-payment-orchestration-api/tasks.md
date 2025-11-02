@@ -55,6 +55,7 @@
 ### Middleware & Security
 
 - [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md
+- [ ] T016a [P] Implement API key management endpoints in `src/middleware/auth.rs` or new controller: POST /api-keys (generate), PUT /api-keys/{id}/rotate, DELETE /api-keys/{id} with audit logging per FR-083
 - [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` using governor (1000 req/min per key per FR-040)
 - [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
 - [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
@@ -63,7 +64,7 @@
 
 - [ ] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql`
 - [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP for immutability tracking per FR-051)
+- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
 - [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
 - [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
 - [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql`
@@ -109,7 +110,7 @@
 - [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
 - [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
 - [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration)
+- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007, set expiration with optional expires_at parameter per FR-044a with validation: max 30 days, min 1 hour)
 - [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
 - [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
 
@@ -304,7 +305,7 @@
 
 - [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
-- [ ] T128 [P] Generate OpenAPI documentation endpoint in actix-web serving `contracts/openapi.yaml`
+- [ ] T128 [P] Generate OpenAPI documentation from code annotations or serve existing `contracts/openapi.yaml` via actix-web endpoint
 - [ ] T128b [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
 - [ ] T129 [P] Create deployment guide in `docs/deployment.md` with MySQL setup, environment variables, TLS configuration
 
@@ -319,14 +320,14 @@
 
 - [ ] T134 Security audit: validate all input sanitization and SQL injection prevention using sqlx compile-time checks
 - [ ] T135 Performance optimization: add database indexes per data-model.md (migration 007)
-- [ ] T136 Performance testing: verify <2s response time for invoice creation (NFR-001)
-- [ ] T137 Load testing: verify 100 concurrent requests handling (NFR-002)
+- [ ] T136 Performance testing: verify <2s response time for invoice creation using k6 load testing tool (NFR-001 - 95th percentile measurement)
+- [ ] T137 Load testing: verify 100 concurrent requests sustained for 5 minutes using k6 with concurrent virtual users (NFR-002)
 - [ ] T138 Implement graceful shutdown handling in main.rs
 
 ### Monitoring & Observability
 
 - [ ] T139 Add structured logging for all API endpoints with request IDs
-- [ ] T140 Add metrics collection for response times, error rates, gateway success rates with GET /metrics endpoint
+- [ ] T140 Add metrics collection for response times, error rates, gateway success rates, webhook processing success rate (99% target per NFR-004) with GET /metrics endpoint and alerting when webhook success rate <99% over 1-hour window
 - [ ] T141 Add health check endpoint GET /health with database connectivity check
 - [ ] T142 Add readiness probe endpoint GET /ready
 
