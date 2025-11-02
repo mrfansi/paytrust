@@ -84,6 +84,10 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/v1")
                     .configure(modules::invoices::controllers::configure)
+                    .configure(modules::installments::controllers::configure)
+                    .configure(modules::reports::controllers::configure)
+                    .configure(modules::gateways::controllers::configure)
+                    .configure(modules::taxes::controllers::configure)
             )
     })
     .bind(&bind_address)?

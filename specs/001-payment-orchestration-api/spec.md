@@ -2,8 +2,69 @@
 
 **Feature Branch**: `001-payment-orchestration-api`  
 **Created**: 2025-11-01  
-**Status**: Draft  
-**Input**: User description: "Paytrust is payment orchestration to unify multiple payment gateway. The goals is to help developer to integrates their platform into their payment gateway using this platform effortless by consume the API. All transaction architectures handled by this codebase. This platform can create invoice with the items, can add additional charge like service fee (its charges from payment gateway) and tax, can handling installment payment by dynamic setup their installment, can adjust their payment like example if their payment is Rp1000.000 and has 2 installments so they can adjust for the first one is Rp200.000 and the last one is Rp800.000. For now the third party payment gateway support only Xendit and Midtrans (Indonesia Only). The currency support is IDR (Indonesia), MYR (Malaysia) and USD (Global). This platform must support for get total additional charge like service fee (its charges from payment gateway) and tax to help their finance. This platform only backend API. Consider to make the payment isolation between different currency or region to avoid mismatch calculation"
+**Status**: Implemented  
+**Version**: 0.1.0
+
+## What is PayTrust?
+
+PayTrust is a **backend payment orchestration API** built in Rust that unifies multiple payment gateways (currently Xendit and Midtrans) into a single, developer-friendly interface. It handles the complete transaction lifecycle from invoice creation to payment completion, supporting both single payments and flexible installment plans.
+
+### Core Capabilities
+
+✅ **Invoice Management**
+
+- Create invoices with multiple line items
+- Automatic calculation of subtotals, taxes, and gateway service fees
+- Support for per-line-item tax rates
+- Invoice expiration (default 24 hours)
+- External ID tracking for your system's reference
+
+✅ **Installment Payments**
+
+- Configure 2-12 installment plans per invoice
+- Equal or custom amount distribution
+- Adjust unpaid installments dynamically
+- Sequential payment enforcement (pay installment 1 before 2)
+- Automatic overpayment handling (excess applies to next installments)
+
+✅ **Multi-Currency Support**
+
+- IDR (Indonesian Rupiah) - zero decimal places
+- MYR (Malaysian Ringgit) - 2 decimal places
+- USD (US Dollar) - 2 decimal places
+- Complete currency isolation (no mixing/conversion)
+
+✅ **Financial Reporting**
+
+- Service fee breakdown by gateway and currency
+- Tax breakdown by rate and currency
+- Date range filtering
+- Transaction counting
+
+✅ **Payment Gateway Integration**
+
+- **Xendit**: IDR, MYR currencies
+- **Midtrans**: IDR currency only
+- Gateway-specific fee calculation (percentage + fixed)
+- Webhook support for payment confirmations
+
+### Technology Stack
+
+- **Language**: Rust 1.91+ (2021 edition)
+- **Framework**: actix-web 4.9+ with async/await
+- **Database**: MySQL 8.0+ with InnoDB
+- **Architecture**: Modular, domain-driven design with repository pattern
+- **Testing**: Real database integration tests (no mocks per Constitution)
+
+### Key Design Principles
+
+1. **Tax on Subtotal Only**: Tax calculated before service fees added
+2. **Immutable Invoices**: Once payment initiated, invoice locked (must cancel/recreate)
+3. **Sequential Installments**: Must pay in order (1→2→3)
+4. **Proportional Distribution**: Taxes and fees distributed proportionally across installments
+5. **Locked Tax Rates**: Tax rate frozen at invoice creation
+
+**Original Input**: "Paytrust is payment orchestration to unify multiple payment gateway. The goals is to help developer to integrates their platform into their payment gateway using this platform effortless by consume the API. All transaction architectures handled by this codebase. This platform can create invoice with the items, can add additional charge like service fee (its charges from payment gateway) and tax, can handling installment payment by dynamic setup their installment, can adjust their payment like example if their payment is Rp1000.000 and has 2 installments so they can adjust for the first one is Rp200.000 and the last one is Rp800.000. For now the third party payment gateway support only Xendit and Midtrans (Indonesia Only). The currency support is IDR (Indonesia), MYR (Malaysia) and USD (Global). This platform must support for get total additional charge like service fee (its charges from payment gateway) and tax to help their finance. This platform only backend API. Consider to make the payment isolation between different currency or region to avoid mismatch calculation"
 
 ## Clarifications
 
