@@ -512,15 +512,15 @@ Each story can progress independently, then integrate at the end.
 
 ## Task Summary
 
-**Total Tasks**: 171  
+**Total Tasks**: 176  
 **Setup**: 6 tasks  
 **Foundational**: 25 tasks (BLOCKING - includes T029a for test database setup, T017a for rate limiting test, excludes API key management moved to US5)  
-**User Story 1 (P1 - MVP)**: 31 tasks (10 tests + 21 implementation - added T038a, T038b)  
+**User Story 1 (P1 - MVP)**: 33 tasks (10 tests + 23 implementation - added T038a, T038b, T044a, T054c)  
 **User Story 2 (P2)**: 21 tasks (7 tests + 14 implementation)  
-**User Story 3 (P3)**: 24 tasks (9 tests + 15 implementation - added T087a, supplementary invoices moved to US5)  
-**User Story 4 (P4)**: 21 tasks (6 tests + 15 implementation)  
-**User Story 5 (P2)**: 15 tasks (7 tests + 8 implementation - added T111i, API key management + supplementary invoices)  
-**Polish**: 28 tasks (removed T146 - moved to T017a in Foundational)
+**User Story 3 (P3)**: 23 tasks (9 tests + 14 implementation - added T087a, supplementary invoices moved to US5, removed T119 duplicate)  
+**User Story 4 (P4)**: 20 tasks (6 tests + 14 implementation - removed T119 moved to US1 as T044a)  
+**User Story 5 (P2)**: 16 tasks (8 tests + 8 implementation - added T111i, T111j, API key management + supplementary invoices)  
+**Polish**: 29 tasks (removed T146 - moved to T017a in Foundational, added T128d for OpenAPI maintenance docs)
 
 **Parallel Opportunities**: ~70 tasks can run in parallel (marked with [P])
 
