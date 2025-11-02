@@ -62,9 +62,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Implement tests/helpers/test_client.rs - HTTP client helper functions per contract
-- [ ] T017 [P] [US1] Implement tests/helpers/gateway_sandbox.rs - XenditSandbox struct with new() and create_invoice() per contract
-- [ ] T018 [P] [US1] Implement tests/helpers/gateway_sandbox.rs - MidtransSandbox struct with new() and charge() per contract
+- [x] T016 [P] [US1] Implement tests/helpers/test_client.rs - HTTP client helper functions per contract
+- [x] T017 [P] [US1] Implement tests/helpers/gateway_sandbox.rs - XenditSandbox struct with new() and create_invoice() per contract
+- [x] T018 [P] [US1] Implement tests/helpers/gateway_sandbox.rs - MidtransSandbox struct with new() and charge() per contract
 - [ ] T019 [P] [US1] Add TestFixtures constants to tests/helpers/test_data.rs (gateway IDs, API keys, test cards)
 - [ ] T020 [US1] Refactor tests/integration/payment_flow_test.rs - replace direct DB queries with spawn_test_server() and HTTP requests
 - [ ] T021 [US1] Update payment_flow_test.rs - use TestDataFactory for unique test data generation
