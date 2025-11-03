@@ -1,10 +1,16 @@
 # Rust
 /target
+debug/
+release/
 Cargo.lock
+*.rs.bk
+*.rlib
+*.prof*
 
 # Environment
 .env
 .env.local
+.env.*.local
 
 # IDE
 .vscode/
@@ -12,6 +18,7 @@ Cargo.lock
 *.swp
 *.swo
 *~
+*.iml
 
 # OS
 .DS_Store
@@ -23,3 +30,6 @@ Thumbs.db
 # Database
 *.db
 *.sqlite
+
+# Testing
+/coverage

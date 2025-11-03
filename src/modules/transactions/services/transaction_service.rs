@@ -166,7 +166,7 @@ impl TransactionService {
     fn parse_webhook_data(
         &self,
         gateway: &str,
-        data: &serde_json::Value,
+        _data: &serde_json::Value,
     ) -> Result<(i64, TransactionStatus, Decimal, String), AppError> {
         // TODO: Implement actual parsing for Xendit and Midtrans webhooks
         // This is a placeholder that needs gateway-specific implementation
@@ -311,9 +311,9 @@ impl TransactionService {
         self.transaction_repo
             .record_refund(
                 transaction.id,
-                refund_id,
+                refund_id.clone(),
                 refund_amount,
-                refund_reason,
+                Some(refund_reason),
             )
             .await?;
 

@@ -53,6 +53,7 @@ impl WebhookController {
 
         let webhook_id = webhook_data.id.clone();
         let event_type = webhook_data.event.clone();
+        let event_type_for_log = event_type.clone();
 
         // Route to appropriate handler based on event type
         let transaction_service = self.transaction_service.clone();
@@ -76,7 +77,7 @@ impl WebhookController {
             })
             .await?;
 
-        info!(webhook_id = %webhook_id, event = %event_type, "Webhook processed successfully");
+        info!(webhook_id = %webhook_id, event = %event_type_for_log, "Webhook processed successfully");
 
         Ok(HttpResponse::Ok().json(serde_json::json!({
             "status": "success",

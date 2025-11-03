@@ -86,10 +86,30 @@ path = "tests/unit/line_item_calculation_test.rs"
 name = "invoice_calculation_test"
 path = "tests/unit/invoice_calculation_test.rs"
 
+[[test]]
+name = "tax_calculator_test"
+path = "tests/unit/tax_calculator_test.rs"
+
+[[test]]
+name = "tax_validation_test"
+path = "tests/unit/tax_validation_test.rs"
+
+[[test]]
+name = "service_fee_test"
+path = "tests/unit/service_fee_test.rs"
+
+[[test]]
+name = "tax_calculation_test"
+path = "tests/unit/tax_calculation_test.rs"
+
 # Contract Tests
 [[test]]
 name = "invoice_api_test"
 path = "tests/contract/invoice_api_test.rs"
+
+[[test]]
+name = "report_api_test"
+path = "tests/contract/report_api_test.rs"
 
 # Integration Tests
 [[test]]

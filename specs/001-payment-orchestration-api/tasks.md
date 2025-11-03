@@ -171,11 +171,11 @@
 
 ### Tests for User Story 2 (TDD Required)
 
-- [ ] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
-- [ ] T059a [P] [US2] Unit test for tax_rate validation in `tests/unit/tax_validation_test.rs` per FR-064a (verify tax_rate >= 0 and <= 1.0, verify max 4 decimal places, verify 400 Bad Request for invalid rates, test edge cases: 0.0, 1.0, 0.0001, 0.27, 1.0001 rejection)
-- [ ] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
-- [ ] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
-- [ ] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
+- [X] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
+- [X] T059a [P] [US2] Unit test for tax_rate validation in `tests/unit/tax_validation_test.rs` per FR-064a (verify tax_rate >= 0 and <= 1.0, verify max 4 decimal places, verify 400 Bad Request for invalid rates, test edge cases: 0.0, 1.0, 0.0001, 0.27, 1.0001 rejection)
+- [X] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
+- [X] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
+- [X] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
 - [ ] T063 [P] [US2] Integration test for tax calculation and locking in `tests/integration/tax_calculation_test.rs` (FR-061, FR-062)
 - [ ] T064 [P] [US2] Integration test for service fee calculation per gateway in `tests/integration/service_fee_test.rs`
 - [ ] T065 [P] [US2] Integration test for financial report generation in `tests/integration/report_generation_test.rs` (FR-063, FR-064)
