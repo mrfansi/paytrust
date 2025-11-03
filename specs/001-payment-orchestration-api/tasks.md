@@ -20,12 +20,12 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [X] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
-- [X] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
-- [X] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
-- [X] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
-- [X] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
-- [X] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
+- [ ] T001 Initialize Cargo project with workspace structure at `/Users/mrfansi/GitHub/paytrust/Cargo.toml`
+- [ ] T002 Create project directory structure: `src/`, `src/modules/`, `src/core/`, `tests/`, `migrations/`, `config/`
+- [ ] T003 [P] Configure Cargo.toml with November 2025 dependencies from research.md (actix-web 4.9, tokio 1.40, sqlx 0.8, reqwest 0.12, rust_decimal 1.36, governor 0.7, argon2 0.5)
+- [ ] T004 [P] Create .env.example template in `config/.env.example` with MySQL connection, gateway credentials, API secrets
+- [ ] T005 [P] Setup .gitignore for Rust (.env, target/, Cargo.lock for libraries)
+- [ ] T006 [P] Configure rustfmt.toml and clippy.toml for code quality standards
 
 **Checkpoint**: ✅ Project structure ready for foundational development
 
@@ -39,57 +39,57 @@
 
 ### Database & Configuration
 
-- [X] T007 Create database migration framework setup in `migrations/` directory
-- [X] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
-- [X] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
-- [X] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
+- [ ] T007 Create database migration framework setup in `migrations/` directory
+- [ ] T008 Implement environment configuration loader in `src/config/mod.rs` using dotenvy
+- [ ] T009 Create database connection pool setup in `src/config/database.rs` using sqlx with MySQL
+- [ ] T010 Implement server configuration in `src/config/server.rs` (port, host, TLS settings)
 
 ### Core Utilities
 
-- [X] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
-- [X] T011a [P] Implement timezone utilities in `src/core/timezone.rs` for UTC storage and gateway-specific timezone conversion (Xendit: UTC, Midtrans: Asia/Jakarta UTC+7) per FR-087. All timestamps stored internally as UTC, converted to gateway timezone for API calls, returned as ISO 8601 UTC in API responses
-- [X] T011b [P] Unit test for timezone conversion utilities in `tests/unit/timezone_test.rs` (verify UTC ↔ Asia/Jakarta conversion accuracy, verify UTC passthrough for Xendit, verify ISO 8601 formatting)
-- [X] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
-- [X] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
-- [X] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
-- [X] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
+- [ ] T011 [P] Define custom error types in `src/core/error.rs` using thiserror (ValidationError, DatabaseError, GatewayError)
+- [ ] T011a [P] Implement timezone utilities in `src/core/timezone.rs` for UTC storage and gateway-specific timezone conversion (Xendit: UTC, Midtrans: Asia/Jakarta UTC+7) per FR-087. All timestamps stored internally as UTC, converted to gateway timezone for API calls, returned as ISO 8601 UTC in API responses
+- [ ] T011b [P] Unit test for timezone conversion utilities in `tests/unit/timezone_test.rs` (verify UTC ↔ Asia/Jakarta conversion accuracy, verify UTC passthrough for Xendit, verify ISO 8601 formatting)
+- [ ] T012 [P] Implement Currency enum and decimal handling in `src/core/currency.rs` (IDR scale=0, MYR/USD scale=2) using rust_decimal
+- [ ] T013 [P] Create base repository trait in `src/core/traits/repository.rs` for CRUD operations
+- [ ] T014 [P] Create base service trait in `src/core/traits/service.rs` for business logic interface
+- [ ] T015 [P] Implement tracing setup in `src/main.rs` using tracing and tracing-subscriber for structured logging
 
 ### Middleware & Security
 
-- [X] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
-- [X] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository (including all aggregation queries in ReportRepository per G2 finding). Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention including financial report aggregations
-- [X] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
-- [X] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
+- [ ] T016 Create API key authentication middleware in `src/middleware/auth.rs` with argon2 hashing per research.md and tenant_id extraction from authenticated API key for multi-tenant isolation per FR-088
+- [ ] T016d Implement tenant isolation enforcement in all repository methods per FR-088 - add tenant_id filter to all SELECT/UPDATE/DELETE queries for: InvoiceRepository, LineItemRepository, InstallmentRepository, TransactionRepository, ReportRepository (including all aggregation queries in ReportRepository per G2 finding). Validate tenant_id matches authenticated user on all write operations. Add integration test in `tests/integration/tenant_isolation_test.rs` to verify cross-tenant data access prevention including financial report aggregations
+- [ ] T018 Create error handler middleware in `src/middleware/error_handler.rs` for HTTP error formatting
+- [ ] T019 Implement CORS middleware configuration in `src/middleware/mod.rs`
 
 ### Database Migrations
 
-- [X] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql` with schema: id (BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY per FR-007a), name VARCHAR(50) NOT NULL, supported_currencies JSON NOT NULL (array of currency codes), fee_percentage DECIMAL(5,4) NOT NULL (e.g., 0.0290 for 2.9%), fee_fixed DECIMAL(10,2) NOT NULL, region VARCHAR(50), webhook_url VARCHAR(255), api_key_encrypted TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-- [X] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
-- [X] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP NULL DEFAULT NULL for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
-- [X] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
-- [X] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
-- [X] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-073)
-- [X] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
-- [X] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-042 Audit Logging section (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
+- [ ] T020 Create migration 001: gateway_configs table in `migrations/001_create_gateway_configs_table.sql` with schema: id (BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY per FR-007a), name VARCHAR(50) NOT NULL, supported_currencies JSON NOT NULL (array of currency codes), fee_percentage DECIMAL(5,4) NOT NULL (e.g., 0.0290 for 2.9%), fee_fixed DECIMAL(10,2) NOT NULL, region VARCHAR(50), webhook_url VARCHAR(255), api_key_encrypted TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+- [ ] T021 Create migration 002: api_keys table in `migrations/002_create_api_keys_table.sql`
+- [ ] T022 Create migration 003: invoices table in `migrations/003_create_invoices_table.sql` (include payment_initiated_at TIMESTAMP NULL DEFAULT NULL for immutability tracking per FR-051, and original_invoice_id BIGINT UNSIGNED NULL with FOREIGN KEY to invoices(id) for supplementary invoice relationship per FR-082)
+- [ ] T023 Create migration 004: line_items table in `migrations/004_create_line_items_table.sql`
+- [ ] T024 Create migration 005: installment_schedules table in `migrations/005_create_installment_schedules_table.sql`
+- [ ] T025 Create migration 006: payment_transactions table in `migrations/006_create_payment_transactions_table.sql` (include overpayment_amount DECIMAL(19,4) NULL column for tracking excess payments per FR-073)
+- [ ] T026 Create migration 007: indexes and constraints in `migrations/007_add_indexes.sql`
+- [ ] T026a Create migration 008: webhook_retry_log table in `migrations/008_create_webhook_retry_log.sql` for audit trail per FR-042 Audit Logging section (columns: id, webhook_id, attempt_number, attempted_at TIMESTAMP, status, error_message)
 
 ### Gateway Module Foundation
 
-- [X] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
-- [X] T027a [P] [FOUNDATION] Create RateLimiter trait definition in `contracts/rate_limiter_trait.rs` with rate_limit() method signature per FR-040. Trait methods: async fn check_rate_limit(&self, api_key: &str) -> Result<(), RateLimitError> and async fn record_request(&self, api_key: &str) -> Result<(), RateLimitError>. This trait enables pluggable rate limiting backends (InMemoryRateLimiter for v1.0, RedisRateLimiter for future multi-instance deployment)
-- [X] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041) - depends on T027a RateLimiter trait definition
-- [X] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
-- [X] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
-- [X] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
+- [ ] T027 Define PaymentGateway trait in `src/modules/gateways/services/gateway_trait.rs` with process_payment, verify_webhook methods
+- [ ] T027a [P] [FOUNDATION] Create RateLimiter trait definition in `contracts/rate_limiter_trait.rs` with rate_limit() method signature per FR-040. Trait methods: async fn check_rate_limit(&self, api_key: &str) -> Result<(), RateLimitError> and async fn record_request(&self, api_key: &str) -> Result<(), RateLimitError>. This trait enables pluggable rate limiting backends (InMemoryRateLimiter for v1.0, RedisRateLimiter for future multi-instance deployment)
+- [ ] T017a [P] [FOUNDATION] Integration test for rate limiting in `tests/integration/rate_limit_test.rs` (verify 1000 req/min limit per API key, verify 429 response with Retry-After header when exceeded per FR-040, FR-041) - depends on T027a RateLimiter trait definition
+- [ ] T017 Create rate limiting middleware in `src/middleware/rate_limit.rs` implementing RateLimiter trait (see contracts/rate_limiter_trait.rs created in T027a) - depends on T017a passing and T027a trait definition. v1.0 uses InMemoryRateLimiter with governor crate (1000 req/min per key per FR-040). Return 429 Too Many Requests with Retry-After header when limit exceeded per FR-041. Architecture: Trait-based design enables future RedisRateLimiter for multi-instance deployment without modifying middleware code (Constitution Principle II - Open/Closed compliance)
+- [ ] T028 [P] Create PaymentGateway model in `src/modules/gateways/models/gateway_config.rs`
+- [ ] T029 [P] Implement gateway repository in `src/modules/gateways/repositories/gateway_repository.rs` with MySQL queries
 
 ### Test Infrastructure (Constitution Principle III - Real Testing)
 
-- [X] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup (min 5 connections, max 20 connections), transaction isolation level READ COMMITTED, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Cleanup strategy: TRUNCATE tables between tests for data isolation, DROP/CREATE database for schema migration tests. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
+- [ ] T029a **[CONSTITUTION CRITICAL]** Create test database configuration in `tests/integration/database_setup.rs` - **Mocks/stubs PROHIBITED per Constitution Principle III and NFR-008**. MUST use real MySQL test database instances with connection pool setup (min 5 connections, max 20 connections), transaction isolation level READ COMMITTED, migration runner (executes same migrations T020-T026a as production for schema parity), test fixtures, and cleanup utilities. Cleanup strategy: TRUNCATE tables between tests for data isolation, DROP/CREATE database for schema migration tests. Test database uses identical schema to production. Real testing requirement is NON-NEGOTIABLE for production validation
 - [ ] T029b **[CONSTITUTION GATE]** Validate Constitution III compliance during code review for each integration test PR. This is a CONTINUOUS validation gate, not a post-implementation audit. For each integration test PR, reviewer MUST verify: (1) Test uses real MySQL connections from T029a database setup, (2) NO mock library imports: grep for `use mockall`, `use mockito`, `mock::` in test file, (3) Test executes actual SQL queries against test database (not in-memory simulations), (4) Webhook tests make real HTTP calls (not mocked HTTP clients), (5) Any exceptions documented with justification. PR merge BLOCKED until all 5 checks pass. This gate enforces TDD: tests written → approved → fail → then implement
-- [X] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
+- [ ] T029c **[CONSTITUTION CRITICAL]** Add CI validation check for Constitution III compliance - create `.github/workflows/constitution-check.yml` with job that fails if mock libraries detected in integration tests: `grep -rn "use mockall\|use mockito\|mock::" tests/integration/ && echo "ERROR: Mocks prohibited in integration tests per Constitution III" && exit 1`. This automated check prevents constitution violations from merging
 
 ### Application Entry Point
 
-- [X] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
+- [ ] T030 Implement main.rs application setup: database pool, middleware registration, route mounting (order: health, auth middleware, invoices, installments, transactions, webhooks, reports), server startup using actix-web and tokio
 
 **Checkpoint**: ✅ Foundation ready - all core utilities, database schema, middleware, and test infrastructure are functional. **Constitution III Compliance MUST BE VALIDATED**: Execute T029a (test database setup), T029b (code review gate), and T029c (CI validation) and verify all pass before proceeding. Validation criteria: (1) Real MySQL test database operational with connection pool, (2) CI mock detection active and passing, (3) Test database migrations match production schema. **BLOCK all Phase 3+ work until this checkpoint passes**. User story implementation can begin in parallel only after validation complete.
 
@@ -105,59 +105,59 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [X] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
-- [X] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
-- [X] T033 [P] [US1] Contract tests for invoice API endpoints in `tests/contract/invoice_api_test.rs` validating OpenAPI schema: POST /invoices, GET /invoices/{id}, GET /invoices (7 tests total covering all three endpoints)
-- [X] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
-- [X] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
-- [X] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
-- [X] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/expires_at_validation_test.rs` - verify all 4 validations from FR-044a: (a) max 30 days from creation, (b) min 1 hour from creation, (c) reject past dates with 400 "Expiration time cannot be in the past", (d) if invoice has installments expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date"
-- [X] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-051(a))
-- [X] T038c [P] [US1] Integration test for refund webhook processing in `tests/integration/refund_webhook_test.rs` (verify Xendit invoice.refunded event updates transaction status, verify Midtrans refund notification updates records, verify GET /invoices/{id}/refunds returns refund history per FR-086)
-- [X] T044b [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_currency_validation_test.rs` (verify gateway supports invoice currency per FR-046, verify 400 Bad Request when gateway does not support currency, test all 3 currencies: IDR/MYR/USD)
+- [ ] T031 [P] [US1] Property-based test for line item subtotal calculation in `tests/unit/line_item_calculation_test.rs` using proptest
+- [ ] T032 [P] [US1] Property-based test for invoice total calculation in `tests/unit/invoice_calculation_test.rs` using proptest
+- [ ] T033 [P] [US1] Contract tests for invoice API endpoints in `tests/contract/invoice_api_test.rs` validating OpenAPI schema: POST /invoices, GET /invoices/{id}, GET /invoices (7 tests total covering all three endpoints)
+- [ ] T036 [P] [US1] Integration test for payment flow in `tests/integration/payment_flow_test.rs` (4 tests: single payment, idempotency, partial payment, concurrency)
+- [ ] T037 [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_validation_test.rs` (2 tests + 3 ignored DB tests)
+- [ ] T038 [P] [US1] Integration test for invoice expiration in `tests/integration/invoice_expiration_test.rs` (3 tests + 3 ignored DB tests)
+- [ ] T038a [P] [US1] Integration test for expires_at parameter validation in `tests/integration/expires_at_validation_test.rs` - verify all 4 validations from FR-044a: (a) max 30 days from creation, (b) min 1 hour from creation, (c) reject past dates with 400 "Expiration time cannot be in the past", (d) if invoice has installments expires_at >= last installment due_date with 400 "Invoice expiration cannot occur before final installment due date"
+- [ ] T038b [P] [US1] Integration test for payment_initiated_at timestamp in `tests/integration/payment_initiation_test.rs` (verify timestamp set on first payment attempt, verify immutability enforcement when timestamp NOT NULL per FR-051(a))
+- [ ] T038c [P] [US1] Integration test for refund webhook processing in `tests/integration/refund_webhook_test.rs` (verify Xendit invoice.refunded event updates transaction status, verify Midtrans refund notification updates records, verify GET /invoices/{id}/refunds returns refund history per FR-086)
+- [ ] T044b [P] [US1] Integration test for gateway currency validation in `tests/integration/gateway_currency_validation_test.rs` (verify gateway supports invoice currency per FR-046, verify 400 Bad Request when gateway does not support currency, test all 3 currencies: IDR/MYR/USD)
 
 ### Implementation for User Story 1
 
 **Invoice Module**
 
-- [X] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
-- [X] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
-- [X] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
-- [X] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007)
-- [X] T042a [US1] Implement expires_at validation logic in InvoiceService per FR-044a: (a) parse ISO 8601 timestamp from request, (b) validate not in past (reject 400 "Expiration time cannot be in the past"), (c) validate >= created_at + 1 hour (reject 400 "Expiration must be at least 1 hour from now"), (d) validate <= created_at + 30 days (reject 400 "Expiration must be within 30 days from now"), (e) if invoice has installments: validate expires_at >= last_installment.due_date (reject 400 "Invoice expiration cannot occur before final installment due date {due_date}"). Default to created_at + 24 hours if expires_at not provided per FR-044
-- [X] T042b [US1] Implement payment_initiated_at timestamp logic in InvoiceService per FR-051(a): Set payment_initiated_at (TIMESTAMP NULL) on Invoice entity when first payment attempt occurs, defined as: (a) gateway payment URL generation (when calling gateway API to create payment), OR (b) payment_transaction record creation (when recording payment attempt), whichever occurs first. Once payment_initiated_at IS NOT NULL, enforce invoice immutability per FR-051 by rejecting modification requests with 400 Bad Request. Timestamp is write-once (never updated after initial set). Use UTC timezone per FR-087
-- [X] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
-- [X] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
-- [X] T044a [US1] Validate gateway supports invoice currency in InvoiceService before invoice creation per FR-046 (check gateway_configs.supported_currencies)
+- [ ] T039 [P] [US1] Create Invoice model in `src/modules/invoices/models/invoice.rs` with validation (FR-001, FR-004, FR-051)
+- [ ] T040 [P] [US1] Create LineItem model in `src/modules/invoices/models/line_item.rs` with subtotal calculation (FR-001, FR-005)
+- [ ] T041 [US1] Implement InvoiceRepository trait in `src/modules/invoices/repositories/invoice_repository.rs` with MySQL CRUD operations (✅ Converted to runtime queries)
+- [ ] T042 [US1] Implement InvoiceService in `src/modules/invoices/services/invoice_service.rs` with business logic (create, calculate totals, validate gateway_id parameter per FR-007)
+- [ ] T042a [US1] Implement expires_at validation logic in InvoiceService per FR-044a: (a) parse ISO 8601 timestamp from request, (b) validate not in past (reject 400 "Expiration time cannot be in the past"), (c) validate >= created_at + 1 hour (reject 400 "Expiration must be at least 1 hour from now"), (d) validate <= created_at + 30 days (reject 400 "Expiration must be within 30 days from now"), (e) if invoice has installments: validate expires_at >= last_installment.due_date (reject 400 "Invoice expiration cannot occur before final installment due date {due_date}"). Default to created_at + 24 hours if expires_at not provided per FR-044
+- [ ] T042b [US1] Implement payment_initiated_at timestamp logic in InvoiceService per FR-051(a): Set payment_initiated_at (TIMESTAMP NULL) on Invoice entity when first payment attempt occurs, defined as: (a) gateway payment URL generation (when calling gateway API to create payment), OR (b) payment_transaction record creation (when recording payment attempt), whichever occurs first. Once payment_initiated_at IS NOT NULL, enforce invoice immutability per FR-051 by rejecting modification requests with 400 Bad Request. Timestamp is write-once (never updated after initial set). Use UTC timezone per FR-087
+- [ ] T043 [US1] Implement InvoiceController handlers in `src/modules/invoices/controllers/invoice_controller.rs` for POST /invoices, GET /invoices/{id}, GET /invoices
+- [ ] T044 [US1] Register invoice routes in `src/modules/invoices/mod.rs` and mount in main.rs
+- [ ] T044a [US1] Validate gateway supports invoice currency in InvoiceService before invoice creation per FR-046 (check gateway_configs.supported_currencies)
 
 **Gateway Module**
 
-- [X] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
-- [X] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
-- [X] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
-- [X] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
+- [ ] T045 [P] [US1] Implement Xendit gateway client in `src/modules/gateways/services/xendit.rs` implementing PaymentGateway trait (create payment, verify webhook)
+- [ ] T046 [P] [US1] Implement Midtrans gateway client in `src/modules/gateways/services/midtrans.rs` implementing PaymentGateway trait
+- [ ] T047 [US1] Implement GatewayService in `src/modules/gateways/services/gateway_service.rs` for routing payments to correct gateway
+- [ ] T048 [US1] Implement GatewayController in `src/modules/gateways/controllers/gateway_controller.rs` for GET /gateways endpoint
 
 **Transaction Module**
 
-- [X] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
-- [X] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
-- [X] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
-- [X] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-042 Audit Logging section
-- [X] T052a [US1] Performance test for webhook retry queue capacity in `tests/integration/webhook_queue_capacity_test.rs` - depends on T052 webhook handler implementation (verify queue handles 10,000 pending retries per NFR-010, verify <100ms queue operation latency at 10k queue depth, test enqueue/dequeue operations under load)
-- [X] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
-- [X] T053a [US1] Implement refund webhook handlers in WebhookController for processing refund events per FR-086: (a) Xendit invoice.refunded event handler, (b) Midtrans refund notification handler, (c) update payment_transactions table with refund information (refund_id, refund_amount, refund_timestamp, refund_reason), (d) update transaction status to reflect refund, (e) store refund records for GET /invoices/{id}/refunds endpoint query
-- [X] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
-- [X] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
-- [X] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
-- [X] T054d [US1] Implement refund history endpoint in TransactionController for GET /invoices/{id}/refunds returning refund records (refund_id, refund_amount, refund_timestamp, refund_reason) per FR-086
+- [ ] T049 [P] [US1] Create PaymentTransaction model in `src/modules/transactions/models/payment_transaction.rs` (FR-030, FR-032)
+- [ ] T050 [US1] Implement TransactionRepository in `src/modules/transactions/repositories/transaction_repository.rs` with idempotency check
+- [ ] T051 [US1] Implement TransactionService in `src/modules/transactions/services/transaction_service.rs` (record payment, update invoice status)
+- [ ] T052 [US1] Implement webhook retry logic in `src/modules/transactions/services/webhook_handler.rs` with cumulative delay retries from initial failure (T=0): retry 1 at T+1 minute (1 min after initial failure), retry 2 at T+6 minutes (6 min after initial failure, 5 min after retry 1), retry 3 at T+36 minutes (36 min after initial failure, 30 min after retry 2) per FR-042. Retry ONLY for 5xx errors and connection timeouts >10s. 4xx errors (including signature verification failures) marked permanently failed immediately without retry. Retry timers are in-memory only and do NOT persist across application restarts per FR-042. After all 3 retries fail: mark webhook permanently failed, log error with CRITICAL level. Log all retry attempts with timestamps, attempt number, final status to webhook_retry_log table per FR-042 Audit Logging section
+- [ ] T052a [US1] Performance test for webhook retry queue capacity in `tests/integration/webhook_queue_capacity_test.rs` - depends on T052 webhook handler implementation (verify queue handles 10,000 pending retries per NFR-010, verify <100ms queue operation latency at 10k queue depth, test enqueue/dequeue operations under load)
+- [ ] T053 [US1] Implement WebhookController in `src/modules/transactions/controllers/webhook_controller.rs` for POST /webhooks/{gateway} with signature validation (FR-034) AND GET /webhooks/failed endpoint to query permanently failed webhooks for manual intervention per FR-042
+- [ ] T053a [US1] Implement refund webhook handlers in WebhookController for processing refund events per FR-086: (a) Xendit invoice.refunded event handler, (b) Midtrans refund notification handler, (c) update payment_transactions table with refund information (refund_id, refund_amount, refund_timestamp, refund_reason), (d) update transaction status to reflect refund, (e) store refund records for GET /invoices/{id}/refunds endpoint query
+- [ ] T054 [US1] Implement TransactionController in `src/modules/transactions/controllers/transaction_controller.rs` for GET /invoices/{id}/transactions
+- [ ] T054b [US1] Implement payment discrepancy endpoint in TransactionController for GET /invoices/{id}/discrepancies (FR-050)
+- [ ] T054c [US1] Implement overpayment query endpoint in TransactionController for GET /invoices/{id}/overpayment returning {invoice_id, total_amount, total_paid, overpayment_amount} per FR-076
+- [ ] T054d [US1] Implement refund history endpoint in TransactionController for GET /invoices/{id}/refunds returning refund records (refund_id, refund_amount, refund_timestamp, refund_reason) per FR-086
 
 **Integration & Error Handling**
 
-- [X] T055 [US1] Implement pessimistic locking for concurrent payment requests using MySQL SELECT FOR UPDATE (FR-053, FR-054)
-- [X] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
-- [X] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
-- [X] T058 [US1] Add logging for all invoice and payment operations using tracing
-- [X] T058a [US1] Implement invoice expiration background job in `src/modules/invoices/services/expiration_checker.rs` per FR-045 - runs every 5 minutes using tokio interval timer, queries invoices with expires_at < current_time AND status IN ('draft', 'pending', 'partially_paid'), updates status to 'expired', logs expiration events. Background task spawned in main.rs during server startup
+- [ ] T055 [US1] Implement pessimistic locking for concurrent payment requests using MySQL SELECT FOR UPDATE (FR-053, FR-054)
+- [ ] T056 [US1] Add invoice immutability enforcement when payment initiated (FR-051, FR-052)
+- [ ] T057 [US1] Implement gateway failure handling with descriptive errors (FR-038, FR-039)
+- [ ] T058 [US1] Add logging for all invoice and payment operations using tracing
+- [ ] T058a [US1] Implement invoice expiration background job in `src/modules/invoices/services/expiration_checker.rs` per FR-045 - runs every 5 minutes using tokio interval timer, queries invoices with expires_at < current_time AND status IN ('draft', 'pending', 'partially_paid'), updates status to 'expired', logs expiration events. Background task spawned in main.rs during server startup
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - developers can create invoices, process payments, receive webhooks, and query status. This is MVP ready.
 
@@ -171,11 +171,11 @@
 
 ### Tests for User Story 2 (TDD Required)
 
-- [X] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
-- [X] T059a [P] [US2] Unit test for tax_rate validation in `tests/unit/tax_validation_test.rs` per FR-064a (verify tax_rate >= 0 and <= 1.0, verify max 4 decimal places, verify 400 Bad Request for invalid rates, test edge cases: 0.0, 1.0, 0.0001, 0.27, 1.0001 rejection)
-- [X] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
-- [X] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
-- [X] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
+- [ ] T059 [P] [US2] Property-based test for per-line-item tax calculation in `tests/unit/tax_calculator_test.rs` using proptest (FR-057, FR-058)
+- [ ] T059a [P] [US2] Unit test for tax_rate validation in `tests/unit/tax_validation_test.rs` per FR-064a (verify tax_rate >= 0 and <= 1.0, verify max 4 decimal places, verify 400 Bad Request for invalid rates, test edge cases: 0.0, 1.0, 0.0001, 0.27, 1.0001 rejection)
+- [ ] T060 [P] [US2] Property-based test for service fee calculation in `tests/unit/service_fee_test.rs` (percentage + fixed, FR-009, FR-047)
+- [ ] T061 [P] [US2] Property-based test for tax-on-subtotal-only calculation in `tests/unit/tax_calculation_test.rs` (FR-055, FR-056)
+- [ ] T062 [P] [US2] Contract test for financial report endpoint in `tests/contract/report_api_test.rs` (GET /reports/financial)
 - [ ] T063 [P] [US2] Integration test for tax calculation and locking in `tests/integration/tax_calculation_test.rs` (FR-061, FR-062)
 - [ ] T064 [P] [US2] Integration test for service fee calculation per gateway in `tests/integration/service_fee_test.rs`
 - [ ] T065 [P] [US2] Integration test for financial report generation in `tests/integration/report_generation_test.rs` (FR-063, FR-064)
@@ -184,27 +184,27 @@
 
 **Tax Module**
 
-- [X] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
-- [X] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
-- [X] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
-- [X] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
+- [ ] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
+- [ ] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
+- [ ] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
+- [ ] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
 
 **Invoice Module Updates**
 
-- [X] T070 [US2] Update Invoice model to include tax_total and service_fee fields
-- [X] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
-- [X] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
-- [X] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
-- [X] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
-- [X] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
-- [X] T075a [US2] Implement tax_rate validation in InvoiceService per FR-064a: (a) validate tax_rate >= 0 and <= 1.0 (0-100%), (b) validate tax_rate has maximum 4 decimal places (0.0001 precision), (c) reject invalid rates with 400 Bad Request "Invalid tax_rate: must be between 0 and 1.0 with max 4 decimal places", (d) log rates exceeding 0.27 (27%) for audit review as potential data entry errors
+- [ ] T070 [US2] Update Invoice model to include tax_total and service_fee fields
+- [ ] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
+- [ ] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
+- [ ] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
+- [ ] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
+- [ ] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
+- [ ] T075a [US2] Implement tax_rate validation in InvoiceService per FR-064a: (a) validate tax_rate >= 0 and <= 1.0 (0-100%), (b) validate tax_rate has maximum 4 decimal places (0.0001 precision), (c) reject invalid rates with 400 Bad Request "Invalid tax_rate: must be between 0 and 1.0 with max 4 decimal places", (d) log rates exceeding 0.27 (27%) for audit review as potential data entry errors
 
 **Reports Module**
 
-- [X] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
-- [X] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
-- [X] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
-- [X] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
+- [ ] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
+- [ ] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
+- [ ] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
+- [ ] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
 
 **Checkpoint**: At this point, User Stories 1 AND 2 work independently - invoices include accurate taxes and fees, financial reports show breakdowns by currency and rate.
 
@@ -362,7 +362,7 @@
 - [ ] T126 [P] Create API usage examples in `docs/examples/` for each user story
 - [ ] T127 [P] Create developer quickstart guide in `docs/quickstart.md` using specs/001-payment-orchestration-api/quickstart.md as reference
 - [ ] T127a [P] Create initial OpenAPI 3.0 specification in `specs/001-payment-orchestration-api/contracts/openapi.yaml` with all User Story 1 endpoints per NFR-006: POST /invoices, GET /invoices/{id}, GET /invoices, POST /webhooks/{gateway}, GET /webhooks/failed, GET /invoices/{id}/transactions, GET /gateways. Include request/response schemas, authentication requirements, error responses
-- [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006. Implementation: (a) create static file handler in `src/middleware/openapi.rs` using actix-files crate, (b) read openapi.yaml at startup and cache in memory, (c) serve as application/json with proper CORS headers (Access-Control-Allow-Origin: *), (d) register route in main.rs before auth middleware (public endpoint), (e) add integration test in `tests/integration/openapi_endpoint_test.rs` to verify endpoint returns valid JSON and matches openapi.yaml content
+- [ ] T128 [P] Implement GET /openapi.json endpoint in actix-web to serve manually-maintained OpenAPI specification from `specs/001-payment-orchestration-api/contracts/openapi.yaml` per NFR-006. Implementation: (a) create static file handler in `src/middleware/openapi.rs` using actix-files crate, (b) read openapi.yaml at startup and cache in memory, (c) serve as application/json with proper CORS headers (Access-Control-Allow-Origin: \*), (d) register route in main.rs before auth middleware (public endpoint), (e) add integration test in `tests/integration/openapi_endpoint_test.rs` to verify endpoint returns valid JSON and matches openapi.yaml content
 - [ ] T128b [P] Implement GET /docs endpoint to serve interactive Swagger UI rendering the OpenAPI specification per NFR-006
 - [ ] T128c [P] Validate OpenAPI 3.0 schema compliance using validator or contract testing framework
 - [ ] T128d [P] Document OpenAPI maintenance workflow in `docs/openapi-maintenance.md`: update specification on endpoint changes, validate with contract tests per T033-T035, version with API releases, keep in sync with code
