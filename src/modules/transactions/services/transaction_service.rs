@@ -273,6 +273,164 @@ impl TransactionService {
             .iter()
             .any(|tx| tx.status == TransactionStatus::Paid))
     }
+
+    /// Process refund webhook from payment gateway (FR-086)
+    /// Handles Xendit invoice.refunded and Midtrans refund events
+    pub async fn process_refund_webhook(
+        &self,
+        gateway: &str,
+        data: &serde_json::Value,
+    ) -> Result<(), AppError> {
+        info!(gateway = %gateway, "Processing refund webhook");
+
+        // Extract refund data based on gateway
+        let (gateway_ref, refund_id, refund_amount, refund_reason) = match gateway.to_lowercase().as_str() {
+            "xendit" => self.extract_xendit_refund_data(data)?,
+            "midtrans" => self.extract_midtrans_refund_data(data)?,
+            _ => return Err(AppError::Validation(format!("Unknown gateway: {}", gateway))),
+        };
+
+        // Find transaction by gateway reference
+        let transaction = self
+            .transaction_repo
+            .find_by_gateway_reference(&gateway_ref)
+            .await?
+            .ok_or_else(|| AppError::NotFound(format!("Transaction not found for gateway ref: {}", gateway_ref)))?;
+
+        // Verify transaction can be refunded
+        if !transaction.can_refund() {
+            return Err(AppError::Validation(format!(
+                "Transaction {} cannot be refunded (status: {:?}, already refunded: {})",
+                transaction.id,
+                transaction.status,
+                transaction.refund_id.is_some()
+            )));
+        }
+
+        // Update transaction with refund information
+        self.transaction_repo
+            .record_refund(
+                transaction.id,
+                refund_id,
+                refund_amount,
+                refund_reason,
+            )
+            .await?;
+
+        info!(
+            transaction_id = transaction.id,
+            refund_id = %refund_id,
+            refund_amount = %refund_amount,
+            "Refund processed successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Extract refund data from Xendit webhook payload
+    fn extract_xendit_refund_data(
+        &self,
+        data: &serde_json::Value,
+    ) -> Result<(String, String, Decimal, String), AppError> {
+        let gateway_ref = data["id"]
+            .as_str()
+            .ok_or_else(|| AppError::Validation("Missing Xendit invoice ID".to_string()))?
+            .to_string();
+
+        let refund_id = data["refund_id"]
+            .as_str()
+            .ok_or_else(|| AppError::Validation("Missing Xendit refund ID".to_string()))?
+            .to_string();
+
+        let refund_amount = data["refund_amount"]
+            .as_f64()
+            .ok_or_else(|| AppError::Validation("Missing Xendit refund amount".to_string()))?;
+
+        let refund_reason = data["refund_reason"]
+            .as_str()
+            .unwrap_or("No reason provided")
+            .to_string();
+
+        Ok((
+            gateway_ref,
+            refund_id,
+            Decimal::from_f64_retain(refund_amount)
+                .ok_or_else(|| AppError::Validation("Invalid refund amount".to_string()))?,
+            refund_reason,
+        ))
+    }
+
+    /// Extract refund data from Midtrans webhook payload
+    fn extract_midtrans_refund_data(
+        &self,
+        data: &serde_json::Value,
+    ) -> Result<(String, String, Decimal, String), AppError> {
+        let gateway_ref = data["transaction_id"]
+            .as_str()
+            .ok_or_else(|| AppError::Validation("Missing Midtrans transaction ID".to_string()))?
+            .to_string();
+
+        let refund_id = data["refund_key"]
+            .as_str()
+            .ok_or_else(|| AppError::Validation("Missing Midtrans refund key".to_string()))?
+            .to_string();
+
+        let refund_amount = data["refund_amount"]
+            .as_str()
+            .ok_or_else(|| AppError::Validation("Missing Midtrans refund amount".to_string()))?
+            .parse::<f64>()
+            .map_err(|e| AppError::Validation(format!("Invalid refund amount: {}", e)))?;
+
+        let refund_reason = data["refund_reason"]
+            .as_str()
+            .unwrap_or("No reason provided")
+            .to_string();
+
+        Ok((
+            gateway_ref,
+            refund_id,
+            Decimal::from_f64_retain(refund_amount)
+                .ok_or_else(|| AppError::Validation("Invalid refund amount".to_string()))?,
+            refund_reason,
+        ))
+    }
+
+    /// Get refund history for an invoice (FR-086)
+    pub async fn get_refund_history(
+        &self,
+        invoice_id: i64,
+    ) -> Result<Vec<RefundRecord>, AppError> {
+        let transactions = self
+            .transaction_repo
+            .list_by_invoice_id(invoice_id)
+            .await?;
+
+        let refunds: Vec<RefundRecord> = transactions
+            .iter()
+            .filter(|tx| tx.refund_id.is_some())
+            .map(|tx| RefundRecord {
+                refund_id: tx.refund_id.clone().unwrap(),
+                refund_amount: tx.refund_amount.unwrap().to_string(),
+                refund_timestamp: tx.refund_timestamp.map(|t| t.to_rfc3339()).unwrap_or_default(),
+                refund_reason: tx.refund_reason.clone().unwrap_or_default(),
+                original_transaction_id: tx.id,
+                gateway_reference: tx.gateway_reference.clone(),
+            })
+            .collect();
+
+        Ok(refunds)
+    }
+}
+
+/// Refund record for API response (FR-086)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RefundRecord {
+    pub refund_id: String,
+    pub refund_amount: String,
+    pub refund_timestamp: String,
+    pub refund_reason: String,
+    pub original_transaction_id: i64,
+    pub gateway_reference: String,
 }
 
 #[cfg(test)]

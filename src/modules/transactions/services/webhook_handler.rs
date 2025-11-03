@@ -16,6 +16,7 @@ use tracing::{error, info, warn};
 /// 4xx errors (including signature verification failures) marked permanently failed immediately
 /// 
 /// Retry timers are in-memory only and do NOT persist across application restarts per FR-042
+#[derive(Clone)]
 pub struct WebhookHandler {
     transaction_repo: Arc<dyn TransactionRepository>,
 }

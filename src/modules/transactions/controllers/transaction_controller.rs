@@ -71,19 +71,17 @@ pub async fn get_overpayment(
 /// GET /invoices/{id}/refunds (FR-086)
 /// Returns list of refunds processed for this invoice
 pub async fn get_refund_history(
-    _service: web::Data<Arc<TransactionService>>,
+    service: web::Data<Arc<TransactionService>>,
     _tenant_id: TenantId,
     path: web::Path<i64>,
 ) -> Result<HttpResponse, AppError> {
     let invoice_id = path.into_inner();
     
-    // TODO: Implement actual refund history query
-    // Query payment_transactions table for refund records
-    // Return refund_id, refund_amount, refund_timestamp, refund_reason
+    let refunds = service.get_refund_history(invoice_id).await?;
     
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "invoice_id": invoice_id,
-        "refunds": []
+        "refunds": refunds
     })))
 }
 

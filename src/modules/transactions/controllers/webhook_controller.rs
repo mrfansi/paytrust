@@ -26,6 +26,7 @@ impl WebhookController {
 
     /// POST /webhooks/{gateway}
     /// Process webhook from payment gateway with signature validation (FR-034)
+    /// Handles payment and refund events per FR-086
     pub async fn process_webhook(
         &self,
         gateway: web::Path<String>,
@@ -51,8 +52,9 @@ impl WebhookController {
             .map_err(|e| AppError::Validation(format!("Invalid webhook payload: {}", e)))?;
 
         let webhook_id = webhook_data.id.clone();
+        let event_type = webhook_data.event.clone();
 
-        // Process webhook with retry logic
+        // Route to appropriate handler based on event type
         let transaction_service = self.transaction_service.clone();
         let webhook_data_clone = webhook_data.clone();
         let gateway_clone = gateway_name.clone();
@@ -62,18 +64,33 @@ impl WebhookController {
                 let service = transaction_service.clone();
                 let data = webhook_data_clone.data.clone();
                 let gw = gateway_clone.clone();
+                let event = event_type.clone();
                 async move {
-                    service.process_webhook_event(&gw, &data).await
+                    // Route based on event type (FR-086)
+                    if Self::is_refund_event(&gw, &event) {
+                        service.process_refund_webhook(&gw, &data).await
+                    } else {
+                        service.process_webhook_event(&gw, &data).await
+                    }
                 }
             })
             .await?;
 
-        info!(webhook_id = %webhook_id, "Webhook processed successfully");
+        info!(webhook_id = %webhook_id, event = %event_type, "Webhook processed successfully");
 
         Ok(HttpResponse::Ok().json(serde_json::json!({
             "status": "success",
             "message": "Webhook received and queued for processing"
         })))
+    }
+
+    /// Check if event is a refund event based on gateway
+    fn is_refund_event(gateway: &str, event: &str) -> bool {
+        match gateway.to_lowercase().as_str() {
+            "xendit" => event == "invoice.refunded",
+            "midtrans" => event == "refund",
+            _ => false,
+        }
     }
 
     /// GET /webhooks/failed
