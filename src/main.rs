@@ -10,6 +10,8 @@ use modules::gateways::repositories::gateway_repository::MySqlGatewayRepository;
 use modules::gateways::services::gateway_service::GatewayService;
 use modules::invoices::repositories::invoice_repository::MySqlInvoiceRepository;
 use modules::invoices::services::invoice_service::InvoiceService;
+use modules::reports::repositories::MySqlReportRepository;
+use modules::reports::services::ReportService;
 use modules::transactions::repositories::transaction_repository::MySqlTransactionRepository;
 use modules::transactions::services::transaction_service::TransactionService;
 use std::sync::Arc;
@@ -79,6 +81,7 @@ async fn main() -> std::io::Result<()> {
     let gateway_repo = Arc::new(MySqlGatewayRepository::new(pool.clone()));
     let invoice_repo = Arc::new(MySqlInvoiceRepository::new(pool.clone()));
     let transaction_repo = Arc::new(MySqlTransactionRepository::new(pool.clone()));
+    let report_repo = Arc::new(MySqlReportRepository::new(pool.clone()));
 
     // Initialize gateway service
     let gateway_service = Arc::new(GatewayService::new());
@@ -96,10 +99,13 @@ async fn main() -> std::io::Result<()> {
         invoice_repo.clone(),
     ));
 
+    let report_service = Arc::new(ReportService::new(report_repo.clone()));
+
     tracing::info!("Payment gateways loaded: xendit, midtrans");
     tracing::info!("Gateway service initialized");
     tracing::info!("Invoice service initialized");
     tracing::info!("Transaction service initialized");
+    tracing::info!("Report service initialized");
 
     // Start HTTP server
     HttpServer::new(move || {
@@ -110,6 +116,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(invoice_service.clone()))
             .app_data(web::Data::new(gateway_service.clone()))
             .app_data(web::Data::new(transaction_service.clone()))
+            .app_data(web::Data::new(report_service.clone()))
             // Middleware stack (order matters!)
             .wrap(configure_cors())
             .wrap(ErrorHandler)
@@ -126,6 +133,7 @@ async fn main() -> std::io::Result<()> {
                     .configure(modules::invoices::controllers::configure)
                     .configure(modules::gateways::controllers::configure)
                     .configure(modules::transactions::controllers::configure)
+                    .configure(modules::reports::controllers::configure)
             )
     })
     .workers(server_config.workers)

@@ -184,27 +184,27 @@
 
 **Tax Module**
 
-- [ ] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
-- [ ] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
-- [ ] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
-- [ ] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
+- [X] T066 [P] [US2] Create Tax model in `src/modules/taxes/models/tax.rs` with rate percentage and category
+- [X] T067 [US2] Implement TaxCalculator in `src/modules/taxes/services/tax_calculator.rs` for per-line-item calculation (FR-057, FR-058)
+- [X] T068 [US2] Implement TaxRepository in `src/modules/taxes/repositories/tax_repository.rs` for aggregation queries
+- [X] T069 [US2] Implement TaxController in `src/modules/taxes/controllers/tax_controller.rs` if needed for tax configuration
 
 **Invoice Module Updates**
 
-- [ ] T070 [US2] Update Invoice model to include tax_total and service_fee fields
-- [ ] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
-- [ ] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
-- [ ] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
-- [ ] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
-- [ ] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
-- [ ] T075a [US2] Implement tax_rate validation in InvoiceService per FR-064a: (a) validate tax_rate >= 0 and <= 1.0 (0-100%), (b) validate tax_rate has maximum 4 decimal places (0.0001 precision), (c) reject invalid rates with 400 Bad Request "Invalid tax_rate: must be between 0 and 1.0 with max 4 decimal places", (d) log rates exceeding 0.27 (27%) for audit review as potential data entry errors
+- [X] T070 [US2] Update Invoice model to include tax_total and service_fee fields
+- [X] T071 [US2] Update LineItem model to include tax_rate, tax_category, tax_amount fields
+- [X] T072 [US2] Update InvoiceService to calculate service fees using gateway fee structure (FR-009, FR-047)
+- [X] T073 [US2] Update InvoiceService to calculate total as subtotal + tax_total + service_fee (FR-055, FR-056)
+- [X] T074 [US2] Update InvoiceService to lock tax rates at invoice creation (FR-061, FR-062)
+- [X] T075 [US2] Update InvoiceController to accept tax_rate per line item in POST /invoices
+- [X] T075a [US2] Implement tax_rate validation in InvoiceService per FR-064a: (a) validate tax_rate >= 0 and <= 1.0 (0-100%), (b) validate tax_rate has maximum 4 decimal places (0.0001 precision), (c) reject invalid rates with 400 Bad Request "Invalid tax_rate: must be between 0 and 1.0 with max 4 decimal places", (d) log rates exceeding 0.27 (27%) for audit review as potential data entry errors
 
 **Reports Module**
 
-- [ ] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
-- [ ] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
-- [ ] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
-- [ ] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
+- [X] T076 [P] [US2] Create FinancialReport model in `src/modules/reports/models/financial_report.rs`
+- [X] T077 [US2] Implement ReportRepository in `src/modules/reports/repositories/report_repository.rs` with aggregation queries (SUM, GROUP BY)
+- [X] T078 [US2] Implement ReportService in `src/modules/reports/services/report_service.rs` for service fee and tax breakdown (FR-012, FR-013, FR-063, FR-064)
+- [X] T079 [US2] Implement ReportController in `src/modules/reports/controllers/report_controller.rs` for GET /reports/financial with date range filtering
 
 **Checkpoint**: At this point, User Stories 1 AND 2 work independently - invoices include accurate taxes and fees, financial reports show breakdowns by currency and rate.
 
