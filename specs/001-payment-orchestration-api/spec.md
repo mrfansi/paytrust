@@ -75,9 +75,27 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 - Q: How should ISO 4217 and ISO 3166 standards be implemented in the data model? → A: Native ISO standards - Store all currencies using ISO 4217 three-letter codes (IDR, MYR, USD already compliant), enforce ISO 3166-1 alpha-2 country codes in tax_category field for jurisdiction identification; minimal schema impact, maximum standards compliance
 - Q: Should pain.001 (Payment Initiation) messages be auto-generated or available on-demand? → A: On-demand export - Generate pain.001 dynamically via GET /invoices/{id}/payment-initiation endpoint (returns XML); enables compliance export without bloating invoice responses; maintains REST/JSON as primary interface while providing ISO 20022 capability
 - Q: How should the system handle idempotent payment requests to prevent duplicate charges? → A: HTTP header `Idempotency-Key` (UUID v4 format), 24-hour retention period, returns 200 OK with original cached response for duplicate requests within retention window, enables safe client retries
+
+**Implementation Strategy**: Use HTTP `Idempotency-Key` header for idempotent POST requests:
+- Client includes `Idempotency-Key: <UUID v4>` header on POST /invoices requests
+- Server stores (tenant_id, Idempotency-Key, response_body) in cache with 24-hour TTL
+- Duplicate requests with same Idempotency-Key within 24 hours return 200 OK + original invoice response
+- Fallback: If Idempotency-Key not provided, system uses optional external_id field for idempotency within single tenant
+- Storage: In-memory cache for v1.0 (acceptable per NFR-009 single-instance constraint); upgrade to database-backed cache for multi-instance future
+
+Task T046 implements both mechanisms; Idempotency-Key is primary (REST standard), external_id is secondary convenience feature.
 - Q: How should the system prevent duplicate processing of webhook events from payment gateways? → A: Store gateway webhook event_id in dedicated webhook_events table with unique constraint per (gateway_name, event_id, tenant_id), check on receipt if already processed, return 200 OK without re-processing if duplicate
 - Q: What does success criterion SC-009 measure - what is the baseline "transaction" scenario? → A: Single-payment happy path baseline: POST /invoices (returns payment_url in response) + payment processed via gateway webhook = 1-2 API calls; installments and supplementary invoices scale appropriately per their flow complexity
 - Q: How should webhook retry logic be architecturally implemented for persistence and recovery? → A: In-memory priority queue with tokio async tasks per webhook failure; HashMap<event_id, RetryState> tracks in-flight retries; GET /webhooks/failed endpoint queries current HashMap state; timers lost on restart (manual recovery via GET /webhooks/failed), acceptable per FR-040 design
+
+**v1.0 Limitation**: Webhook retry queue is in-memory only per NFR-009 (single instance deployment):
+- Retries are lost if the service crashes or restarts
+- Mitigation: GET /webhooks/failed endpoint lists all failed webhooks (not just in-flight; includes failed webhooks from before crashes)
+- Merchant recovery procedure: Call GET /webhooks/failed periodically, identify failed event_ids, manually trigger re-processing via internal admin tool
+- Task T039 implements in-memory queue with tokio tasks; task T105 CI check validates no database persistence logic exists (in-memory design is intentional)
+- Future multi-instance deployment (v2.0) will require Redis-backed persistent queue; update plan accordingly when scaling
+
+This design trades durability for simplicity in v1.0; acceptable risk given merchant can query failed webhooks and retry manually.
 - Q: What should POST /invoices response include to optimize developer integration and meet SC-009? → A: Comprehensive 201 response body with: invoice_id, status, created_at (ISO 8601 UTC), currency, subtotal, total_tax, total_service_fee, total_amount, payment_url, and if installments: installment_schedule array with [{number, due_date, amount, tax, service_fee, total_for_installment}]; enables single-call integration for single payment flows
 
 ### Session 2025-11-01
@@ -92,6 +110,15 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 - Q: Which invoice modifications should be allowed after a payment has been initiated? → A: No modifications allowed - Invoice becomes read-only once payment initiated, must cancel and recreate
 - Q: How should the system handle multiple simultaneous payment requests for the same invoice? → A: Lock invoice, first wins - First request locks invoice, others get 409 Conflict "payment in progress"
 - Q: In what order should tax and service fees be calculated when both are present on an invoice? → A: Tax on subtotal only - Tax applies to subtotal only, service fees added after: Total = Subtotal + (Subtotal × Tax%) + Service Fee
+
+**Clarification**: Service fee calculation applies AFTER tax calculation. The order is:
+1. Calculate subtotal = SUM(line_item.quantity × line_item.unit_price)
+2. Calculate total_tax = SUM(line_item.subtotal × line_item.tax_rate)
+3. Calculate service_fee = (subtotal × gateway.fee_percentage) + gateway.fee_fixed_amount
+4. Total Amount = Subtotal + Total Tax + Service Fee
+
+This order ensures taxes apply only to goods/services, and service fees are charged on top of the taxed subtotal.
+
 - Q: Should taxes be applied per line item or at invoice level? → A: Per-line-item tax rates - Each line item can have its own tax rate/category, system calculates tax per item and sums for invoice total
 - Q: How should tax be distributed across installment payments when custom amounts are configured? → A: Proportional distribution - Tax distributed proportionally: installment_tax = total_tax × (installment_amount / total_amount)
 - Q: What happens if external tax rates change between invoice creation and payment completion? → A: Lock tax rate at creation - Tax rate frozen when invoice created, immutable throughout invoice lifecycle regardless of external rate changes
@@ -100,7 +127,23 @@ PayTrust is a **backend payment orchestration API** built in Rust that unifies m
 - Q: Must installments be paid in sequential order (1, 2, 3) or can customers pay any unpaid installment at any time? → A: Sequential order enforced - Installments must be paid in order, payment link for next installment only available after previous paid
 - Q: How should rounding discrepancies be handled when dividing amounts across installments (especially for IDR with no decimals)? → A: Last installment absorbs difference - Round down earlier installments, last installment = total minus sum of previous
 - Q: What happens when a customer overpays a single installment (e.g., pays Rp 300,000 for Rp 200,000 installment)? → A: Accept excess, auto-apply to remaining installments - Apply excess sequentially to next installments, mark them paid, if total reached mark invoice "fully paid"
+
+**Implementation Detail**: Overpayment behavior is strictly forward-sequential:
+- Excess from installment N applies ONLY to unpaid installments N+1, N+2, etc.
+- Previously paid installments (1 through N-1) remain locked and cannot be modified by overpayment
+- If overpayment exceeds remaining balance, invoice marked "fully paid" and overpayment_amount tracked
+- Merchants can query overpayment via GET /invoices/{id}/overpayment to reconcile in their accounting system
+
 - Q: Can developers adjust remaining installment amounts after first payment is made? → A: Can adjust unpaid installments only - Paid installments locked, unpaid amounts can be adjusted while maintaining total remaining balance
+
+- Q: What constraints apply when merchants adjust unpaid installment amounts? → A: Adjustment constraints:
+  1. **Minimum amount**: Each installment must be >= smallest currency unit (1 IDR, 0.01 MYR, 0.01 USD)
+  2. **Lower bound**: Merchants cannot reduce total remaining balance below (sum of overpayments already applied)
+     Example: Invoice 1000 IDR, installment 1 paid with 300 IDR overpayment applied to installment 2; merchant cannot reduce installment 2 below 300 IDR
+  3. **Total balance invariant**: SUM(all unpaid installments) must equal (invoice total - sum of paid installments)
+  4. **Timing**: Adjustments only allowed on unpaid installments; paid installments locked and cannot be modified
+
+  Task T072 implements validation logic; task T083 tests boundary conditions (min amounts, overpayment lower bounds).
 - Q: How should the system handle adding line items to an invoice after payment has started? → A: Create supplementary invoice - Original invoice continues unchanged, new invoice created for additional items with separate payment/installment schedule
 
 ## User Scenarios & Testing _(mandatory)_
@@ -189,6 +232,27 @@ A developer manages API keys for authentication and creates supplementary invoic
 3. **Given** an API key is compromised, **When** admin revokes it via DELETE /api-keys/{id}, **Then** system marks key as revoked, rejects future requests with that key, and logs revocation event
 4. **Given** an invoice with payment in progress, **When** developer creates supplementary invoice via POST /invoices/{id}/supplementary with new line items, **Then** system creates new invoice referencing parent, inherits currency and gateway, maintains separate payment schedule
 5. **Given** a supplementary invoice request, **When** parent invoice does not exist or is itself supplementary, **Then** system rejects request with 400 Bad Request and appropriate error message
+
+### API Key Rotation Semantics
+
+When an API key is rotated:
+1. **Old key becomes immediately inactive** - Cannot be used for new requests; returns 401 Unauthorized
+2. **In-flight requests**: Requests received with old key after rotation initiated will fail with 401; client must handle and retry with new key
+3. **Grace period**: None in v1.0; v2.0 may implement 60-second grace period if business requirements change
+4. **Response to caller**: PUT /api-keys/{id}/rotate returns 200 OK with new key included in response body (returned once only per security best practice)
+5. **Audit trail**: Both rotation event and any subsequent failed authentication attempts with rotated key logged to api_key_audit_log for forensics
+
+Task T086-T087 implement this behavior; code review gate T104 verifies no grace period logic exists.
+
+### Supplementary Invoice Chaining
+
+Supplementary invoices cannot create further supplementary invoices:
+1. **No chaining in v1.0** - Supplementary invoices can only reference original invoices
+2. **Validation**: Attempting to create supplementary of supplementary returns 400 Bad Request with error message "Supplementary invoices cannot reference other supplementary invoices"
+3. **Rationale**: Prevents chain complexity and keeps financial reporting tractable
+4. **Forward design**: Future v2.0 may support chaining if business requirements change; document as technical debt note if needed
+
+Task T093 implements validation logic; task T102 tests supplementary invoice parent validation.
 
 ---
 
