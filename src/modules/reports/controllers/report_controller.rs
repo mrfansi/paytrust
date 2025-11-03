@@ -20,15 +20,44 @@ pub struct FinancialReportQuery {
 }
 
 /// GET /reports/financial - Generate financial report
+/// Query params: start_date, end_date (ISO 8601 format)
 pub async fn get_financial_report(
-    _query: web::Query<FinancialReportQuery>,
-    _report_service: web::Data<Arc<ReportService>>,
+    query: web::Query<FinancialReportQuery>,
+    report_service: web::Data<Arc<ReportService>>,
 ) -> impl Responder {
-    // TODO: Implement financial report endpoint
-    // This is a stub that will make tests fail
-    HttpResponse::NotImplemented().json(serde_json::json!({
-        "error": "Not implemented yet"
-    }))
+    // Parse dates
+    let start_date = match chrono::NaiveDateTime::parse_from_str(&query.start_date, "%Y-%m-%d %H:%M:%S") {
+        Ok(date) => date,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "Invalid start_date format. Expected: YYYY-MM-DD HH:MM:SS"
+            }));
+        }
+    };
+
+    let end_date = match chrono::NaiveDateTime::parse_from_str(&query.end_date, "%Y-%m-%d %H:%M:%S") {
+        Ok(date) => date,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "Invalid end_date format. Expected: YYYY-MM-DD HH:MM:SS"
+            }));
+        }
+    };
+
+    // Validate date range
+    if start_date > end_date {
+        return HttpResponse::BadRequest().json(serde_json::json!({
+            "error": "start_date must be before or equal to end_date"
+        }));
+    }
+
+    // Generate report
+    match report_service.generate_financial_report(start_date, end_date).await {
+        Ok(report) => HttpResponse::Ok().json(report),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": format!("Failed to generate report: {}", e)
+        })),
+    }
 }
 
 pub fn configure_routes(cfg: &mut web::ServiceConfig) {

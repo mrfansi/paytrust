@@ -116,6 +116,18 @@ path = "tests/contract/report_api_test.rs"
 name = "rate_limit_test"
 path = "tests/integration/rate_limit_test.rs"
 
+[[test]]
+name = "tax_calculation_integration_test"
+path = "tests/integration/tax_calculation_integration_test.rs"
+
+[[test]]
+name = "service_fee_integration_test"
+path = "tests/integration/service_fee_integration_test.rs"
+
+[[test]]
+name = "financial_report_integration_test"
+path = "tests/integration/financial_report_integration_test.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

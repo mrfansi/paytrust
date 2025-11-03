@@ -17,18 +17,22 @@ impl ReportService {
     /// FR-012: Service fee breakdown by gateway
     /// FR-013: Tax breakdown by rate
     /// FR-063: Separate totals by currency (no conversion)
-    /// FR-064: Group by currency and rate
     pub async fn generate_financial_report(
         &self,
         start_date: chrono::NaiveDateTime,
         end_date: chrono::NaiveDateTime,
     ) -> Result<FinancialReport, AppError> {
-        // TODO: Implement financial report generation
-        // This is a stub that will make tests fail
+        // Fetch all report data in parallel
+        let (service_fee_breakdown, tax_breakdown, total_revenue) = tokio::try_join!(
+            self.report_repo.get_service_fee_breakdown(start_date, end_date),
+            self.report_repo.get_tax_breakdown(start_date, end_date),
+            self.report_repo.get_revenue_by_currency(start_date, end_date),
+        )?;
+
         Ok(FinancialReport {
-            service_fee_breakdown: vec![],
-            tax_breakdown: vec![],
-            total_revenue: vec![],
+            service_fee_breakdown,
+            tax_breakdown,
+            total_revenue,
         })
     }
 }
